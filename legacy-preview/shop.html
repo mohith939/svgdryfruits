@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Explore the SVG Dry Fruits collection." />
+    <meta name="theme-color" content="#f5f2eb" />
+    <title>The Collection — SVG Dry Fruits</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./premium.css" />
+    <script src="./script.js" defer></script>
+    <script src="./catalog.js" defer></script>
+  </head>
+  <body class="shop-page">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="wordmark" href="./index.html" aria-label="SVG Dry Fruits home">
+          <img src="./assets/svg-dry-fruits-logo.jpg" alt="" />
+        </a>
+        <nav class="desktop-nav" aria-label="Main navigation">
+          <a href="./shop.html" aria-current="page">Shop</a>
+          <a href="./index.html#pantry">The pantry</a>
+          <a href="./index.html#gifting">Gifting</a>
+          <a href="./index.html#story">Our story</a>
+        </nav>
+        <div class="header-actions">
+          <button class="icon-button search-toggle" type="button" aria-label="Show search">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.8" cy="10.8" r="6.8"></circle>
+              <path d="m16 16 4.5 4.5"></path>
+            </svg>
+          </button>
+          <a class="bag-link" href="#collection" aria-label="Shopping bag preview">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5.5 8.5h13l1 12h-15l1-12Z"></path>
+              <path d="M9 9V6a3 3 0 0 1 6 0v3"></path>
+            </svg>
+            <span class="bag-count" aria-label="No items">0</span>
+          </a>
+          <button
+            class="icon-button menu-toggle"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="mobile-nav"
+          >
+            <span></span><span></span>
+          </button>
+        </div>
+      </div>
+      <form class="search-panel" role="search" hidden>
+        <label for="site-search">Search the collection</label>
+        <div class="search-row">
+          <input id="site-search" type="search" placeholder="Try almonds or dates" />
+          <button type="submit">Search</button>
+        </div>
+        <p>Search the design-preview categories below.</p>
+      </form>
+      <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation" hidden>
+        <a href="./shop.html">Shop</a>
+        <a href="./index.html#pantry">The pantry</a>
+        <a href="./index.html#gifting">Gifting</a>
+        <a href="./index.html#story">Our story</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="shop-intro" aria-labelledby="shop-title">
+        <div class="breadcrumbs"><a href="./index.html">Home</a><span aria-hidden="true">/</span><span>Shop</span></div>
+        <p class="section-kicker">A PLACE TO BEGIN</p>
+        <div class="shop-intro-row">
+          <h1 id="shop-title">The <em>collection.</em></h1>
+          <p>
+            A considered pantry of dry fruits and little things to take along.
+            We’re shaping the range around SVG’s real products.
+          </p>
+        </div>
+        <div class="catalog-note">
+          <span class="catalog-note-mark" aria-hidden="true">i</span>
+          <p>
+            This is a collection design preview. Prices, pack sizes, stock, and
+            product details will be added from your verified catalog.
+          </p>
+        </div>
+      </section>
+
+      <section class="catalog-section" id="collection" aria-labelledby="catalog-heading">
+        <div class="catalog-toolbar">
+          <div class="catalog-heading-wrap">
+            <h2 id="catalog-heading">Browse the pantry</h2>
+            <span class="catalog-count" aria-live="polite">4 categories</span>
+          </div>
+          <div class="catalog-controls">
+            <label class="catalog-search-label" for="catalog-search">Find something</label>
+            <input id="catalog-search" type="search" placeholder="Search categories" />
+          </div>
+        </div>
+        <div class="category-filters" role="group" aria-label="Filter collection">
+          <button class="filter-button is-active" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="filter-button" type="button" data-filter="nuts" aria-pressed="false">Nuts</button>
+          <button class="filter-button" type="button" data-filter="fruit" aria-pressed="false">Dried fruit</button>
+          <button class="filter-button" type="button" data-filter="gifting" aria-pressed="false">Gifting</button>
+        </div>
+        <div class="catalog-grid">
+          <article class="catalog-card" data-category="nuts" data-search="almonds nuts pantry">
+            <a class="catalog-image" href="./shop.html?category=nuts#collection" aria-label="Browse almonds and nuts">
+              <img src="./assets/mixed-nuts-reference.jpg" alt="Assorted nuts shown as temporary category photography" loading="lazy" />
+              <span class="catalog-image-index">01</span>
+              <span class="catalog-image-arrow" aria-hidden="true">↗</span>
+              <span class="image-reference-tag">REFERENCE IMAGE</span>
+            </a>
+            <div class="catalog-card-meta"><span>THE PANTRY</span><span>01</span></div>
+            <h3>Almonds &amp; nuts</h3>
+            <p>Everyday favourites, gathered in one place.</p>
+            <span class="catalog-detail">Products &amp; pack details to come</span>
+          </article>
+          <article class="catalog-card" data-category="nuts" data-search="cashews pistachios nuts">
+            <a class="catalog-image" href="./shop.html?category=nuts#collection" aria-label="Browse cashews and pistachios">
+              <img src="./assets/mixed-fruit-reference.jpg" alt="A bowl of mixed nuts and fruit shown as temporary category photography" loading="lazy" />
+              <span class="catalog-image-index">02</span>
+              <span class="catalog-image-arrow" aria-hidden="true">↗</span>
+              <span class="image-reference-tag">REFERENCE IMAGE</span>
+            </a>
+            <div class="catalog-card-meta"><span>THE PANTRY</span><span>02</span></div>
+            <h3>Cashews &amp; pistachios</h3>
+            <p>More of the good things to keep close.</p>
+            <span class="catalog-detail">Products &amp; pack details to come</span>
+          </article>
+          <article class="catalog-card" data-category="fruit" data-search="dates raisins dried fruit">
+            <a class="catalog-image" href="./shop.html?category=fruit#collection" aria-label="Browse dates and dried fruit">
+              <img src="./assets/dates-reference.jpg" alt="Dates in a small glass dish shown as temporary category photography" loading="lazy" />
+              <span class="catalog-image-index">03</span>
+              <span class="catalog-image-arrow" aria-hidden="true">↗</span>
+              <span class="image-reference-tag">REFERENCE IMAGE</span>
+            </a>
+            <div class="catalog-card-meta"><span>SOMETHING SWEET</span><span>03</span></div>
+            <h3>Dates &amp; dried fruit</h3>
+            <p>A naturally lovely addition to the pantry.</p>
+            <span class="catalog-detail">Products &amp; pack details to come</span>
+          </article>
+          <article class="catalog-card" data-category="gifting" data-search="gifts hampers combinations">
+            <a class="catalog-image" href="./shop.html?category=gifting#collection" aria-label="Browse gift collections">
+              <img src="./assets/mixed-nuts-reference.jpg" alt="Assorted nuts shown as temporary gifting-category photography" loading="lazy" />
+              <span class="catalog-image-index">04</span>
+              <span class="catalog-image-arrow" aria-hidden="true">↗</span>
+              <span class="image-reference-tag">REFERENCE IMAGE</span>
+            </a>
+            <div class="catalog-card-meta"><span>TO TAKE ALONG</span><span>04</span></div>
+            <h3>Gifts &amp; combinations</h3>
+            <p>Thoughtful boxes for the people you remember.</p>
+            <span class="catalog-detail">Gift range details to come</span>
+          </article>
+        </div>
+        <p class="empty-results" hidden>No categories match that search. Try another name.</p>
+        <p class="image-note">
+          These stock photographs are for layout and mood only; they do not
+          represent SVG products or packaging.
+        </p>
+      </section>
+
+      <section class="shop-note">
+        <p class="section-kicker">MADE TO FEEL LIKE YOURS</p>
+        <h2>Real products.<br /><em>Your story.</em></h2>
+        <p>
+          When the product range and pack photography are ready, this page will
+          become the live collection.
+        </p>
+        <a class="underlined-link" href="./index.html">Back to the homepage <span aria-hidden="true">↗</span></a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-main">
+        <div class="footer-brand">
+          <a class="wordmark footer-wordmark" href="./index.html" aria-label="SVG Dry Fruits home">
+            <img src="./assets/svg-dry-fruits-logo.jpg" alt="" />
+          </a>
+          <p>Good things, kept close.</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a href="./shop.html">Shop</a>
+          <a href="./index.html#pantry">The pantry</a>
+          <a href="./index.html#gifting">Gifting</a>
+          <a href="./index.html#story">Our story</a>
+        </nav>
+        <p class="footer-note">© <span id="year"></span> SVG Dry Fruits</p>
+      </div>
+      <p class="preview-disclaimer">
+        Design preview only. Product details, pricing, availability and checkout
+        are not configured yet.
+      </p>
+    </footer>
+    <p class="sr-only" role="status" aria-live="polite" id="status-message"></p>
+  </body>
+</html>

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Homepage design study for SVG Dry Fruits." />
+    <meta name="theme-color" content="#f5f2eb" />
+    <title>SVG Dry Fruits — A considered pantry</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./premium.css" />
+    <script src="./script.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="wordmark" href="./index.html" aria-label="SVG Dry Fruits home">
+          <img src="./assets/svg-dry-fruits-logo.jpg" alt="" />
+        </a>
+        <nav class="desktop-nav" aria-label="Main navigation">
+          <a href="#top" aria-current="page">Home</a>
+          <a href="./shop.html">Shop</a>
+          <a href="./shop.html#collection">The pantry</a>
+          <a href="#gifting">Gifting</a>
+          <a href="#story">Our story</a>
+        </nav>
+        <div class="header-actions">
+          <button class="icon-button search-toggle" type="button" aria-label="Show search">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.8" cy="10.8" r="6.8"></circle>
+              <path d="m16 16 4.5 4.5"></path>
+            </svg>
+          </button>
+          <a class="bag-link" href="#shop" aria-label="Shopping bag preview">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5.5 8.5h13l1 12h-15l1-12Z"></path>
+              <path d="M9 9V6a3 3 0 0 1 6 0v3"></path>
+            </svg>
+            <span class="bag-count" aria-label="No items">0</span>
+          </a>
+          <button
+            class="icon-button menu-toggle"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="mobile-nav"
+          >
+            <span></span><span></span>
+          </button>
+        </div>
+      </div>
+      <form class="search-panel" role="search" hidden>
+        <label for="site-search">Search the collection</label>
+        <div class="search-row">
+          <input id="site-search" type="search" placeholder="Try almonds or dates" />
+          <button type="submit">Search</button>
+        </div>
+        <p>Product search will be connected when the catalog is added.</p>
+      </form>
+      <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation" hidden>
+        <a href="./shop.html">Shop</a>
+        <a href="./shop.html#collection">The pantry</a>
+        <a href="#gifting">Gifting</a>
+        <a href="#story">Our story</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="hero-kicker">SVG DRY FRUITS <span></span> THE EVERYDAY COLLECTION</p>
+          <h1 id="hero-title">Good things,<br />kept <em>close.</em></h1>
+          <p class="hero-description">
+            Dry fruits for the kitchen counter, the desk drawer, and the moments
+            worth sharing.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="./shop.html">Explore the collection <span aria-hidden="true">↗</span></a>
+            <a class="text-link" href="#gifting">A note on gifting</a>
+          </div>
+          <div class="hero-footnote">
+            <span class="footnote-rule"></span>
+            <span>A familiar favourite, in good company.</span>
+          </div>
+        </div>
+        <figure class="hero-image">
+          <img
+            src="./assets/mixed-nuts-reference.jpg"
+            alt="A close-up still life of assorted nuts, including almonds, cashews, and pistachios"
+            fetchpriority="high"
+          />
+          <figcaption>STILL-LIFE REFERENCE PHOTOGRAPHY</figcaption>
+        </figure>
+        <span class="hero-index" aria-hidden="true">01 — THE PANTRY</span>
+      </section>
+
+      <section class="pantry-section" id="pantry" aria-labelledby="pantry-title">
+        <div class="section-heading">
+          <p class="section-kicker">A PLACE TO BEGIN</p>
+          <div class="section-heading-main">
+            <h2 id="pantry-title">Find your way<br />to the <em>good stuff.</em></h2>
+            <p>
+              A few familiar favourites, with room for the ones you haven’t met
+              yet.
+            </p>
+          </div>
+        </div>
+        <div class="category-grid" id="shop">
+          <a class="category-card category-card-nuts" href="./shop.html?category=nuts#collection">
+            <img src="./assets/mixed-fruit-reference.jpg" alt="" loading="lazy" />
+            <span class="category-index">01 / THE PANTRY</span>
+            <span class="category-label">Nuts &amp; almonds <span aria-hidden="true">↗</span></span>
+          </a>
+          <a class="category-card category-card-dates" href="./shop.html?category=fruit#collection">
+            <img src="./assets/dates-reference.jpg" alt="" loading="lazy" />
+            <span class="category-index">02 / SOMETHING SWEET</span>
+            <span class="category-label">Dates &amp; dried fruit <span aria-hidden="true">↗</span></span>
+          </a>
+          <a class="category-card category-card-gifts" href="./shop.html?category=gifting#collection">
+            <img src="./assets/mixed-nuts-reference.jpg" alt="" loading="lazy" />
+            <span class="category-index">03 / TO TAKE ALONG</span>
+            <span class="category-label">Gifts &amp; combinations <span aria-hidden="true">↗</span></span>
+          </a>
+        </div>
+        <p class="image-note">
+          Reference photographs shown for design direction; they are not SVG
+          product photography.
+        </p>
+      </section>
+
+      <section class="gifting-section" id="gifting" aria-labelledby="gifting-title">
+        <div class="gifting-photo">
+          <img src="./assets/dates-reference.jpg" alt="Dates arranged in a small glass dish" loading="lazy" />
+          <span>FOR THE HOST, THE VISIT, THE LITTLE OCCASION</span>
+        </div>
+        <div class="gifting-copy">
+          <p class="section-kicker">A THOUGHT TO TAKE ALONG</p>
+          <h2 id="gifting-title">A small gesture.<br /><em>A good one.</em></h2>
+          <p>
+            A gift can be simple and still feel considered. We’re making room
+            for boxes and combinations that are a pleasure to give.
+          </p>
+          <a class="underlined-link" href="#contact">Explore gifting <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+
+      <section class="story-section" id="story" aria-labelledby="story-title">
+        <p class="section-kicker">A NOTE FROM SVG</p>
+        <h2 id="story-title">For the jar by the kettle.<br />For the friend at the door.<br /><em>For keeping close.</em></h2>
+        <a class="underlined-link" href="#contact">A little about us <span aria-hidden="true">↗</span></a>
+      </section>
+
+      <section class="contact-strip" id="contact" aria-label="Brand contact information">
+        <p>Something you’d like to know?</p>
+        <span>Business contact details will be added here.</span>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-main">
+        <div class="footer-brand">
+          <a class="wordmark footer-wordmark" href="./index.html" aria-label="SVG Dry Fruits home">
+              <img src="./assets/svg-dry-fruits-logo.jpg" alt="" />
+          </a>
+          <p>Good things, kept close.</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a href="./shop.html">Shop</a>
+          <a href="./shop.html#collection">The pantry</a>
+          <a href="#gifting">Gifting</a>
+          <a href="#story">Our story</a>
+        </nav>
+        <p class="footer-note">© <span id="year"></span> SVG Dry Fruits</p>
+      </div>
+      <p class="preview-disclaimer">
+        Design study. The original logo and brand photography were not present
+        in the project folder. Images are temporary stock references; product
+        assortment and business details are not yet connected.
+      </p>
+    </footer>
+    <p class="sr-only" role="status" aria-live="polite" id="status-message"></p>
+  </body>
+</html>
