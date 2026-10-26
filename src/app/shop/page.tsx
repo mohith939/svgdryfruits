@@ -9,29 +9,9 @@ export const metadata: Metadata = {
   description: "Wholesome nuts, dried fruits and natural foods, carefully sourced from trusted growers.",
 };
 
-const DEFAULT_CATEGORIES = REAL_CATEGORIES.map((c) => ({
-  id: c.id,
-  slug: c.slug,
-  name: c.name,
-  imageUrl: c.imageUrl,
-}));
+const DEFAULT_CATEGORIES: { id: string; slug: string; name: string; imageUrl?: string | null }[] = [];
 
-const DEFAULT_PRODUCTS: ShopProduct[] = REAL_PRODUCTS.map((p) => ({
-  id: p.id,
-  slug: p.slug,
-  name: p.name,
-  categorySlug: p.categorySlug,
-  description: p.description,
-  imageUrl: p.imageUrl,
-  variants: p.variants.map((v) => ({
-    id: v.id,
-    sku: v.sku,
-    label: v.label,
-    pricePaise: v.pricePaise,
-    comparePricePaise: v.comparePricePaise,
-    stock: v.stock,
-  })),
-}));
+const DEFAULT_PRODUCTS: ShopProduct[] = [];
 
 type Params = { category?: string };
 

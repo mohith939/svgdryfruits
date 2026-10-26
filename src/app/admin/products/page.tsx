@@ -6,6 +6,7 @@ import { categories, products, variants } from "@/db/schema";
 import { getAdminSession } from "@/lib/auth";
 import { formatINR } from "@/lib/money";
 import { AdminProductRowActions } from "@/components/AdminProductRowActions";
+import { AdminCatalogControls } from "@/components/AdminCatalogControls";
 
 export const dynamic = "force-dynamic";
 
@@ -209,6 +210,10 @@ export default async function AdminProductsPage({
         <Link href="/admin/products/new" className="admin-v3-btn-add">
           <span>+ Add New Product</span>
         </Link>
+
+        <div style={{ marginLeft: "auto" }}>
+          <AdminCatalogControls />
+        </div>
       </form>
 
       {/* Products Table Card */}

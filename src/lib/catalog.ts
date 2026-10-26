@@ -82,7 +82,7 @@ export async function listProducts(opts: { categorySlug?: string; q?: string; co
       .orderBy(asc(products.name));
 
     if (!rows.length) {
-      return getFallbackProducts(opts);
+      return [];
     }
 
     const productIds = rows.map((r) => r.product.id);
@@ -160,12 +160,10 @@ export async function getProduct(slug: string) {
       return { ...row.product, category: row.category, variants: finalVariants };
     }
 
-    const fallback = REAL_PRODUCTS_BY_SLUG.get(slug);
-    return fallback ? toCatalogProductShape(fallback) : null;
+    return null;
   } catch (err) {
-    console.warn("getProduct lookup fallback:", err);
-    const fallback = REAL_PRODUCTS_BY_SLUG.get(slug);
-    return fallback ? toCatalogProductShape(fallback) : null;
+    console.warn("getProduct lookup error:", err);
+    return null;
   }
 }
 
@@ -178,29 +176,9 @@ export async function listCategories() {
       .where(eq(categories.active, true))
       .orderBy(asc(categories.sortOrder));
 
-    if (rows.length > 0) return rows;
-
-    return REAL_CATEGORIES.map((c) => ({
-      id: c.id,
-      slug: c.slug,
-      name: c.name,
-      description: c.description,
-      imageUrl: c.imageUrl,
-      sortOrder: c.sortOrder,
-      active: true,
-      createdAt: new Date(),
-    }));
+    return rows;
   } catch (err) {
-    console.warn("listCategories query fallback:", err);
-    return REAL_CATEGORIES.map((c) => ({
-      id: c.id,
-      slug: c.slug,
-      name: c.name,
-      description: c.description,
-      imageUrl: c.imageUrl,
-      sortOrder: c.sortOrder,
-      active: true,
-      createdAt: new Date(),
-    }));
+    console.warn("listCategories query error:", err);
+    return [];
   }
 }

@@ -235,17 +235,6 @@ export async function createLocalDb(dataDir?: string): Promise<Db> {
     await client.query('ALTER TABLE "coupons" ADD COLUMN IF NOT EXISTS "description" text;');
   } catch {}
 
-  // Auto-seed real catalog if products count is 0 without blocking cold start
-  try {
-    client.query("SELECT count(*) as count FROM products;").then(async (prodCheck: any) => {
-      if (Number(prodCheck.rows?.[0]?.count || 0) === 0) {
-        const { seedRealData } = await import("../../scripts/seed");
-        await seedRealData().catch(() => {});
-      }
-    }).catch(() => {});
-  } catch {}
-
-
   return db;
 }
 

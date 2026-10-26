@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ImageUploader } from "@/components/ImageUploader";
 import { MultiImageUploader } from "@/components/MultiImageUploader";
+import { REAL_PRODUCTS } from "@/lib/catalog-data";
 
 type Category = { id: string; name: string; slug: string };
 
@@ -95,6 +96,35 @@ export default function NewProductPage() {
     ]);
   }
 
+  function handleSelectPreset(slug: string) {
+    if (!slug) return;
+    const p = REAL_PRODUCTS.find((item) => item.slug === slug);
+    if (!p) return;
+    const matchedCat = categories.find((c) => c.slug === p.categorySlug);
+    setForm((prev) => ({
+      ...prev,
+      name: p.name,
+      slug: p.slug,
+      description: p.description,
+      categoryId: matchedCat ? matchedCat.id : prev.categoryId,
+      imageUrl: p.imageUrl,
+      images: [p.imageUrl],
+      isCombo: p.isCombo,
+      active: true,
+    }));
+    setVariants(
+      p.variants.map((v) => ({
+        label: v.label,
+        sku: v.sku,
+        priceINR: Math.round(v.pricePaise / 100),
+        compareINR: v.comparePricePaise ? Math.round(v.comparePricePaise / 100) : "",
+        stock: v.stock,
+        lowStockThreshold: 5,
+        active: true,
+      }))
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -180,6 +210,30 @@ export default function NewProductPage() {
       <form className="admin-form" onSubmit={handleSubmit}>
         <div className="admin-card">
           <h2>1. Basic Information &amp; Image</h2>
+
+          <div style={{ background: "#F6F5F2", border: "1px dashed #D6C8B5", borderRadius: 8, padding: "12px 16px", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+              <div>
+                <strong style={{ fontSize: 13, color: "#0E3626" }}>⚡ Quick-Fill with Realistic Dry Fruit Preset</strong>
+                <p style={{ margin: 0, fontSize: 12, color: "#7C7265" }}>
+                  Optionally pre-fill authentic product title, description, pack sizes (250g, 500g, 1kg), INR prices, and HD photo.
+                </p>
+              </div>
+              <select
+                onChange={(e) => handleSelectPreset(e.target.value)}
+                defaultValue=""
+                style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid #D6C8B5", background: "#FFFFFF", fontSize: 13, fontWeight: 500 }}
+              >
+                <option value="">— Choose a Dry Fruit Preset —</option>
+                {REAL_PRODUCTS.map((p) => (
+                  <option key={p.slug} value={p.slug}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="form-group-row">
             <div className="form-group">
               <label htmlFor="pname">Product Name *</label>

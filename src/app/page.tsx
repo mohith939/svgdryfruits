@@ -8,6 +8,7 @@ import { ThreeSizesSection } from "@/components/ThreeSizesSection";
 import { StorySection } from "@/components/StorySection";
 import { FramerReveal } from "@/components/FramerReveal";
 import { HowItWorks } from "@/components/HowItWorks";
+import { listCategories, listProducts } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +34,36 @@ export default async function Home() {
   const igPosts = instagramPosts();
   const wa = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "");
 
+  const [dbProducts, dbCategories] = await Promise.all([
+    listProducts().catch(() => []),
+    listCategories().catch(() => []),
+  ]);
+
+  const formattedProducts = dbProducts.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    imageUrl: p.imageUrl,
+    categorySlug: p.category?.slug,
+    variants: p.variants.map((v) => ({
+      id: v.id,
+      label: v.label,
+      pricePaise: v.pricePaise,
+      comparePricePaise: v.comparePricePaise,
+    })),
+  }));
+
+  const formattedCategories = dbCategories.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    imageUrl: c.imageUrl,
+  }));
+
   return (
     <>
       <AnimatedHero />
-      <CollectionSection />
+      <CollectionSection initialProducts={formattedProducts} initialCategories={formattedCategories} />
       <WhyChooseSection />
 
       <div className="marquee" aria-hidden="true">
