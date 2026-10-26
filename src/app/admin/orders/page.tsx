@@ -152,11 +152,13 @@ export default function AdminOrdersPage() {
     });
   }, [ordersList, search, statusFilter, dateFilter]);
 
-  // KPI Metrics (Matching reference mockup values accurately)
-  const totalOrdersCount = ordersList.length >= 10 ? 128 : Math.max(ordersList.length, 128);
-  const pendingCount = ordersList.filter((o) => normalizeStatus(o.fulfillmentStatus) === "pending").length >= 5 ? 12 : 12;
-  const processingCount = ordersList.filter((o) => normalizeStatus(o.fulfillmentStatus) === "processing").length >= 2 ? 8 : 8;
-  const todayRevenuePaise = 18465000; // ₹1,84,650 matching reference mockup
+  // Real Dynamic KPI Metrics from Database Orders
+  const totalOrdersCount = ordersList.length;
+  const pendingCount = ordersList.filter((o) => normalizeStatus(o.fulfillmentStatus) === "pending").length;
+  const processingCount = ordersList.filter((o) => normalizeStatus(o.fulfillmentStatus) === "processing").length;
+  const totalRevenuePaise = ordersList
+    .filter((o) => o.paymentStatus === "paid")
+    .reduce((sum, o) => sum + o.totalPaise, 0);
 
   // Pagination
   const totalItems = filtered.length;
@@ -395,15 +397,15 @@ export default function AdminOrdersPage() {
           <img src="/assets/singlepistaproduct.png" alt="" className="admin-kpi-thumb" />
         </div>
 
-        {/* Card 4: ₹1,84,650 REVENUE (TODAY) */}
+        {/* Card 4: Total Revenue */}
         <div className="admin-v3-kpi-card">
           <div className="admin-v3-kpi-left">
             <div className="admin-v3-kpi-icon-box" style={{ background: "#EDF7EE", color: "#15803D" }}>
               <span style={{ fontSize: 18, fontWeight: 700 }}>₹</span>
             </div>
             <div className="admin-v3-kpi-info">
-              <span className="admin-v3-kpi-num">{formatINR(todayRevenuePaise)}</span>
-              <span className="admin-v3-kpi-label">REVENUE (TODAY)</span>
+              <span className="admin-v3-kpi-num">{formatINR(totalRevenuePaise)}</span>
+              <span className="admin-v3-kpi-label">TOTAL REVENUE</span>
             </div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}

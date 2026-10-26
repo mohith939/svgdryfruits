@@ -45,6 +45,7 @@ export async function POST(
     if (restock) {
       const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));
       for (const item of items) {
+        if (!item.variantId) continue;
         await tx
           .update(variants)
           .set({ stock: sql`${variants.stock} + ${item.quantity}` })

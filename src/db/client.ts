@@ -233,6 +233,7 @@ export async function createLocalDb(dataDir?: string): Promise<Db> {
     await client.query('ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "images" jsonb DEFAULT \'[]\'::jsonb;');
     await client.query('ALTER TABLE "coupons" ADD COLUMN IF NOT EXISTS "name" text;');
     await client.query('ALTER TABLE "coupons" ADD COLUMN IF NOT EXISTS "description" text;');
+    await client.query('ALTER TABLE "order_items" ALTER COLUMN "variant_id" DROP NOT NULL;');
   } catch {}
 
   return db;

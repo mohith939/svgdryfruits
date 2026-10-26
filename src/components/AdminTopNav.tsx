@@ -188,7 +188,17 @@ export function AdminTopNav({ adminEmail }: AdminTopNavProps) {
               <Link href="/admin/settings" className="admin-v4-dropdown-item" onClick={() => setShowProfileMenu(false)}>
                 Store Settings
               </Link>
-              <form action="/api/admin/auth/logout" method="POST">
+              <form
+                action="/api/admin/auth/logout"
+                method="POST"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await fetch("/api/admin/auth/logout", { method: "POST" });
+                  } catch {}
+                  window.location.href = "/admin/login";
+                }}
+              >
                 <button type="submit" className="admin-v4-dropdown-logout">
                   Sign out
                 </button>
