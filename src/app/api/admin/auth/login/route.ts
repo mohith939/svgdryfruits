@@ -22,7 +22,11 @@ export async function POST(req: Request) {
     const { email, password } = parsed.data;
 
     // Bootstrap initial admin if environment variables are provided and no admin exists
-    await bootstrapAdminFromEnv();
+    try {
+      await bootstrapAdminFromEnv();
+    } catch (bootErr) {
+      console.warn("Bootstrap admin notice:", bootErr);
+    }
 
     const db = await getDb();
     const [admin] = await db
@@ -52,8 +56,9 @@ export async function POST(req: Request) {
         email: admin.email,
       },
     });
-  } catch (err: unknown) {
+  } catch (err: any) {
     console.error("Admin login error:", err);
-    return NextResponse.json({ error: "Authentication system error" }, { status: 500 });
+    return NextResponse.json({ error: err?.message || "Authentication system error" }, { status: 500 });
   }
 }
+

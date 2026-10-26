@@ -36,8 +36,13 @@ export async function bootstrapAdminFromEnv() {
       passwordHash,
     });
     console.log(`[AUTH] Bootstrapped admin: ${email}`);
+  } else if (!verifyPassword(password, existing.passwordHash)) {
+    const passwordHash = hashPassword(password);
+    await db.update(admins).set({ passwordHash }).where(eq(admins.id, existing.id));
+    console.log(`[AUTH] Updated admin password for: ${email}`);
   }
 }
+
 
 export async function createAdminSession(adminId: string) {
   const rawToken = crypto.randomBytes(32).toString("hex");
