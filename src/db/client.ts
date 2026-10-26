@@ -113,7 +113,8 @@ export async function createLocalDb(dataDir?: string): Promise<Db> {
 
     if (!migrationSucceeded) {
       try {
-        await client.query(`
+        const executeDdl = client.exec ? (sql: string) => client.exec(sql) : (sql: string) => client.query(sql);
+        await executeDdl(`
           CREATE TABLE IF NOT EXISTS "admins" (
             "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
             "email" text NOT NULL UNIQUE,
