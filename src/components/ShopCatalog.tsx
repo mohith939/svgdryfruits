@@ -68,16 +68,16 @@ export function ShopCatalog({ initialProducts, activeCategorySlug, initialCatego
   // Drag-to-scroll and arrow navigation ref & state
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [isMouseDown, setIsMouseDown] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeftState, setScrollLeftState] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+  const hasDraggedRef = useRef(false);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!tabsContainerRef.current) return;
     setIsMouseDown(true);
-    setIsDragging(false);
-    setStartX(e.pageX - tabsContainerRef.current.offsetLeft);
-    setScrollLeftState(tabsContainerRef.current.scrollLeft);
+    hasDraggedRef.current = false;
+    startXRef.current = e.pageX - tabsContainerRef.current.offsetLeft;
+    scrollLeftRef.current = tabsContainerRef.current.scrollLeft;
   };
 
   const handleMouseLeave = () => {
@@ -86,19 +86,17 @@ export function ShopCatalog({ initialProducts, activeCategorySlug, initialCatego
 
   const handleMouseUp = () => {
     setIsMouseDown(false);
-    // slight delay so tab click doesn't trigger if user was dragging
-    setTimeout(() => setIsDragging(false), 80);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isMouseDown || !tabsContainerRef.current) return;
     e.preventDefault();
     const x = e.pageX - tabsContainerRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    if (Math.abs(walk) > 4) {
-      setIsDragging(true);
+    const walk = (x - startXRef.current) * 1.5;
+    if (Math.abs(walk) > 8) {
+      hasDraggedRef.current = true;
     }
-    tabsContainerRef.current.scrollLeft = scrollLeftState - walk;
+    tabsContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
   };
 
   const scrollTabs = (direction: "left" | "right") => {
@@ -256,10 +254,11 @@ export function ShopCatalog({ initialProducts, activeCategorySlug, initialCatego
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => {
-                    if (!isDragging) setSelectedCat(tab.id);
+                    if (!hasDraggedRef.current) {
+                      setSelectedCat(tab.id);
+                    }
                   }}
                   className={`eoc-tab-card${isActive ? " is-active" : ""}`}
-                  style={{ pointerEvents: isMouseDown ? "none" : "auto" }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -268,8 +267,9 @@ export function ShopCatalog({ initialProducts, activeCategorySlug, initialCatego
                     className="eoc-tab-card-img"
                     aria-hidden="true"
                     draggable={false}
+                    style={{ pointerEvents: "none" }}
                   />
-                  <span className="eoc-tab-card-label">{tab.label}</span>
+                  <span className="eoc-tab-card-label" style={{ pointerEvents: "none" }}>{tab.label}</span>
                   {isActive && <span className="eoc-tab-active-bar" />}
                 </button>
               );

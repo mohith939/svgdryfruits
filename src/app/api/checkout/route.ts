@@ -3,10 +3,11 @@ import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { orderItems, orders } from "@/db/schema";
+import { categories, orderItems, orders, products, variants } from "@/db/schema";
 import { priceCart } from "@/lib/cart-server";
 import { InsufficientStockError, reserveStock } from "@/lib/inventory";
 import { createGatewayOrder } from "@/lib/razorpay";
+import { findCatalogVariant, REAL_CATEGORIES_BY_SLUG } from "@/lib/catalog-data";
 
 const checkoutSchema = z.object({
   customer: z.object({
@@ -77,6 +78,48 @@ export async function POST(req: Request) {
     });
 
     const db = await getDb();
+
+    // Ensure referenced variants exist in database (e.g. fresh lambda cold start)
+    for (const line of priced.lines) {
+      const [existingVar] = await db.select().from(variants).where(eq(variants.id, line.variantId)).limit(1);
+      if (!existingVar) {
+        const catalogItem = findCatalogVariant(line.variantId);
+        if (catalogItem) {
+          const cat = REAL_CATEGORIES_BY_SLUG.get(catalogItem.product.categorySlug);
+          if (cat) {
+            await db.insert(categories).values({
+              id: cat.id,
+              slug: cat.slug,
+              name: cat.name,
+              description: cat.description,
+              imageUrl: cat.imageUrl,
+              sortOrder: cat.sortOrder,
+              active: true,
+            }).onConflictDoNothing();
+          }
+          await db.insert(products).values({
+            id: catalogItem.product.id,
+            slug: catalogItem.product.slug,
+            name: catalogItem.product.name,
+            description: catalogItem.product.description,
+            categoryId: cat?.id ?? null,
+            imageUrl: catalogItem.product.imageUrl,
+            isCombo: catalogItem.product.isCombo,
+            active: true,
+          }).onConflictDoNothing();
+          await db.insert(variants).values({
+            id: catalogItem.variant.id,
+            productId: catalogItem.product.id,
+            sku: catalogItem.variant.sku,
+            label: catalogItem.variant.label,
+            pricePaise: catalogItem.variant.pricePaise,
+            comparePricePaise: catalogItem.variant.comparePricePaise,
+            stock: catalogItem.variant.stock,
+            active: true,
+          }).onConflictDoNothing();
+        }
+      }
+    }
 
     // Insert order in pending state
     const [createdOrder] = await db.insert(orders).values({

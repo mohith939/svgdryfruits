@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { categories, products, shippingSettings, variants } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import { REAL_CATEGORIES, REAL_PRODUCTS } from "../../../../../scripts/seed";
+import { REAL_CATEGORIES, REAL_PRODUCTS } from "@/lib/catalog-data";
 
 export async function POST() {
   try {
@@ -19,10 +19,9 @@ export async function POST() {
     if (toDeleteIds.length > 0) {
       await db.delete(variants).where(inArray(variants.productId, toDeleteIds));
       await db.delete(products).where(inArray(products.id, toDeleteIds));
-      console.log(`Deleted ${toDeleteIds.length} demo product(s).`);
     }
 
-    // 2. Upsert categories
+    // 2. Upsert categories with stable IDs
     const categoryMap = new Map<string, string>();
     for (const cat of REAL_CATEGORIES) {
       const [existing] = await db.select().from(categories).where(eq(categories.slug, cat.slug)).limit(1);
@@ -31,16 +30,25 @@ export async function POST() {
           name: cat.name,
           description: cat.description,
           sortOrder: cat.sortOrder,
+          imageUrl: cat.imageUrl,
           active: true,
         }).where(eq(categories.id, existing.id));
         categoryMap.set(cat.slug, existing.id);
       } else {
-        const [inserted] = await db.insert(categories).values(cat).returning();
+        const [inserted] = await db.insert(categories).values({
+          id: cat.id,
+          slug: cat.slug,
+          name: cat.name,
+          description: cat.description,
+          imageUrl: cat.imageUrl,
+          sortOrder: cat.sortOrder,
+          active: true,
+        }).returning();
         categoryMap.set(cat.slug, inserted.id);
       }
     }
 
-    // 3. Upsert real products and variants
+    // 3. Upsert real products and variants with stable IDs
     const synced = [];
     for (const p of REAL_PRODUCTS) {
       const categoryId = categoryMap.get(p.categorySlug) || null;
@@ -60,6 +68,7 @@ export async function POST() {
         prodId = existing.id;
       } else {
         const [inserted] = await db.insert(products).values({
+          id: p.id,
           slug: p.slug,
           name: p.name,
           description: p.description,
@@ -86,6 +95,7 @@ export async function POST() {
           }).where(eq(variants.id, existingVar.id));
         } else {
           await db.insert(variants).values({
+            id: v.id,
             productId: prodId,
             sku: v.sku,
             label: v.label,
