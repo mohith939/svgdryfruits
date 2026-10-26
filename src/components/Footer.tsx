@@ -22,12 +22,12 @@ const helpLinks = [
   { href: "/contact", label: "Contact Us" },
 ];
 
-const aboutLinks = [
-  { href: "/about", label: "Our Story" },
-  { href: "/about", label: "Our Process" },
+const exploreLinks = [
   { href: "/#why-us", label: "Quality Promise" },
-  { href: "/about", label: "Blog" },
-  { href: "/contact", label: "Careers" },
+  { href: "/#faq", label: "FAQs" },
+  { href: "/combos", label: "Gifting & Combos" },
+  { href: "/contact", label: "Bulk Inquiries" },
+  { href: "/contact", label: "Contact Us" },
 ];
 
 export function Footer() {
@@ -174,11 +174,11 @@ export function Footer() {
             </ul>
           </nav>
 
-          {/* Nav: ABOUT */}
-          <nav className="footer-nav-col" aria-label="About SVG Dry Fruits">
-            <h3 className="footer-col-heading">ABOUT</h3>
+          {/* Nav: EXPLORE */}
+          <nav className="footer-nav-col" aria-label="Explore SVG Dry Fruits">
+            <h3 className="footer-col-heading">EXPLORE</h3>
             <ul className="footer-links-list">
-              {aboutLinks.map((item) => (
+              {exploreLinks.map((item) => (
                 <li key={item.label}>
                   <Link href={item.href} className="footer-nav-link">
                     {item.label}

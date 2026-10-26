@@ -44,8 +44,8 @@ export function WhyChooseSection() {
           <p className="why-choose-desc">
             We go beyond just dry fruits — we bring you a promise of quality, care and a healthier tomorrow.
           </p>
-          <Link href="/about" className="why-choose-cta">
-            LEARN MORE <span aria-hidden="true">→</span>
+          <Link href="/shop" className="why-choose-cta">
+            EXPLORE COLLECTION <span aria-hidden="true">→</span>
           </Link>
         </div>
 

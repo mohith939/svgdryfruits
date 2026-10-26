@@ -25,8 +25,8 @@ export function StorySection() {
           </p>
 
           {/* Link */}
-          <Link href="/about" className="story-cta-link">
-            <span>A little about us</span>
+          <Link href="/shop" className="story-cta-link">
+            <span>Explore our harvest</span>
             <span className="story-cta-arrow" aria-hidden="true">↗</span>
           </Link>
         </div>

@@ -1,86 +1,139 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Icon } from "@/components/Icon";
-import { instagramProfile } from "@/lib/social";
 import { ContactForm } from "@/components/ContactForm";
 
-export const metadata: Metadata = { title: "Contact" };
+export const metadata: Metadata = {
+  title: "Contact Us | SVG Dry Fruits",
+  description:
+    "Get in touch with SVG Dry Fruits for order inquiries, pack sizes, bulk corporate orders, or assistance.",
+};
 
 export default function Contact() {
-  const email = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
-  const wa = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "");
-  const ig = instagramProfile();
-  const hours = process.env.NEXT_PUBLIC_BUSINESS_HOURS;
-  const address = process.env.NEXT_PUBLIC_BUSINESS_ADDRESS;
-
-  const channels = [
-    wa && { icon: "whatsapp", title: "WhatsApp", body: "The quickest way to ask about an order or a product.", label: "Message us", href: `https://wa.me/${wa}` },
-    email && { icon: "mail", title: "Email", body: email, label: "Write to us", href: `mailto:${email}` },
-    ig && { icon: "instagram", title: "Instagram", body: "New arrivals and gift ideas.", label: "Follow us", href: ig, external: true },
-  ].filter(Boolean) as { icon: string; title: string; body: string; label: string; href: string; external?: boolean }[];
-
-  const help = [
-    { icon: "truck", title: "Track an order", body: "Follow your order with its order number.", href: "/track" },
-    { icon: "clock", title: "Shipping policy", body: "How and when orders are sent.", href: "/shipping-policy" },
-    { icon: "leaf", title: "Returns", body: "What to do if something isn’t right.", href: "/return-policy" },
-    { icon: "bag", title: "Your bag", body: "Review items before checkout.", href: "/cart" },
-  ];
+  const email = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "orders@svgdryfruits.com";
+  const rawWa = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") || "918340956469";
+  const displayWa = "+91 83409 56469";
 
   return (
-    <>
-      <section className="shop-intro" aria-labelledby="contact-title">
-        <div className="breadcrumbs"><Link href="/">Home</Link><span aria-hidden="true">/</span><span>Contact</span></div>
-        <div className="shop-intro-row">
-          <h1 id="contact-title">Get in <em>touch.</em></h1>
-          <p>Questions about a product, a pack size or an order? We’re happy to help.</p>
-        </div>
-      </section>
+    <div className="min-contact-page">
+      {/* Breadcrumbs */}
+      <nav className="min-contact-breadcrumbs" aria-label="Breadcrumb">
+        <Link href="/">Home</Link>
+        <span aria-hidden="true">/</span>
+        <span style={{ color: "var(--pine)", fontWeight: 500 }}>Contact</span>
+      </nav>
 
-      <section className="contact-section" aria-label="Contact channels">
-        {channels.length > 0 ? (
-          <ul className="contact-grid">
-            {channels.map((c) => (
-              <li key={c.title} className="contact-card">
-                <Icon className="contact-icon" name={c.icon} size={36} />
-                <h2>{c.title}</h2>
-                <p>{c.body}</p>
-                <a className="underlined-link" href={c.href} {...(c.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{c.label} <span aria-hidden="true">↗</span></a>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="contact-card contact-pending">
-            <Icon className="contact-icon" name="chat" size={36} />
-            <h2>Contact details coming soon</h2>
-            <p>Business contact details will be added here once confirmed by the owner.</p>
+      {/* Hero Header */}
+      <header className="min-contact-hero">
+        <p className="min-contact-kicker">GET IN TOUCH</p>
+        <h1 className="min-contact-title">
+          We’re here to <em>help.</em>
+        </h1>
+        <p className="min-contact-desc">
+          Have questions about our harvest, pack sizes, bulk corporate gifting, or an existing delivery?
+          Reach out through any of the channels below or leave us a message.
+        </p>
+      </header>
+
+      {/* 2-Column Minimalist Layout */}
+      <div className="min-contact-grid">
+        {/* Left Column: Direct Touchpoints & Services */}
+        <div className="min-contact-cards">
+          {/* Card 1: WhatsApp Support */}
+          <div className="min-contact-card">
+            <div className="min-contact-card-top">
+              <span className="min-contact-card-label">
+                <Icon name="whatsapp" size={18} />
+                WhatsApp Support
+              </span>
+              <span className="min-contact-card-badge green">● Active</span>
+            </div>
+            <p className="min-contact-card-val">{displayWa}</p>
+            <p className="min-contact-card-sub">
+              Fastest way to get real-time answers for active orders, delivery updates, and tracking.
+            </p>
+            <a
+              href={`https://wa.me/${rawWa}?text=Hi%20SVG%20Dry%20Fruits,%20I%20have%20an%20enquiry.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-contact-card-link"
+            >
+              <span>Chat on WhatsApp</span>
+              <span aria-hidden="true">↗</span>
+            </a>
           </div>
-        )}
 
-        {(hours || address) && (
-          <ul className="contact-meta">
-            {hours && <li><Icon name="clock" size={22} /><span><strong>Hours</strong>{hours}</span></li>}
-            {address && <li><Icon name="pin" size={22} /><span><strong>Address</strong>{address}</span></li>}
-          </ul>
-        )}
+          {/* Card 2: Email Inquiries */}
+          <div className="min-contact-card">
+            <div className="min-contact-card-top">
+              <span className="min-contact-card-label">
+                <Icon name="mail" size={18} />
+                Email Inquiries
+              </span>
+              <span className="min-contact-card-badge gold">Direct</span>
+            </div>
+            <p className="min-contact-card-val">{email}</p>
+            <p className="min-contact-card-sub">
+              For bulk and corporate quotations, feedback, invoice copies, or general questions.
+            </p>
+            <a
+              href={`mailto:${email}?subject=SVG%20Dry%20Fruits%20Enquiry`}
+              className="min-contact-card-link"
+            >
+              <span>Send an email</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
 
-        <ContactForm />
-      </section>
+          {/* Card 3: Dispatch Center */}
+          <div className="min-contact-card">
+            <div className="min-contact-card-top">
+              <span className="min-contact-card-label">
+                <Icon name="pin" size={18} />
+                Dispatch Center
+              </span>
+              <span className="min-contact-card-badge gold">Bengaluru</span>
+            </div>
+            <p className="min-contact-card-val" style={{ fontSize: 16 }}>
+              SVG Dry Fruits Studio &amp; Packing Center
+            </p>
+            <p className="min-contact-card-sub" style={{ marginBottom: 0 }}>
+              Bengaluru, Karnataka, India — 560038<br />
+              Mon – Sat: 9:00 AM – 7:00 PM IST
+            </p>
+          </div>
 
-      <section className="contact-section" aria-labelledby="help-title">
-        <h2 id="help-title" className="contact-subtitle">Looking for something <em>specific?</em></h2>
-        <ul className="contact-help">
-          {help.map((h) => (
-            <li key={h.href}>
-              <Link href={h.href}>
-                <Icon name={h.icon} size={28} />
-                <strong>{h.title}</strong>
-                <span>{h.body}</span>
-                <Icon className="insta-arrow" name="arrow" size={18} />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </>
+          {/* Quick Helpful Links */}
+          <div className="min-contact-quick-links">
+            <p className="min-contact-quick-links-title">Quick Self-Service</p>
+            <ul className="min-contact-quick-links-list">
+              <li>
+                <Link href="/track">
+                  <span>Track an existing shipment</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/shipping-policy">
+                  <span>Shipping timelines &amp; delivery info</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/return-policy">
+                  <span>Return &amp; refund guidelines</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Right Column: Sleek Form */}
+        <div>
+          <ContactForm />
+        </div>
+      </div>
+    </div>
   );
 }
