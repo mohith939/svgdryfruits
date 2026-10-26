@@ -44,22 +44,55 @@ export async function bootstrapAdminFromEnv() {
 }
 
 
-export async function createAdminSession(adminId: string) {
-  const rawToken = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+const AUTH_SECRET = process.env.ADMIN_SESSION_SECRET || "svg-dry-fruits-secure-admin-session-secret-key-2026";
+
+function createSignedToken(payload: { adminId: string; email: string; csrfToken: string; expiresAt: number }): string {
+  const json = JSON.stringify(payload);
+  const sig = crypto.createHmac("sha256", AUTH_SECRET).update(json).digest("hex");
+  return Buffer.from(`${json}###${sig}`).toString("base64url");
+}
+
+function verifySignedToken(token: string): { adminId: string; email: string; csrfToken: string; expiresAt: number } | null {
+  try {
+    const raw = Buffer.from(token, "base64url").toString("utf8");
+    const [json, sig] = raw.split("###");
+    if (!json || !sig) return null;
+    const expectedSig = crypto.createHmac("sha256", AUTH_SECRET).update(json).digest("hex");
+    if (sig !== expectedSig) return null;
+    const data = JSON.parse(json);
+    if (data.expiresAt <= Date.now()) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export async function createAdminSession(adminId: string, adminEmail?: string) {
+  const email = adminEmail || "svgdryfruits@gmail.com";
   const csrfToken = crypto.randomBytes(24).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
-  const db = await getDb();
-  await db.insert(adminSessions).values({
+  const signedToken = createSignedToken({
     adminId,
-    tokenHash,
+    email,
     csrfToken,
-    expiresAt,
+    expiresAt: expiresAt.getTime(),
   });
 
+  // Record in database if DB is online
+  try {
+    const tokenHash = crypto.createHash("sha256").update(signedToken).digest("hex");
+    const db = await getDb();
+    await db.insert(adminSessions).values({
+      adminId,
+      tokenHash,
+      csrfToken,
+      expiresAt,
+    }).catch(() => {});
+  } catch {}
+
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, rawToken, {
+  cookieStore.set(COOKIE_NAME, signedToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -72,11 +105,24 @@ export async function createAdminSession(adminId: string) {
 
 export async function getAdminSession() {
   const cookieStore = await cookies();
-  const rawToken = cookieStore.get(COOKIE_NAME)?.value;
-  if (!rawToken) return null;
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  if (!token) return null;
 
+  // 1. Verify cryptographic HMAC signature (instant, 0ms, zero-database dependency across all serverless containers)
+  const verified = verifySignedToken(token);
+  if (verified) {
+    return {
+      admin: {
+        id: verified.adminId,
+        email: verified.email,
+      },
+      csrfToken: verified.csrfToken,
+    };
+  }
+
+  // 2. Fallback to legacy database session lookup if older raw token is provided
   try {
-    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const db = await getDb();
     const [row] = await db
       .select({
@@ -90,7 +136,6 @@ export async function getAdminSession() {
 
     if (!row) return null;
 
-    // Check expiration in JavaScript
     if (new Date(row.session.expiresAt).getTime() <= Date.now()) {
       return null;
     }
@@ -111,14 +156,17 @@ export async function getAdminSession() {
 export async function clearAdminSession() {
   try {
     const cookieStore = await cookies();
-    const rawToken = cookieStore.get(COOKIE_NAME)?.value;
-    if (rawToken) {
-      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-      const db = await getDb();
-      await db.delete(adminSessions).where(eq(adminSessions.tokenHash, tokenHash));
+    const token = cookieStore.get(COOKIE_NAME)?.value;
+    if (token) {
+      try {
+        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+        const db = await getDb();
+        await db.delete(adminSessions).where(eq(adminSessions.tokenHash, tokenHash)).catch(() => {});
+      } catch {}
     }
     cookieStore.delete(COOKIE_NAME);
   } catch (err) {
     console.warn("clearAdminSession error:", err);
   }
 }
+

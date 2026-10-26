@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    const { csrfToken } = await createAdminSession(admin.id);
+    const { csrfToken } = await createAdminSession(admin.id, admin.email);
 
     return NextResponse.json({
       ok: true,

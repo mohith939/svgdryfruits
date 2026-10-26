@@ -30,9 +30,9 @@ export function AdminLoginForm() {
         setError(data.error || "Login failed. Please check credentials.");
         setLoading(false);
       } else {
-        router.push("/admin/products");
-        router.refresh();
+        window.location.href = "/admin/orders";
       }
+
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
