@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Icon } from "./Icon";
 import { instagramProfile } from "@/lib/social";
 
@@ -31,8 +32,13 @@ const exploreLinks = [
 ];
 
 export function Footer() {
+  const pathname = usePathname();
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   const wa = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") || "918340956469";
   const ig = instagramProfile() || "https://instagram.com";

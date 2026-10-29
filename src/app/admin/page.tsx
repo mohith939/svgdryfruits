@@ -58,10 +58,18 @@ export default async function AdminOverviewPage() {
 
   return (
     <div className="admin-content">
-      <div className="admin-page-header">
+      <div className="admin-page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1>Dashboard <em>Overview</em></h1>
           <p>Real-time metrics and order activity for SVG Dry Fruits.</p>
+        </div>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <Link href="/admin/products" className="button button-primary">
+            Products &amp; Stock →
+          </Link>
+          <Link href="/admin/products/new" className="button button-secondary">
+            + Add Product
+          </Link>
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useCart } from "@/lib/cart";
 
@@ -14,9 +15,14 @@ const links = [
 ];
 
 export function Header() {
+  const pathname = usePathname();
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
   const count = useCart().reduce((s, l) => s + l.quantity, 0);
+
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   return (
     <header className="site-header">

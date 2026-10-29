@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "./Icon";
 
@@ -18,7 +19,12 @@ export function triggerCartToast(payload: CartToastPayload) {
 }
 
 export function CartToast() {
+  const pathname = usePathname();
   const [toast, setToast] = useState<(CartToastPayload & { id: number }) | null>(null);
+
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   useEffect(() => {
     function handleCartAdd(e: Event) {

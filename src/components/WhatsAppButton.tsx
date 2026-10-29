@@ -1,9 +1,15 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import { Icon } from "./Icon";
 
 export function WhatsAppButton() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
+
   const rawNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
   const cleaned = rawNumber ? rawNumber.replace(/\D/g, "") : "";
   // If no number configured in dev, link to WhatsApp with prefilled message

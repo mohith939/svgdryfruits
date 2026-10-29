@@ -30,7 +30,7 @@ export function AdminLoginForm() {
         setError(data.error || "Login failed. Please check credentials.");
         setLoading(false);
       } else {
-        window.location.href = "/admin/orders";
+        window.location.href = "/admin";
       }
 
     } catch {
