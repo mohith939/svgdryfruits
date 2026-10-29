@@ -111,5 +111,13 @@ export async function POST(req: Request) {
     }
   }
 
+  try {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/admin/products");
+    revalidatePath("/shop");
+    revalidatePath("/");
+    revalidatePath(`/products/${product.slug}`);
+  } catch {}
+
   return NextResponse.json({ ok: true, product });
 }

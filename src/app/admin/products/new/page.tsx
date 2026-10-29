@@ -180,8 +180,7 @@ export default function NewProductPage() {
         setError(data.error || "Failed to create product");
         setLoading(false);
       } else {
-        router.push("/admin/products");
-        router.refresh();
+        window.location.href = "/admin/products";
       }
     } catch {
       setError("An unexpected error occurred. Please try again.");

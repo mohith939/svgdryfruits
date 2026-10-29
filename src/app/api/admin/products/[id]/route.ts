@@ -66,6 +66,14 @@ export async function PUT(
     .where(eq(products.id, id))
     .returning();
 
+  try {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/admin/products");
+    revalidatePath("/shop");
+    revalidatePath("/");
+    if (updated?.slug) revalidatePath(`/products/${updated.slug}`);
+  } catch {}
+
   return NextResponse.json({ ok: true, product: updated });
 }
 
@@ -104,6 +112,13 @@ export async function DELETE(
 
     // 5. Delete product permanently
     await db.delete(products).where(eq(products.id, id));
+
+    try {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath("/admin/products");
+      revalidatePath("/shop");
+      revalidatePath("/");
+    } catch {}
 
     return NextResponse.json({ ok: true, deleted: true, message: "Product deleted permanently." });
   } catch (err: any) {

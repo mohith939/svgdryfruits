@@ -1,0 +1,8 @@
+.data
+backup
+tests
+legacy-preview
+.agents
+.claude
+scripts
+*.log
