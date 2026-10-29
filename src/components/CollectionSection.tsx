@@ -201,7 +201,7 @@ export function CollectionSection({
               Fresh Harvest Arriving Soon
             </p>
             <p style={{ fontSize: 15, maxWidth: 520, margin: "0 auto 24px", color: "#7C7265", lineHeight: 1.6 }}>
-              Our collection is currently being prepared. Check back shortly to explore our newly added artisanal dry fruits, crunchy nuts, and gift boxes.
+              Our collection is currently being prepared. Check back shortly to explore our newly added artisanal dry fruits, crunchy nuts, and curated combos.
             </p>
             <Link href="/contact" className="coll-view-all-btn">
               Contact Store for Orders <span aria-hidden="true">→</span>

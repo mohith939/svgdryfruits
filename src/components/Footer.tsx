@@ -8,11 +8,10 @@ import { instagramProfile } from "@/lib/social";
 
 const shopLinks = [
   { href: "/categories/nuts", label: "Nuts" },
-  { href: "/shop", label: "Seeds" },
   { href: "/categories/dates-dried-fruit", label: "Dried Fruits" },
-  { href: "/combos", label: "Premium Mix" },
-  { href: "/combos", label: "Gift Packs" },
-  { href: "/shop", label: "Organic" },
+  { href: "/shop", label: "Seeds" },
+  { href: "/shop", label: "Healthy Mix" },
+  { href: "/combos", label: "Combos" },
 ];
 
 const helpLinks = [
@@ -33,8 +32,6 @@ const exploreLinks = [
 
 export function Footer() {
   const pathname = usePathname();
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
 
   if (pathname?.startsWith("/admin")) {
     return null;
@@ -43,34 +40,17 @@ export function Footer() {
   const wa = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") || "918340956469";
   const ig = instagramProfile() || "https://instagram.com";
 
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    setSubscribed(true);
-    setEmail("");
-    setTimeout(() => setSubscribed(false), 5000);
-  };
-
   return (
     <footer className="site-footer-v2" aria-labelledby="footer-brand-title">
       {/* =====================================================================
-          STATIC CORNER INGREDIENTS (ZERO ANIMATION)
+          SINGLE FOOTER BACKGROUND IMAGE
           ===================================================================== */}
-      <div className="footer-decor-layer" aria-hidden="true">
-        {/* Top-Left Corner Earthenware Bowl, Leaves & Walnut (Static, Set Properly) */}
+      <div className="footer-bg-layer" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/assets/footer-decor-top-left.png"
+          src="/assets/footer bg.png"
           alt=""
-          className="footer-decor-top-left"
-        />
-
-        {/* Top-Right Corner Fruits Cluster (Pure fruits, Zero ghost text) */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/assets/footer-tr-decor.png"
-          alt=""
-          className="footer-decor-top-right"
+          className="footer-bg-img"
         />
       </div>
 
@@ -99,47 +79,43 @@ export function Footer() {
               <em className="footer-tagline-italic">Kept Close.</em>
             </h2>
 
-            <p className="footer-blurb-v2">
-              Wholesome dry fruits, thoughtfully sourced and beautifully packed, to bring goodness closer to your everyday moments.
-            </p>
-
             {/* Circular Outlined Social Media Buttons */}
             <div className="footer-social-row" aria-label="Social links">
               <a
-                href={ig}
+                href={ig || "https://instagram.com/svgdryfruits"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="footer-social-btn"
+                className="footer-social-btn footer-social-instagram"
                 aria-label="Follow SVG Dry Fruits on Instagram"
               >
-                <Icon name="instagram" size={17} />
+                <Icon name="instagram" size={18} />
               </a>
               <a
-                href="https://facebook.com"
+                href="https://facebook.com/svgdryfruits"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="footer-social-btn"
+                className="footer-social-btn footer-social-facebook"
                 aria-label="Follow SVG Dry Fruits on Facebook"
               >
-                <Icon name="facebook" size={17} />
+                <Icon name="facebook" size={18} />
               </a>
               <a
-                href="https://youtube.com"
+                href="https://youtube.com/@svgdryfruits"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="footer-social-btn"
+                className="footer-social-btn footer-social-youtube"
                 aria-label="Subscribe to SVG Dry Fruits on YouTube"
               >
-                <Icon name="youtube" size={17} />
+                <Icon name="youtube" size={18} />
               </a>
               <a
                 href={`https://wa.me/${wa}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="footer-social-btn"
+                className="footer-social-btn footer-social-whatsapp"
                 aria-label="Chat with SVG Dry Fruits on WhatsApp"
               >
-                <Icon name="whatsapp" size={17} />
+                <Icon name="whatsapp" size={18} />
               </a>
             </div>
           </div>
@@ -185,35 +161,6 @@ export function Footer() {
               ))}
             </ul>
           </nav>
-
-          {/* Newsletter Column */}
-          <div className="footer-newsletter-col">
-            <h3 className="footer-col-heading">STAY IN THE LOOP</h3>
-            <p className="footer-newsletter-desc">
-              Get exclusive offers, healthy living tips, and new arrivals straight to your inbox.
-            </p>
-
-            <form onSubmit={handleSubscribe} className="footer-newsletter-form">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email address"
-                required
-                className="footer-newsletter-input"
-                aria-label="Email address for newsletter"
-              />
-              <button type="submit" className="footer-newsletter-btn">
-                <span>Subscribe</span>
-                <span aria-hidden="true">→</span>
-              </button>
-            </form>
-            {subscribed && (
-              <p className="footer-newsletter-success">
-                Thank you for subscribing!
-              </p>
-            )}
-          </div>
         </div>
 
         {/* =====================================================================

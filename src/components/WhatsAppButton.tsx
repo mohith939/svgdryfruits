@@ -57,7 +57,7 @@ export function WhatsAppButton() {
         }}
         whileHover={{
           scale: 1.08,
-          boxShadow: "0 14px 34px rgba(7, 61, 38, 0.55)",
+          boxShadow: "0 14px 34px rgba(37, 211, 102, 0.6)",
           transition: { duration: 0.2 },
         }}
         whileTap={{ scale: 0.94 }}

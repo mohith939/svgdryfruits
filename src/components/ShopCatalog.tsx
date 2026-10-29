@@ -45,8 +45,8 @@ const DEFAULT_CATEGORY_ICONS: Record<string, string> = {
   "dried-fruits": "/assets/cat-hd-dried-fruits.png",
   seeds: "/assets/cat-hd-seeds.png",
   "healthy-mix": "/assets/cat-hd-healthy-mix.png",
+  combos: "/assets/cat-hd-gift-boxes.png",
   "gift-boxes": "/assets/cat-hd-gift-boxes.png",
-  organic: "/assets/cat-hd-organic.png",
 };
 
 const FALLBACK_CATEGORY_TABS: CategoryTabItem[] = [
@@ -55,8 +55,7 @@ const FALLBACK_CATEGORY_TABS: CategoryTabItem[] = [
   { id: "dried-fruits", label: "Dried Fruits", icon: "/assets/cat-hd-dried-fruits.png" },
   { id: "seeds", label: "Seeds", icon: "/assets/cat-hd-seeds.png" },
   { id: "healthy-mix", label: "Healthy Mix", icon: "/assets/cat-hd-healthy-mix.png" },
-  { id: "gift-boxes", label: "Gift Boxes", icon: "/assets/cat-hd-gift-boxes.png" },
-  { id: "organic", label: "Organic", icon: "/assets/cat-hd-organic.png" },
+  { id: "combos", label: "Combos", icon: "/assets/cat-hd-gift-boxes.png" },
 ];
 
 export function ShopCatalog({ initialProducts, activeCategorySlug, initialCategories }: ShopCatalogProps) {

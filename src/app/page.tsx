@@ -12,7 +12,7 @@ import { listCategories, listProducts } from "@/lib/catalog";
 
 export const revalidate = 60;
 
-const marquee = ["Almonds", "Cashews", "Pistachios", "Walnuts", "Dates", "Raisins", "Figs", "Apricots", "Gift boxes"];
+const marquee = ["Almonds", "Cashews", "Pistachios", "Walnuts", "Dates", "Raisins", "Figs", "Apricots", "Combos"];
 
 const perks = [
   { icon: "scale", title: "Fixed pack sizes", body: "250 g, 500 g or 1 kg" },

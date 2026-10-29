@@ -30,8 +30,8 @@ export function AnimatedHero() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/assets/hero-bowl-rotating.png"
-              alt="Finest California almonds"
+              src="/assets/mixed dry fruits.png"
+              alt="Finest mixed dry fruits and nuts"
               className="hero-rotating-bowl-img"
             />
           </motion.div>
@@ -66,7 +66,7 @@ export function AnimatedHero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
-              Wholesome California almonds, buttery cashews, festive dates, and artisanal gift boxes. Sourced with care, packed in transparent pantry sizes, delivered fresh to your doorstep.
+              Wholesome California almonds, buttery cashews, festive dates, and curated combos. Sourced with care, packed in transparent pantry sizes, delivered fresh to your doorstep.
             </motion.p>
 
             <motion.div
@@ -105,8 +105,8 @@ export function AnimatedHero() {
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/assets/hero-bowl-rotating.png"
-                alt="Finest California almonds"
+                src="/assets/mixed dry fruits.png"
+                alt="Finest mixed dry fruits and nuts"
                 className="hero-mobile-bowl-img"
               />
             </motion.div>

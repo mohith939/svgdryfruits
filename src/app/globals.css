@@ -558,7 +558,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(18px, 4vw, 56px);
+  gap: clamp(16px, 2.8vw, 42px);
   margin: 0 auto 52px;
   flex-wrap: wrap;
 }
@@ -571,8 +571,8 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 6px 12px 14px;
+  gap: 12px;
+  padding: 8px 14px 18px;
   transition: transform 0.2s ease;
 }
 
@@ -581,24 +581,26 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 }
 
 .coll-tab-icon-wrap {
-  width: 56px;
-  height: 56px;
+  width: clamp(92px, 8.5vw, 126px);
+  height: clamp(92px, 8.5vw, 126px);
   border-radius: 50%;
   overflow: hidden;
   background: #ffffff;
-  border: 1.5px solid #ded5c2;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 2px solid #ded5c2;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 6px;
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  flex-shrink: 0;
 }
 
 .coll-tab-btn.is-active .coll-tab-icon-wrap {
   border-color: #163323;
-  box-shadow: 0 6px 16px rgba(22, 51, 35, 0.18);
-  transform: scale(1.08);
+  border-width: 2.5px;
+  box-shadow: 0 8px 24px rgba(22, 51, 35, 0.22);
+  transform: scale(1.05);
 }
 
 .coll-tab-icon-img {
@@ -611,11 +613,12 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 
 .coll-tab-label {
   font-family: var(--sans);
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 600;
   color: #555b4f;
   letter-spacing: -0.01em;
   transition: color 0.2s ease;
+  white-space: nowrap;
 }
 
 .coll-tab-btn.is-active .coll-tab-label {
@@ -626,9 +629,9 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 .coll-tab-indicator {
   position: absolute;
   bottom: 0;
-  left: 12%;
-  right: 12%;
-  height: 2.5px;
+  left: 8%;
+  right: 8%;
+  height: 3px;
   background: #163323;
   border-radius: 2px;
 }
@@ -1729,7 +1732,7 @@ body { font-size: 17px; line-height: 1.6; }
   width: 58px;
   height: 58px;
   border-radius: 9999px;
-  background: rgba(7, 61, 38, 0.45);
+  background: rgba(37, 211, 102, 0.45);
   pointer-events: none;
   z-index: 1;
 }
@@ -1740,15 +1743,15 @@ body { font-size: 17px; line-height: 1.6; }
   align-items: center;
   gap: 10px;
   padding: 12px 20px 12px 14px;
-  background: #073D26;
+  background: #25D366;
   color: #ffffff !important;
   border-radius: 9999px;
-  box-shadow: 0 10px 28px rgba(7, 61, 38, 0.4), 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 28px rgba(37, 211, 102, 0.45), 0 2px 8px rgba(0, 0, 0, 0.12);
   text-decoration: none;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  border: 1.5px solid #C9A34E;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 .wa-icon-wrap {
   position: relative;
@@ -1763,8 +1766,8 @@ body { font-size: 17px; line-height: 1.6; }
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #C9A34E;
-  border: 2px solid #073D26;
+  background: #ffffff;
+  border: 2px solid #25D366;
 }
 .wa-label-text {
   letter-spacing: .02em;
@@ -3839,8 +3842,8 @@ body { font-size: 17px; line-height: 1.6; }
   padding: 70px 0 30px;
 }
 
-/* Background Static Corner Decor Layers (Zero Animation) */
-.footer-decor-layer {
+/* Background Image Layer (Single Panoramic Footer BG) */
+.footer-bg-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -3848,28 +3851,15 @@ body { font-size: 17px; line-height: 1.6; }
   z-index: 1;
 }
 
-/* Top-Left Corner Ceramic Bowl, Leaves & Walnut (Static, Set Properly) */
-.footer-decor-top-left {
+.footer-bg-img {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 206px;
-  max-width: 22vw;
-  height: auto;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
   pointer-events: none;
-  filter: drop-shadow(0 6px 16px rgba(40, 30, 20, 0.1));
-}
-
-/* Top-Right Corner Fruits Cluster (Static, Pure Fruits with Zero Ghost Text) */
-.footer-decor-top-right {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 166px;
-  max-width: 18vw;
-  height: auto;
-  pointer-events: none;
-  filter: drop-shadow(0 6px 16px rgba(40, 30, 20, 0.1));
+  opacity: 1;
 }
 
 /* Footer Main Container */
@@ -3882,11 +3872,11 @@ body { font-size: 17px; line-height: 1.6; }
   padding: 0 44px;
 }
 
-/* Top Grid Layout */
+/* Top Grid Layout (4 columns now that newsletter is removed) */
 .footer-top-grid {
   display: grid;
-  grid-template-columns: 1.5fr 0.7fr 0.75fr 0.75fr 1.3fr;
-  gap: 36px;
+  grid-template-columns: 2.2fr 1fr 1fr 1fr;
+  gap: clamp(24px, 4vw, 56px);
   align-items: start;
   padding-bottom: 50px;
   border-bottom: 1px solid rgba(180, 160, 130, 0.25);
@@ -3902,8 +3892,8 @@ body { font-size: 17px; line-height: 1.6; }
 .footer-brand-header {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .footer-leaf-emblem {
@@ -3916,19 +3906,21 @@ body { font-size: 17px; line-height: 1.6; }
 .footer-brand-title-wrap {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 14px;
 }
 
 .footer-svg-logo {
-  width: 26px;
-  height: 26px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  border: 2px solid rgba(180, 160, 130, 0.35);
+  flex-shrink: 0;
 }
 
 .footer-brand-kicker {
-  font-size: 0.76rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   color: #123824;
@@ -3940,7 +3932,7 @@ body { font-size: 17px; line-height: 1.6; }
   font-size: clamp(2.1rem, 2.7vw, 2.85rem);
   line-height: 1.1;
   color: #0E3622;
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   font-weight: 400;
   letter-spacing: -0.01em;
 }
@@ -3952,39 +3944,53 @@ body { font-size: 17px; line-height: 1.6; }
 }
 
 .footer-blurb-v2 {
-  font-size: 0.92rem;
-  line-height: 1.6;
-  color: #556658;
-  max-width: 330px;
-  margin: 0 0 22px;
+  display: none;
 }
 
-/* Social Buttons */
+/* Social Buttons (Vibrant Brand Colors) */
 .footer-social-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .footer-social-btn {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  border: 1.5px solid rgba(180, 160, 130, 0.4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #0E3622;
-  background: rgba(255, 255, 255, 0.55);
-  transition: all 0.25s ease;
+  color: #ffffff;
+  border: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
   text-decoration: none;
 }
 
+.footer-social-btn.footer-social-instagram {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  box-shadow: 0 4px 12px rgba(220, 39, 67, 0.32);
+}
+
+.footer-social-btn.footer-social-facebook {
+  background: #1877F2;
+  box-shadow: 0 4px 12px rgba(24, 119, 242, 0.32);
+}
+
+.footer-social-btn.footer-social-youtube {
+  background: #FF0000;
+  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.32);
+}
+
+.footer-social-btn.footer-social-whatsapp {
+  background: #25D366;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.32);
+}
+
 .footer-social-btn:hover {
-  border-color: #0E3622;
-  background: #0E3622;
-  color: #FAF3E8;
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.08);
+  filter: brightness(1.12);
+  color: #ffffff;
 }
 
 /* Nav Columns */
@@ -4012,16 +4018,17 @@ body { font-size: 17px; line-height: 1.6; }
 }
 
 .footer-nav-link {
-  color: #556658;
+  color: #163923;
   text-decoration: none;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
+  font-weight: 550;
   transition: color 0.2s ease, transform 0.2s ease;
   display: inline-block;
 }
 
 .footer-nav-link:hover {
   color: #A77052;
-  transform: translateX(2px);
+  transform: translateX(3px);
 }
 
 /* Newsletter Column */
@@ -4305,20 +4312,17 @@ body { font-size: 17px; line-height: 1.6; }
     grid-template-columns: 1fr;
     gap: 30px;
   }
-  .footer-brand-col,
-  .footer-newsletter-col {
+  .footer-brand-col {
     grid-column: span 1;
+  }
+  .footer-svg-logo {
+    width: 52px;
+    height: 52px;
   }
   .footer-bottom-bar {
     flex-direction: column;
     align-items: flex-start;
     gap: 18px;
-  }
-  .footer-decor-top-left {
-    width: 130px;
-  }
-  .footer-decor-top-right {
-    width: 95px;
   }
   .footer-finstics-wrapper {
     width: 100%;

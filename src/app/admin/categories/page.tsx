@@ -20,8 +20,7 @@ const CATEGORY_ICON_PRESETS = [
   { label: "Dried Fruits Icon", url: "/assets/cat-hd-dried-fruits.png" },
   { label: "Seeds Icon", url: "/assets/cat-hd-seeds.png" },
   { label: "Healthy Mix Icon", url: "/assets/cat-hd-healthy-mix.png" },
-  { label: "Gift Boxes Icon", url: "/assets/cat-hd-gift-boxes.png" },
-  { label: "Organic Icon", url: "/assets/cat-hd-organic.png" },
+  { label: "Combos Icon", url: "/assets/cat-hd-gift-boxes.png" },
   { label: "All Products Icon", url: "/assets/cat-hd-all-products.png" },
 ];
 
