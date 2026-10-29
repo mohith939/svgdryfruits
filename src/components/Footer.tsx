@@ -82,14 +82,6 @@ export function Footer() {
           {/* Brand Column */}
           <div className="footer-brand-col">
             <div className="footer-brand-header">
-              {/* Botanical Leaf Flourish */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/assets/footer-leaf-emblem.png"
-                alt=""
-                className="footer-leaf-emblem"
-                aria-hidden="true"
-              />
               <div className="footer-brand-title-wrap">
                 {/* SVG Dry Fruits Logo */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
