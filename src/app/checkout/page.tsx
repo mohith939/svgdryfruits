@@ -176,7 +176,14 @@ export default function CheckoutPage() {
 
       // Live / Sandbox Razorpay checkout
       if (typeof window !== "undefined" && (window as unknown as { Razorpay?: unknown }).Razorpay) {
-        const RazorpayClass = (window as unknown as { Razorpay: new (opts: unknown) => { open: () => void } }).Razorpay;
+        const RazorpayClass = (
+          window as unknown as {
+            Razorpay: new (opts: unknown) => {
+              open: () => void;
+              on: (event: string, callback: (res: any) => void) => void;
+            };
+          }
+        ).Razorpay;
         const rzp = new RazorpayClass({
           key: orderData.keyId,
           amount: orderData.amountPaise,
@@ -225,6 +232,16 @@ export default function CheckoutPage() {
             },
           },
         });
+
+        rzp.on("payment.failed", function (response: any) {
+          setSubmitting(false);
+          const failureReason =
+            response?.error?.description ||
+            response?.error?.reason ||
+            "Payment failed or was declined. Please try again with another payment method.";
+          setError(failureReason);
+        });
+
         rzp.open();
       } else {
         setError("Payment gateway is still loading. Please wait a moment and try again.");

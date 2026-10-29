@@ -21,9 +21,9 @@ export default async function AdminProductsPage({
   const { q, category } = await searchParams;
   const db = await getDb();
 
-  const allCategories = await db.select().from(categories).orderBy(asc(categories.name));
+  let allCategories = await db.select().from(categories).orderBy(asc(categories.name));
 
-  const rows = await db
+  let rows = await db
     .select({
       product: products,
       category: categories,
@@ -31,6 +31,24 @@ export default async function AdminProductsPage({
     .from(products)
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .orderBy(asc(products.name));
+
+  if (rows.length === 0 && !q && !category) {
+    try {
+      const { seedRealData } = await import("@/lib/seed-catalog");
+      await seedRealData();
+      rows = await db
+        .select({
+          product: products,
+          category: categories,
+        })
+        .from(products)
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .orderBy(asc(products.name));
+      allCategories = await db.select().from(categories).orderBy(asc(categories.name));
+    } catch (e) {
+      console.warn("Auto-seed catalog in admin page:", e);
+    }
+  }
 
   const allItems = [];
   for (const r of rows) {

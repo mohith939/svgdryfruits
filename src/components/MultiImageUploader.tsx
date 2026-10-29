@@ -33,6 +33,48 @@ export function MultiImageUploader({
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  function compressImage(file: File, maxWidth = 1200, quality = 0.85): Promise<File> {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+        return resolve(file);
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(file);
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) return resolve(file);
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" }));
+            },
+            "image/webp",
+            quality
+          );
+        };
+        img.onerror = () => resolve(file);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  }
+
   const handleUploadFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     setUploading(true);
@@ -42,20 +84,35 @@ export function MultiImageUploader({
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        const readyFile = await compressImage(file);
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", readyFile);
 
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          body: formData,
-        });
+        try {
+          const res = await fetch("/api/admin/upload", {
+            method: "POST",
+            body: formData,
+          });
 
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || `Failed to upload ${file.name}`);
-        }
-        if (data.url) {
-          newUrls.push(data.url);
+          const data = await res.json();
+          if (res.ok && data.url) {
+            newUrls.push(data.url);
+          } else {
+            // Local Data URL fallback
+            const dataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(readyFile);
+            });
+            newUrls.push(dataUrl);
+          }
+        } catch {
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(readyFile);
+          });
+          newUrls.push(dataUrl);
         }
       }
 

@@ -37,6 +37,48 @@ export function ImageUploader({
   const [showPresets, setShowPresets] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
+  function compressImage(file: File, maxWidth = 1200, quality = 0.85): Promise<File> {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+        return resolve(file);
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(file);
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) return resolve(file);
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" }));
+            },
+            "image/webp",
+            quality
+          );
+        };
+        img.onerror = () => resolve(file);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handleFile(file: File) {
     if (!file.type.startsWith("image/")) {
       setError("Please select an image file (JPEG, PNG, WebP, SVG).");
@@ -46,8 +88,9 @@ export function ImageUploader({
     setUploading(true);
 
     try {
+      const readyFile = await compressImage(file);
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", readyFile);
 
       const res = await fetch("/api/admin/upload", {
         method: "POST",
@@ -55,13 +98,23 @@ export function ImageUploader({
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to upload image.");
+      if (!res.ok || !data.url) {
+        // Fallback: Read as Data URL directly so user is never blocked
+        const reader = new FileReader();
+        reader.onload = () => {
+          onChange(reader.result as string);
+        };
+        reader.readAsDataURL(readyFile);
       } else {
         onChange(data.url);
       }
     } catch {
-      setError("An unexpected error occurred during upload.");
+      // Safe client-side fallback
+      const reader = new FileReader();
+      reader.onload = () => {
+        onChange(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     } finally {
       setUploading(false);
     }

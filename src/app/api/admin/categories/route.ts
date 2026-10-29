@@ -18,8 +18,7 @@ export async function GET() {
 
     await ensureColumn();
     const db = await getDb();
-
-    const cats = await db
+    let cats = await db
       .select({
         id: categories.id,
         slug: categories.slug,
@@ -35,6 +34,31 @@ export async function GET() {
       .leftJoin(products, eq(products.categoryId, categories.id))
       .groupBy(categories.id)
       .orderBy(asc(categories.sortOrder), asc(categories.name));
+
+    if (cats.length === 0) {
+      try {
+        const { seedRealData } = await import("@/lib/seed-catalog");
+        await seedRealData();
+        cats = await db
+          .select({
+            id: categories.id,
+            slug: categories.slug,
+            name: categories.name,
+            description: categories.description,
+            imageUrl: categories.imageUrl,
+            sortOrder: categories.sortOrder,
+            active: categories.active,
+            createdAt: categories.createdAt,
+            productCount: sql<number>`count(${products.id})::int`,
+          })
+          .from(categories)
+          .leftJoin(products, eq(products.categoryId, categories.id))
+          .groupBy(categories.id)
+          .orderBy(asc(categories.sortOrder), asc(categories.name));
+      } catch (seedErr) {
+        console.warn("Auto-seed categories notice:", seedErr);
+      }
+    }
 
     return NextResponse.json({ categories: cats });
   } catch (err: any) {

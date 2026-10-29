@@ -82,7 +82,7 @@ export async function listProducts(opts: { categorySlug?: string; q?: string; co
       .orderBy(asc(products.name));
 
     if (!rows.length) {
-      return [];
+      return getFallbackProducts(opts);
     }
 
     const productIds = rows.map((r) => r.product.id);
@@ -176,9 +176,29 @@ export async function listCategories() {
       .where(eq(categories.active, true))
       .orderBy(asc(categories.sortOrder));
 
-    return rows;
+    if (rows.length > 0) return rows;
+
+    return REAL_CATEGORIES.map((c) => ({
+      id: c.id,
+      slug: c.slug,
+      name: c.name,
+      description: c.description,
+      imageUrl: c.imageUrl,
+      sortOrder: c.sortOrder,
+      active: true,
+      createdAt: new Date(),
+    }));
   } catch (err) {
     console.warn("listCategories query error:", err);
-    return [];
+    return REAL_CATEGORIES.map((c) => ({
+      id: c.id,
+      slug: c.slug,
+      name: c.name,
+      description: c.description,
+      imageUrl: c.imageUrl,
+      sortOrder: c.sortOrder,
+      active: true,
+      createdAt: new Date(),
+    }));
   }
 }

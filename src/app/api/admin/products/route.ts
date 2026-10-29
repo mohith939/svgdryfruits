@@ -30,7 +30,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const db = await getDb();
-  const rows = await db
+  let rows = await db
     .select({
       product: products,
       category: categories,
@@ -38,6 +38,23 @@ export async function GET() {
     .from(products)
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .orderBy(asc(products.name));
+
+  if (rows.length === 0) {
+    try {
+      const { seedRealData } = await import("@/lib/seed-catalog");
+      await seedRealData();
+      rows = await db
+        .select({
+          product: products,
+          category: categories,
+        })
+        .from(products)
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .orderBy(asc(products.name));
+    } catch (seedErr) {
+      console.warn("Auto-seed error in /api/admin/products:", seedErr);
+    }
+  }
 
   const list = [];
   for (const r of rows) {

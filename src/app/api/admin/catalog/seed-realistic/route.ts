@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
-import { seedRealData } from "@/../scripts/seed";
+import { seedRealData } from "@/lib/seed-catalog";
 
 export async function POST() {
   const session = await getAdminSession();
