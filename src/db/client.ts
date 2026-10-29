@@ -207,6 +207,50 @@ export async function createLocalDb(dataDir?: string): Promise<Db> {
             "usage_limit" integer,
             "times_used" integer DEFAULT 0 NOT NULL
           );
+          CREATE TABLE IF NOT EXISTS "combo_items" (
+            "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+            "combo_variant_id" uuid NOT NULL REFERENCES variants(id) ON DELETE CASCADE,
+            "component_variant_id" uuid NOT NULL REFERENCES variants(id),
+            "quantity" integer DEFAULT 1 NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS "inventory_movements" (
+            "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+            "variant_id" uuid NOT NULL REFERENCES variants(id),
+            "delta" integer NOT NULL,
+            "reason" text NOT NULL,
+            "order_id" uuid,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS "reservations" (
+            "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+            "order_id" uuid NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+            "variant_id" uuid NOT NULL REFERENCES variants(id),
+            "quantity" integer NOT NULL,
+            "status" text DEFAULT 'held' NOT NULL,
+            "expires_at" timestamp with time zone NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS "payments" (
+            "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+            "order_id" uuid NOT NULL REFERENCES orders(id),
+            "razorpay_payment_id" text UNIQUE,
+            "amount_paise" integer NOT NULL,
+            "status" text NOT NULL,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS "webhook_events" (
+            "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+            "event_id" text NOT NULL UNIQUE,
+            "type" text NOT NULL,
+            "processed_at" timestamp with time zone DEFAULT now() NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS "refunds" (
+            "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+            "order_id" uuid NOT NULL REFERENCES orders(id),
+            "amount_paise" integer NOT NULL,
+            "reason" text,
+            "razorpay_refund_id" text UNIQUE,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+          );
           CREATE TABLE IF NOT EXISTS "shipping_settings" (
             "id" integer PRIMARY KEY DEFAULT 1,
             "flat_charge_paise" integer DEFAULT 0 NOT NULL,
