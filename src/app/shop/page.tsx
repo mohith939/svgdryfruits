@@ -3,7 +3,7 @@ import { listCategories, listProducts } from "@/lib/catalog";
 import { ShopCatalog, type ShopProduct } from "@/components/ShopCatalog";
 import { REAL_CATEGORIES, REAL_PRODUCTS } from "@/lib/catalog-data";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 export const metadata: Metadata = {
   title: "Explore Our Collection — SVG Dry Fruits",
   description: "Wholesome nuts, dried fruits and natural foods, carefully sourced from trusted growers.",

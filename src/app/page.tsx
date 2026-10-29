@@ -10,7 +10,7 @@ import { FramerReveal } from "@/components/FramerReveal";
 import { HowItWorks } from "@/components/HowItWorks";
 import { listCategories, listProducts } from "@/lib/catalog";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const marquee = ["Almonds", "Cashews", "Pistachios", "Walnuts", "Dates", "Raisins", "Figs", "Apricots", "Gift boxes"];
 

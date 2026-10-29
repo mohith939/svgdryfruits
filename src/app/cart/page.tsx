@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { pruneMissing, setQuantity, useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/money";
 
@@ -240,8 +240,36 @@ export default function CartPage() {
     );
   }
 
-  // Loading / Validating State
-  if (!data) {
+  const optimisticData: Priced | null = useMemo(() => {
+    if (!cart.length) return null;
+    const subtotal = cart.reduce((sum, l) => sum + (l.unitPricePaise || 0) * l.quantity, 0);
+    return {
+      lines: cart.map((l) => ({
+        variantId: l.variantId,
+        productSlug: "",
+        imageUrl: l.imageUrl || null,
+        productName: l.productName || "Product Item",
+        variantLabel: l.variantLabel || "",
+        unitPricePaise: l.unitPricePaise || 0,
+        quantity: l.quantity,
+        available: 99,
+      })),
+      totals: {
+        subtotalPaise: subtotal,
+        discountPaise: 0,
+        shippingPaise: subtotal >= 100000 || subtotal === 0 ? 0 : 5000,
+        totalPaise: subtotal >= 100000 || subtotal === 0 ? subtotal : subtotal + 5000,
+      },
+      missing: [],
+      freeThresholdPaise: 100000,
+      couponError: null,
+    };
+  }, [cart]);
+
+  const activeData = data || optimisticData;
+
+  // Loading State only if neither server data nor optimistic data exists
+  if (!activeData) {
     return (
       <div className="cart-v3-page-wrapper">
         <div className="cart-v3-container">
@@ -252,25 +280,21 @@ export default function CartPage() {
                 Good Choices<br />
                 Go a Long Way
               </h1>
-              <p className="cart-v3-subtitle">
-                Wholesome dry fruits, closer to a healthier you.<br />
-                Review your cart and continue to bring home nature&apos;s best.
-              </p>
             </div>
           </div>
-          <div style={{ textAlign: "center", padding: "80px 20px", color: "#6B6255" }}>
-            Preparing your fresh harvest bag…
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#6B6255" }}>
+            Loading cart…
           </div>
         </div>
       </div>
     );
   }
 
-  const itemCount = data.lines.reduce((s, l) => s + l.quantity, 0);
-  const subtotal = data.totals.subtotalPaise;
-  const shippingPaise = data.totals.shippingPaise;
-  const discountPaise = data.totals.discountPaise;
-  const totalPaise = data.totals.totalPaise;
+  const itemCount = activeData.lines.reduce((s, l) => s + l.quantity, 0);
+  const subtotal = activeData.totals.subtotalPaise;
+  const shippingPaise = activeData.totals.shippingPaise;
+  const discountPaise = activeData.totals.discountPaise;
+  const totalPaise = activeData.totals.totalPaise;
 
   return (
     <div className="cart-v3-page-wrapper">
@@ -322,7 +346,7 @@ export default function CartPage() {
 
             {/* Table Body */}
             <div className="cart-v3-table-body">
-              {data.lines.map((l) => (
+              {activeData.lines.map((l) => (
                 <div key={l.variantId} className="cart-v3-item-row">
                   {/* PRODUCT */}
                   <div className="cart-v3-cell-product">
@@ -511,9 +535,9 @@ export default function CartPage() {
                     )}
                   </div>
                 )}
-                {data.couponError && (
+                {activeData.couponError && (
                   <p style={{ color: "#9B1C1C", fontSize: 11.5, margin: "4px 0 0" }}>
-                    {data.couponError}
+                    {activeData.couponError}
                   </p>
                 )}
               </div>

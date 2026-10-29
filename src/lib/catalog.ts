@@ -82,7 +82,7 @@ export async function listProducts(opts: { categorySlug?: string; q?: string; co
       .orderBy(asc(products.name));
 
     if (!rows.length) {
-      return getFallbackProducts(opts);
+      return [];
     }
 
     const productIds = rows.map((r) => r.product.id);
@@ -102,26 +102,12 @@ export async function listProducts(opts: { categorySlug?: string; q?: string; co
     }
 
     return rows.map((r) => {
-      const dbVs = variantsByProductId.get(r.product.id) ?? [];
-      // If DB has product but no variants, fill from catalog
-      const vs = dbVs.length
-        ? dbVs
-        : (REAL_PRODUCTS_BY_SLUG.get(r.product.slug)?.variants.map((v) => ({
-            id: v.id,
-            productId: r.product.id,
-            sku: v.sku,
-            label: v.label,
-            pricePaise: v.pricePaise,
-            comparePricePaise: v.comparePricePaise,
-            stock: v.stock,
-            lowStockThreshold: 5,
-            active: true,
-          })) ?? []);
+      const vs = variantsByProductId.get(r.product.id) ?? [];
       return { ...r.product, category: r.category, variants: vs };
     });
   } catch (err) {
     console.warn("listProducts query fallback:", err);
-    return getFallbackProducts(opts);
+    return [];
   }
 }
 
@@ -142,22 +128,7 @@ export async function getProduct(slug: string) {
         .where(and(eq(variants.productId, row.product.id), eq(variants.active, true)))
         .orderBy(asc(variants.pricePaise));
 
-      const catalogFallback = REAL_PRODUCTS_BY_SLUG.get(slug);
-      const finalVariants = vs.length
-        ? vs
-        : (catalogFallback?.variants.map((v) => ({
-            id: v.id,
-            productId: row.product.id,
-            sku: v.sku,
-            label: v.label,
-            pricePaise: v.pricePaise,
-            comparePricePaise: v.comparePricePaise,
-            stock: v.stock,
-            lowStockThreshold: 5,
-            active: true,
-          })) ?? []);
-
-      return { ...row.product, category: row.category, variants: finalVariants };
+      return { ...row.product, category: row.category, variants: vs };
     }
 
     return null;

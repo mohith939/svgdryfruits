@@ -104,7 +104,7 @@ export const orders = pgTable("orders", {
 export const orderItems = pgTable("order_items", {
   id: id(),
   orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-  variantId: uuid("variant_id").references(() => variants.id),
+  variantId: uuid("variant_id").references(() => variants.id, { onDelete: "set null" }),
   // Snapshot so later catalog edits never change past orders.
   productName: text("product_name").notNull(),
   variantLabel: text("variant_label").notNull(),

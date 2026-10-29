@@ -17,7 +17,7 @@ export async function priceCart(input: { variantId: string; quantity: number }[]
 
   let rows: { v: typeof variants.$inferSelect; p: typeof products.$inferSelect }[] = [];
   let s: typeof shippingSettings.$inferSelect | undefined;
-  let allCoupons: (typeof coupons.$inferSelect)[] = [];
+  let coupon: typeof coupons.$inferSelect | undefined;
 
   try {
     const db = await getDb();
@@ -38,11 +38,17 @@ export async function priceCart(input: { variantId: string; quantity: number }[]
       rows = [...rows, ...skuRows];
     }
 
-    const [shippingRow] = await db.select().from(shippingSettings);
+    const [shippingRow] = await db.select().from(shippingSettings).limit(1);
     s = shippingRow;
 
     if (couponCode) {
-      allCoupons = await db.select().from(coupons);
+      const { ilike } = await import("drizzle-orm");
+      const [matched] = await db
+        .select()
+        .from(coupons)
+        .where(ilike(coupons.code, couponCode.trim()))
+        .limit(1);
+      coupon = matched;
     }
   } catch (dbErr) {
     console.warn("priceCart db lookup fallback:", dbErr);
@@ -60,37 +66,15 @@ export async function priceCart(input: { variantId: string; quantity: number }[]
     available: v.active && p.active ? v.stock : 0,
   }));
 
-  // Resolve any items not found in DB against real catalog-data.ts (e.g. serverless cold start or unseeded DB)
-  for (const id of ids) {
-    const alreadyFound = lines.some((l) => l.variantId === id);
-    if (!alreadyFound) {
-      const catalogItem = findCatalogVariant(id);
-      if (catalogItem) {
-        lines.push({
-          variantId: id, // Keep client variant ID so client match is preserved
-          productSlug: catalogItem.product.slug,
-          imageUrl: catalogItem.product.imageUrl,
-          productName: catalogItem.product.name,
-          variantLabel: catalogItem.variant.label,
-          unitPricePaise: catalogItem.variant.pricePaise,
-          quantity: merged.get(id) ?? 1,
-          available: catalogItem.variant.stock,
-        });
-      }
-    }
-  }
-
   const shipping: ShippingConfig = {
     flatChargePaise: s?.flatChargePaise ?? 0,
     freeThresholdPaise: s?.freeThresholdPaise ?? 100000,
     active: s?.active ?? false,
   };
 
-  let coupon;
-  if (couponCode) {
-    coupon = allCoupons.find((c) => c.code.toLowerCase() === couponCode.trim().toLowerCase());
-    // Also support fallback standard coupons if DB is unseeded
-    if (!coupon && couponCode.toUpperCase() === "WELCOME10") {
+  if (couponCode && !coupon) {
+    // Standard welcome offer fallback
+    if (couponCode.toUpperCase() === "WELCOME10") {
       coupon = {
         id: "c0000000-0000-0000-0000-000000000001",
         code: "WELCOME10",

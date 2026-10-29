@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { categories, products, variants } from "@/db/schema";
 import { getAdminSession } from "@/lib/auth";
@@ -32,33 +32,27 @@ export default async function AdminProductsPage({
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .orderBy(asc(products.name));
 
-  if (rows.length === 0 && !q && !category) {
-    try {
-      const { seedRealData } = await import("@/lib/seed-catalog");
-      await seedRealData();
-      rows = await db
-        .select({
-          product: products,
-          category: categories,
-        })
-        .from(products)
-        .leftJoin(categories, eq(products.categoryId, categories.id))
-        .orderBy(asc(products.name));
-      allCategories = await db.select().from(categories).orderBy(asc(categories.name));
-    } catch (e) {
-      console.warn("Auto-seed catalog in admin page:", e);
-    }
+  const productIds = rows.map((r) => r.product.id);
+  const allVariants = productIds.length > 0
+    ? await db
+        .select()
+        .from(variants)
+        .where(inArray(variants.productId, productIds))
+        .orderBy(asc(variants.pricePaise))
+    : [];
+
+  const variantsByProductId = new Map<string, typeof allVariants>();
+  for (const v of allVariants) {
+    const list = variantsByProductId.get(v.productId) ?? [];
+    list.push(v);
+    variantsByProductId.set(v.productId, list);
   }
 
-  const allItems = [];
-  for (const r of rows) {
-    const vs = await db
-      .select()
-      .from(variants)
-      .where(eq(variants.productId, r.product.id))
-      .orderBy(asc(variants.pricePaise));
-    allItems.push({ ...r.product, category: r.category, variants: vs });
-  }
+  const allItems = rows.map((r) => ({
+    ...r.product,
+    category: r.category,
+    variants: variantsByProductId.get(r.product.id) ?? [],
+  }));
 
   // Filter in memory for instantaneous search/filtering
   const filtered = allItems.filter((p) => {

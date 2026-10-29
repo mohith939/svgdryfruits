@@ -86,13 +86,16 @@ export async function DELETE(
     const variantIds = vs.map((v) => v.id);
 
     if (variantIds.length > 0) {
+      const { inventoryMovements } = await import("@/db/schema");
       // 1. Remove any pending stock reservations
       await db.delete(reservations).where(inArray(reservations.variantId, variantIds));
       // 2. Remove from combo compositions if part of any combos
       await db.delete(comboItems).where(inArray(comboItems.componentVariantId, variantIds));
-      // 3. Remove linked order items
-      await db.delete(orderItems).where(inArray(orderItems.variantId, variantIds));
-      // 4. Delete product variants
+      // 3. Remove inventory movements
+      await db.delete(inventoryMovements).where(inArray(inventoryMovements.variantId, variantIds));
+      // 4. Safely unlink order items (preserving order receipt snapshots)
+      await db.update(orderItems).set({ variantId: null }).where(inArray(orderItems.variantId, variantIds));
+      // 5. Delete product variants
       await db.delete(variants).where(inArray(variants.id, variantIds));
     }
 

@@ -37,8 +37,18 @@ export async function GET() {
 
     if (cats.length === 0) {
       try {
-        const { seedRealData } = await import("@/lib/seed-catalog");
-        await seedRealData();
+        const { REAL_CATEGORIES } = await import("@/lib/catalog-data");
+        for (const c of REAL_CATEGORIES) {
+          await db.insert(categories).values({
+            id: c.id,
+            slug: c.slug,
+            name: c.name,
+            description: c.description,
+            imageUrl: c.imageUrl,
+            sortOrder: c.sortOrder,
+            active: true,
+          }).onConflictDoNothing();
+        }
         cats = await db
           .select({
             id: categories.id,
@@ -56,7 +66,7 @@ export async function GET() {
           .groupBy(categories.id)
           .orderBy(asc(categories.sortOrder), asc(categories.name));
       } catch (seedErr) {
-        console.warn("Auto-seed categories notice:", seedErr);
+        console.warn("Category fallback notice:", seedErr);
       }
     }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { categories, products, variants } from "@/db/schema";
@@ -39,28 +39,27 @@ export async function GET() {
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .orderBy(asc(products.name));
 
-  if (rows.length === 0) {
-    try {
-      const { seedRealData } = await import("@/lib/seed-catalog");
-      await seedRealData();
-      rows = await db
-        .select({
-          product: products,
-          category: categories,
-        })
-        .from(products)
-        .leftJoin(categories, eq(products.categoryId, categories.id))
-        .orderBy(asc(products.name));
-    } catch (seedErr) {
-      console.warn("Auto-seed error in /api/admin/products:", seedErr);
-    }
+  const productIds = rows.map((r) => r.product.id);
+  const allVariants = productIds.length > 0
+    ? await db
+        .select()
+        .from(variants)
+        .where(inArray(variants.productId, productIds))
+        .orderBy(asc(variants.pricePaise))
+    : [];
+
+  const variantsByProductId = new Map<string, typeof allVariants>();
+  for (const v of allVariants) {
+    const list = variantsByProductId.get(v.productId) ?? [];
+    list.push(v);
+    variantsByProductId.set(v.productId, list);
   }
 
-  const list = [];
-  for (const r of rows) {
-    const vs = await db.select().from(variants).where(eq(variants.productId, r.product.id)).orderBy(asc(variants.pricePaise));
-    list.push({ ...r.product, category: r.category, variants: vs });
-  }
+  const list = rows.map((r) => ({
+    ...r.product,
+    category: r.category,
+    variants: variantsByProductId.get(r.product.id) ?? [],
+  }));
 
   return NextResponse.json({ products: list });
 }
