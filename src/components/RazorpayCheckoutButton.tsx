@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Script from "next/script";
+import { loadRazorpayScript } from "@/lib/razorpay-client";
 
 interface RazorpayCheckoutButtonProps {
   amountPaise?: number; // e.g. 50000 for ₹500.00
@@ -46,7 +47,13 @@ export function RazorpayCheckoutButton({
     setSuccessInfo(null);
 
     try {
-      // Step 1: Create Order via Backend API
+      // Step 1: Pre-load Razorpay SDK script
+      const scriptReady = await loadRazorpayScript();
+      if (!scriptReady || typeof window === "undefined" || !(window as any).Razorpay) {
+        throw new Error("Unable to load Razorpay payment gateway SDK. Please check your internet connection.");
+      }
+
+      // Step 2: Create Order via Backend API
       const createRes = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,12 +70,7 @@ export function RazorpayCheckoutButton({
       }
 
       const { order_id, amount } = orderData;
-      const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TthV6CQXszsjl8";
-
-      // Step 2: Open Razorpay Standard Checkout Modal
-      if (typeof window === "undefined" || !(window as any).Razorpay) {
-        throw new Error("Razorpay SDK not loaded yet. Please try again.");
-      }
+      const keyId = orderData.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TthV6CQXszsjl8";
 
       const RazorpayClass = (window as any).Razorpay;
       const rzp = new RazorpayClass({

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
+import { getRazorpayKeyId, getRazorpayKeySecret } from "@/lib/razorpay";
 
 export async function POST(req: Request) {
   try {
@@ -16,8 +17,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const key_id = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    const key_id = getRazorpayKeyId();
+    const key_secret = getRazorpayKeySecret();
 
     if (!key_id || !key_secret) {
       return NextResponse.json(
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
         order_id: order.id,
         amount: order.amount,
         currency: order.currency,
+        key_id,
       });
     } catch (apiError: any) {
       console.error("Razorpay order creation error:", apiError);

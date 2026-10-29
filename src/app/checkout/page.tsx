@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { clearCart, pruneMissing, useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/money";
 import { Icon } from "@/components/Icon";
+import { loadRazorpayScript } from "@/lib/razorpay-client";
 
 type PricedCart = {
   lines: {
@@ -175,6 +176,7 @@ export default function CheckoutPage() {
       }
 
       // Live / Sandbox Razorpay checkout
+      const scriptReady = await loadRazorpayScript();
       if (typeof window !== "undefined" && (window as unknown as { Razorpay?: unknown }).Razorpay) {
         const RazorpayClass = (
           window as unknown as {
@@ -244,7 +246,7 @@ export default function CheckoutPage() {
 
         rzp.open();
       } else {
-        setError("Payment gateway is still loading. Please wait a moment and try again.");
+        setError("Unable to load Razorpay payment gateway. Please check your internet connection or ad-blocker and try again.");
         setSubmitting(false);
       }
     } catch (err: unknown) {

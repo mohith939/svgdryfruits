@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { shippingSettings } from "@/db/schema";
 import { getAdminSession } from "@/lib/auth";
+import { isRazorpayConfigured } from "@/lib/razorpay";
 
 const settingsSchema = z.object({
   flatChargePaise: z.number().int().min(0),
@@ -24,7 +25,7 @@ export async function GET() {
       siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
       whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "",
       contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "",
-      razorpayKeyConfigured: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
+      razorpayKeyConfigured: isRazorpayConfigured(),
     },
   });
 }

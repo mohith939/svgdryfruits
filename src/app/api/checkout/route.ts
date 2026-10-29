@@ -6,7 +6,7 @@ import { getDb } from "@/db/client";
 import { categories, orderItems, orders, products, variants } from "@/db/schema";
 import { priceCart } from "@/lib/cart-server";
 import { InsufficientStockError, reserveStock } from "@/lib/inventory";
-import { createGatewayOrder } from "@/lib/razorpay";
+import { createGatewayOrder, getRazorpayKeyId } from "@/lib/razorpay";
 import { findCatalogVariant, REAL_CATEGORIES_BY_SLUG } from "@/lib/catalog-data";
 
 const checkoutSchema = z.object({
@@ -166,7 +166,7 @@ export async function POST(req: Request) {
       throw err;
     }
 
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_test_svg";
+    const keyId = getRazorpayKeyId();
 
     return NextResponse.json({
       orderId: createdOrder.id,
