@@ -39,17 +39,6 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mockCashfreeModal, setMockCashfreeModal] = useState<{
-    orderId: string;
-    orderNumber: string;
-    trackingToken: string;
-    cashfreeOrderId: string;
-    paymentSessionId: string;
-    amountPaise: number;
-    currency: string;
-  } | null>(null);
-  const [mockApproving, setMockApproving] = useState(false);
-  const [mockMethod, setMockMethod] = useState<"upi" | "card" | "netbanking">("upi");
 
   // Guest Customer Information
   const [form, setForm] = useState({
@@ -167,94 +156,32 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Check if test / mock mode (e.g. when Cashfree credentials aren't set in dev environment)
-      if (orderData.isMock) {
-        setMockCashfreeModal(orderData);
-        setSubmitting(false);
-        return;
-      }
-
-      // Live / Sandbox Cashfree checkout using official Cashfree JS SDK
+      // Direct redirection to Cashfree hosted checkout page
       try {
+        const mode = String(orderData.cfEnvironment || "").toLowerCase().includes("sandbox") || orderData.cfEnvironment === 1
+          ? "sandbox"
+          : "production";
+
         const result = await launchCashfreeCheckout({
           paymentSessionId: orderData.paymentSessionId,
-          redirectTarget: "_modal",
-          mode: String(orderData.cfEnvironment || "").toLowerCase().includes("sandbox") || orderData.cfEnvironment === 1
-            ? "sandbox"
-            : "production",
+          redirectTarget: "_self", // Directly navigates to Cashfree hosted checkout page
+          mode,
         });
 
         if (result?.error) {
-          setError(result.error.message || "Payment was cancelled or failed.");
+          setError(result.error.message || "Payment checkout could not be opened. Please try again.");
           setSubmitting(false);
           return;
         }
-
-        // Verify order on backend
-        const vRes = await fetch("/api/checkout/verify", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            orderId: orderData.orderId,
-            cashfreeOrderId: orderData.cashfreeOrderId,
-            cashfreePaymentId: result?.paymentDetails?.paymentId,
-          }),
-        });
-
-        if (vRes.ok) {
-          clearCart();
-          sessionStorage.removeItem(COUPON_KEY);
-          router.push(`/order/success?orderNumber=${encodeURIComponent(orderData.orderNumber)}&token=${encodeURIComponent(orderData.trackingToken)}`);
-        } else {
-          const vErr = await vRes.json();
-          setError(vErr.error || "Payment received but order verification failed. Please contact us.");
-          setSubmitting(false);
-        }
       } catch (cfErr: any) {
         console.error("Cashfree checkout error:", cfErr);
-        setError(cfErr?.message || "Unable to launch Cashfree payment checkout. Please try again.");
+        setError(cfErr?.message || "Unable to redirect to Cashfree checkout. Please try again.");
         setSubmitting(false);
       }
     } catch (err: unknown) {
       console.error(err);
       setError("An unexpected error occurred. Please try again.");
       setSubmitting(false);
-    }
-  }
-
-  async function handleApproveMockPayment() {
-    if (!mockCashfreeModal) return;
-    setMockApproving(true);
-    try {
-      const verifyRes = await fetch("/api/checkout/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          orderId: mockCashfreeModal.orderId,
-          cashfreeOrderId: mockCashfreeModal.cashfreeOrderId,
-          cashfreePaymentId: `cf_pay_sim_${Date.now()}`,
-          isMock: true,
-        }),
-      });
-
-      if (verifyRes.ok) {
-        clearCart();
-        sessionStorage.removeItem(COUPON_KEY);
-        router.push(
-          `/order/success?orderNumber=${encodeURIComponent(
-            mockCashfreeModal.orderNumber
-          )}&token=${encodeURIComponent(mockCashfreeModal.trackingToken)}`
-        );
-      } else {
-        const vErr = await verifyRes.json();
-        setError(vErr.error || "Payment verification failed.");
-        setMockCashfreeModal(null);
-      }
-    } catch {
-      setError("Error finalizing payment.");
-      setMockCashfreeModal(null);
-    } finally {
-      setMockApproving(false);
     }
   }
 
@@ -444,7 +371,7 @@ export default function CheckoutPage() {
                 className="button button-primary checkout-submit-btn"
                 disabled={submitting || unavailable}
               >
-                {submitting ? "Processing payment…" : unavailable ? "Fix unavailable items" : `Pay ${formatINR(data.totals.totalPaise)} with Cashfree`}
+                {submitting ? "Redirecting to Cashfree…" : unavailable ? "Fix unavailable items" : `Pay ${formatINR(data.totals.totalPaise)} with Cashfree`}
               </button>
 
               <p className="checkout-guarantee">
@@ -507,265 +434,6 @@ export default function CheckoutPage() {
           </aside>
         </div>
 
-        {/* =====================================================================
-            CASHFREE PAYMENT GATEWAY MODAL (TEST SIMULATOR & GATEWAY PREVIEW)
-            ===================================================================== */}
-        {mockCashfreeModal && (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.65)",
-              backdropFilter: "blur(4px)",
-              zIndex: 99999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 16,
-            }}
-          >
-            <div
-              style={{
-                width: "100%",
-                maxWidth: 440,
-                background: "#FFFFFF",
-                borderRadius: 16,
-                overflow: "hidden",
-                boxShadow: "0 20px 50px rgba(0, 0, 0, 0.3)",
-                animation: "fadeIn 0.2s ease-out",
-                fontFamily: "system-ui, -apple-system, sans-serif",
-              }}
-            >
-              {/* Cashfree Branded Topbar */}
-              <div
-                style={{
-                  background: "#203c32",
-                  color: "#FFFFFF",
-                  padding: "18px 20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/assets/svg-dry-fruits-logo.jpg"
-                    alt=""
-                    style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }}
-                  />
-                  <div>
-                    <strong style={{ display: "block", fontSize: 15, letterSpacing: 0.2 }}>
-                      SVG Dry Fruits
-                    </strong>
-                    <span style={{ fontSize: 11, opacity: 0.75 }}>
-                      Order {mockCashfreeModal.orderNumber}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <span style={{ display: "block", fontSize: 11, opacity: 0.75 }}>Payable</span>
-                  <strong style={{ fontSize: 18, color: "#58c977" }}>
-                    {formatINR(mockCashfreeModal.amountPaise)}
-                  </strong>
-                </div>
-              </div>
-
-              {/* Developer Notice */}
-              <div
-                style={{
-                  padding: "10px 16px",
-                  background: "#f0fdf4",
-                  borderBottom: "1px solid #dcfce7",
-                  fontSize: 11.5,
-                  color: "#166534",
-                  lineHeight: 1.4,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <span>⚡</span>
-                <span>
-                  <strong>Cashfree Test Sandbox:</strong> Select any payment method and click approve to simulate an authentic payment.
-                </span>
-              </div>
-
-              {/* Payment Methods */}
-              <div style={{ padding: "16px 20px" }}>
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                    color: "#64748b",
-                    marginBottom: 10,
-                  }}
-                >
-                  Select Payment Option
-                </span>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {/* UPI Option */}
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 14px",
-                      borderRadius: 10,
-                      border: `1.5px solid ${mockMethod === "upi" ? "#0c2340" : "#e2e8f0"}`,
-                      background: mockMethod === "upi" ? "#f8fafc" : "#fff",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="mockMethod"
-                      checked={mockMethod === "upi"}
-                      onChange={() => setMockMethod("upi")}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <strong style={{ display: "block", fontSize: 13, color: "#1e293b" }}>
-                        UPI / QR Code
-                      </strong>
-                      <span style={{ fontSize: 11, color: "#64748b" }}>
-                        Google Pay, PhonePe, Paytm, BHIM, CRED
-                      </span>
-                    </div>
-                    <span style={{ fontSize: 18 }}>📱</span>
-                  </label>
-
-                  {/* Cards Option */}
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 14px",
-                      borderRadius: 10,
-                      border: `1.5px solid ${mockMethod === "card" ? "#0c2340" : "#e2e8f0"}`,
-                      background: mockMethod === "card" ? "#f8fafc" : "#fff",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="mockMethod"
-                      checked={mockMethod === "card"}
-                      onChange={() => setMockMethod("card")}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <strong style={{ display: "block", fontSize: 13, color: "#1e293b" }}>
-                        Cards (Credit / Debit)
-                      </strong>
-                      <span style={{ fontSize: 11, color: "#64748b" }}>
-                        Visa, MasterCard, RuPay, Maestro
-                      </span>
-                    </div>
-                    <span style={{ fontSize: 18 }}>💳</span>
-                  </label>
-
-                  {/* Netbanking Option */}
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 14px",
-                      borderRadius: 10,
-                      border: `1.5px solid ${mockMethod === "netbanking" ? "#0c2340" : "#e2e8f0"}`,
-                      background: mockMethod === "netbanking" ? "#f8fafc" : "#fff",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="mockMethod"
-                      checked={mockMethod === "netbanking"}
-                      onChange={() => setMockMethod("netbanking")}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <strong style={{ display: "block", fontSize: 13, color: "#1e293b" }}>
-                        Net Banking
-                      </strong>
-                      <span style={{ fontSize: 11, color: "#64748b" }}>
-                        HDFC, SBI, ICICI, Axis, Kotak &amp; 50+ Banks
-                      </span>
-                    </div>
-                    <span style={{ fontSize: 18 }}>🏦</span>
-                  </label>
-                </div>
-
-                {/* Action Buttons */}
-                <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-                  <button
-                    type="button"
-                    onClick={handleApproveMockPayment}
-                    disabled={mockApproving}
-                    style={{
-                      flex: 1,
-                      padding: "13px 18px",
-                      background: "#0c2340",
-                      color: "#FFFFFF",
-                      border: "none",
-                      borderRadius: 10,
-                      fontWeight: 700,
-                      fontSize: 14,
-                      cursor: "pointer",
-                      boxShadow: "0 4px 12px rgba(12, 35, 64, 0.25)",
-                    }}
-                  >
-                    {mockApproving
-                      ? "Verifying Payment…"
-                      : `Pay ${formatINR(mockCashfreeModal.amountPaise)}`}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMockCashfreeModal(null)}
-                    disabled={mockApproving}
-                    style={{
-                      padding: "13px 16px",
-                      background: "#f1f5f9",
-                      color: "#475569",
-                      border: "none",
-                      borderRadius: 10,
-                      fontWeight: 600,
-                      fontSize: 13,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    marginTop: 14,
-                    fontSize: 11,
-                    color: "#94a3b8",
-                  }}
-                >
-                  <span>🔒 Secured by 256-bit SSL</span>
-                  <span>&bull;</span>
-                  <span>Cashfree Verified</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </section>
     </>
   );

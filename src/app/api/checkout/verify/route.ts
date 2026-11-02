@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, sql } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { auditEvents, coupons, orders, payments } from "@/db/schema";
@@ -7,10 +7,13 @@ import { commitReservations } from "@/lib/inventory";
 import { fetchCashfreeOrder, isCashfreeConfigured } from "@/lib/cashfree";
 
 const verifySchema = z.object({
-  orderId: z.string().uuid(),
+  orderId: z.string().optional(),
+  orderNumber: z.string().optional(),
   cashfreeOrderId: z.string().optional(),
   cashfreePaymentId: z.string().optional(),
   isMock: z.boolean().optional(),
+}).refine((data) => data.orderId || data.orderNumber || data.cashfreeOrderId, {
+  message: "orderId, orderNumber, or cashfreeOrderId is required",
 });
 
 export async function POST(req: Request) {
@@ -22,10 +25,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid payment verification data" }, { status: 400 });
     }
 
-    const { orderId, cashfreeOrderId, cashfreePaymentId, isMock } = parsed.data;
+    const { orderId, orderNumber, cashfreeOrderId, cashfreePaymentId, isMock } = parsed.data;
 
     const db = await getDb();
-    const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+    let order;
+    if (orderId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+      [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+    } else {
+      const identifier = orderNumber || cashfreeOrderId || orderId;
+      if (identifier) {
+        [order] = await db.select().from(orders).where(
+          or(
+            eq(orders.orderNumber, identifier),
+            eq(orders.cashfreeOrderId, identifier)
+          )
+        ).limit(1);
+      }
+    }
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });

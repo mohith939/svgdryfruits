@@ -71,6 +71,9 @@ export async function POST(req: Request) {
     const reservationExpiresAt = new Date(Date.now() + 15 * 60_000); // 15 mins TTL
 
     // Create Cashfree order
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https://")
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : "https://svgdryfruits.com";
     const orderAmountRupees = priced.totals.totalPaise / 100;
     const gatewayOrder = await createCashfreeOrder({
       orderId: orderNumber,
@@ -79,6 +82,8 @@ export async function POST(req: Request) {
       customerName: customer.name,
       customerEmail: customer.email || undefined,
       orderNote: `SVG Dry Fruits Order ${orderNumber}`,
+      returnUrl: `${siteUrl}/order/success?order_id={order_id}&token=${trackingToken}`,
+      notifyUrl: `${siteUrl}/api/webhooks/cashfree`,
     });
 
     const db = await getDb();

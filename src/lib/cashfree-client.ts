@@ -36,6 +36,6 @@ export async function launchCashfreeCheckout(options: CashfreeCheckoutOptions) {
 
   return cashfree.checkout({
     paymentSessionId: options.paymentSessionId,
-    redirectTarget: options.redirectTarget || "_modal",
+    redirectTarget: options.redirectTarget || "_self",
   });
 }

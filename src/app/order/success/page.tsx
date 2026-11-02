@@ -1,10 +1,13 @@
 import Link from "next/link";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import type { Metadata } from "next";
 import { getDb } from "@/db/client";
-import { orderItems, orders } from "@/db/schema";
+import { auditEvents, orderItems, orders, payments } from "@/db/schema";
 import { formatINR } from "@/lib/money";
 import { Icon } from "@/components/Icon";
+import { fetchCashfreeOrder } from "@/lib/cashfree";
+import { commitReservations } from "@/lib/inventory";
+import { OrderSuccessSync } from "@/components/OrderSuccessSync";
 
 export const metadata: Metadata = {
   title: "Order Confirmed — SVG Dry Fruits",
@@ -15,11 +18,12 @@ export const dynamic = "force-dynamic";
 export default async function OrderSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ orderNumber?: string; token?: string }>;
+  searchParams: Promise<{ orderNumber?: string; token?: string; order_id?: string }>;
 }) {
-  const { orderNumber, token } = await searchParams;
+  const { orderNumber, token, order_id } = await searchParams;
+  const targetId = orderNumber || order_id;
 
-  if (!orderNumber || !token) {
+  if (!targetId) {
     return (
       <section className="success-page">
         <div className="success-box">
@@ -33,10 +37,17 @@ export default async function OrderSuccessPage({
   }
 
   const db = await getDb();
-  const [order] = await db
+  let [order] = await db
     .select()
     .from(orders)
-    .where(and(eq(orders.orderNumber, orderNumber), eq(orders.trackingToken, token)))
+    .where(
+      token
+        ? and(
+            or(eq(orders.orderNumber, targetId), eq(orders.cashfreeOrderId, targetId)),
+            eq(orders.trackingToken, token)
+          )
+        : or(eq(orders.orderNumber, targetId), eq(orders.cashfreeOrderId, targetId))
+    )
     .limit(1);
 
   if (!order) {
@@ -45,8 +56,81 @@ export default async function OrderSuccessPage({
         <div className="success-box">
           <Icon name="shield" size={48} className="success-icon-warn" />
           <h1>Order not found</h1>
-          <p>We could not find an order matching the specified credentials. Please verify your order number and tracking link.</p>
+          <p>We could not find an order matching {targetId}. If you just completed payment, please wait a moment or contact our support team.</p>
           <Link className="button button-primary" href="/">Return to home</Link>
+        </div>
+      </section>
+    );
+  }
+
+  // If order is still awaiting payment, verify directly with Cashfree
+  if (order.paymentStatus !== "paid" && (order.cashfreeOrderId || order.orderNumber)) {
+    try {
+      const cfStatus = await fetchCashfreeOrder(order.cashfreeOrderId || order.orderNumber);
+      if (cfStatus.order_status === "PAID") {
+        await db.transaction(async (tx) => {
+          // Record payment
+          await tx.insert(payments).values({
+            orderId: order.id,
+            cashfreePaymentId: `cf_pay_success_${Date.now()}`,
+            amountPaise: order.totalPaise,
+            status: "captured",
+          }).onConflictDoNothing();
+
+          // Update order status
+          await tx.update(orders).set({
+            paymentStatus: "paid",
+            fulfillmentStatus: "confirmed",
+          }).where(eq(orders.id, order.id));
+
+          // Commit inventory reservation
+          await commitReservations(tx as unknown as Parameters<typeof commitReservations>[0], order.id);
+
+          // Record audit event
+          await tx.insert(auditEvents).values({
+            actor: "cashfree_return_redirect",
+            action: "payment_captured",
+            detail: {
+              orderNumber: order.orderNumber,
+              cfStatus: cfStatus.order_status,
+            },
+          });
+        });
+
+        // Refresh updated order instance
+        const [refreshed] = await db.select().from(orders).where(eq(orders.id, order.id)).limit(1);
+        if (refreshed) {
+          order = refreshed;
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching order status from Cashfree on success page:", err);
+    }
+  }
+
+  const trackingUrl = `/track?order=${encodeURIComponent(order.orderNumber)}&token=${encodeURIComponent(order.trackingToken)}`;
+
+  // If payment is not yet confirmed
+  if (order.paymentStatus !== "paid") {
+    return (
+      <section className="success-page">
+        <div className="success-box">
+          <Icon name="shield" size={48} className="success-icon-warn" />
+          <h1>Payment pending confirmation</h1>
+          <p>
+            Your order <strong>{order.orderNumber}</strong> was placed, but Cashfree has not yet marked the transaction as complete.
+          </p>
+          <p className="success-note" style={{ marginTop: 12, color: "#64748b" }}>
+            If your account was debited, payment typically confirms within 1–2 minutes. You can refresh this page or track the order anytime.
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24 }}>
+            <Link className="button button-primary" href={trackingUrl}>
+              <Icon name="truck" size={18} /> Track your order
+            </Link>
+            <Link className="button button-outline" href="/checkout">
+              Return to Checkout
+            </Link>
+          </div>
         </div>
       </section>
     );
@@ -65,10 +149,9 @@ export default async function OrderSuccessPage({
     pincode?: string;
   };
 
-  const trackingUrl = `/track?order=${encodeURIComponent(order.orderNumber)}&token=${encodeURIComponent(order.trackingToken)}`;
-
   return (
     <section className="success-page">
+      <OrderSuccessSync />
       <div className="success-card">
         <div className="success-header">
           <div className="success-check-badge">

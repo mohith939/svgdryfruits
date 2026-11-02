@@ -90,6 +90,13 @@ export async function createCashfreeOrder(params: {
   const customerId = `cust_${phone.slice(-6)}_${Date.now().toString(36)}`;
 
   if (client) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https://")
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : "https://svgdryfruits.com";
+    const safeReturnUrl = params.returnUrl?.startsWith("https://")
+      ? params.returnUrl
+      : `${siteUrl}/order/success?order_id={order_id}`;
+
     const response = await client.PGCreateOrder({
       order_id: params.orderId,
       order_amount: Number(params.orderAmount.toFixed(2)),
@@ -101,8 +108,8 @@ export async function createCashfreeOrder(params: {
         customer_email: params.customerEmail || "customer@example.com",
       },
       order_meta: {
-        return_url: params.returnUrl,
-        notify_url: params.notifyUrl,
+        return_url: safeReturnUrl,
+        notify_url: params.notifyUrl?.startsWith("https://") ? params.notifyUrl : `${siteUrl}/api/webhooks/cashfree`,
       },
       order_note: params.orderNote,
     });
