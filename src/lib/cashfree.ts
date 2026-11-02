@@ -5,18 +5,25 @@ export function getCashfreeClientId(): string {
   return (
     process.env.CASHFREE_CLIENT_ID ||
     process.env.CASHFREE_APP_ID ||
+    process.env.CASHFREE_API_ID ||
+    process.env.CF_CLIENT_ID ||
+    process.env.CF_APP_ID ||
     process.env.NEXT_PUBLIC_CASHFREE_CLIENT_ID ||
     process.env.NEXT_PUBLIC_CASHFREE_APP_ID ||
+    process.env.NEXT_PUBLIC_CASHFREE_API_ID ||
     ""
-  );
+  ).trim();
 }
 
 export function getCashfreeClientSecret(): string {
   return (
     process.env.CASHFREE_CLIENT_SECRET ||
     process.env.CASHFREE_SECRET_KEY ||
+    process.env.CASHFREE_API_SECRET ||
+    process.env.CF_CLIENT_SECRET ||
+    process.env.CF_SECRET_KEY ||
     ""
-  );
+  ).trim();
 }
 
 export function getCashfreeEnvironment(): CFEnvironment {
@@ -129,16 +136,20 @@ export async function createCashfreeOrder(params: {
     };
   }
 
-  // Fallback for local development or testing when Cashfree API credentials are not set
-  const mockSessionId = `session_sim_${Date.now().toString(36)}_${crypto.randomBytes(6).toString("hex")}`;
-  return {
-    orderId: params.orderId,
-    paymentSessionId: mockSessionId,
-    cfOrderId: `cf_sim_${Date.now()}`,
-    orderAmount: params.orderAmount,
-    orderCurrency: "INR",
-    isMock: true,
-  };
+  // Unit test runner fallback only (when running offline in vitest)
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) {
+    const mockSessionId = `session_sim_${Date.now().toString(36)}_${crypto.randomBytes(6).toString("hex")}`;
+    return {
+      orderId: params.orderId,
+      paymentSessionId: mockSessionId,
+      cfOrderId: `cf_sim_${Date.now()}`,
+      orderAmount: params.orderAmount,
+      orderCurrency: "INR",
+      isMock: true,
+    };
+  }
+
+  throw new Error("Cashfree payment gateway credentials are not configured on server. Please check environment variables CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET.");
 }
 
 export async function fetchCashfreeOrder(orderId: string) {

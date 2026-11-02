@@ -194,7 +194,10 @@ export async function POST(req: Request) {
       },
     });
   } catch (err: unknown) {
-    console.error("Checkout creation error:", err);
-    return NextResponse.json({ error: "Unable to initiate checkout. Please try again." }, { status: 500 });
+    const errorMsg =
+      (err as any)?.response?.data?.message ||
+      (err as any)?.message ||
+      "Unable to initiate checkout. Please try again.";
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
