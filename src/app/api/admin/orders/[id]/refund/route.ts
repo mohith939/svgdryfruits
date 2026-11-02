@@ -7,7 +7,7 @@ import { getAdminSession } from "@/lib/auth";
 
 const refundSchema = z.object({
   amountPaise: z.number().int().min(1),
-  note: z.string().trim().min(2, "Please provide a reason or Razorpay gateway reference"),
+  note: z.string().trim().min(2, "Please provide a reason or payment gateway reference"),
   restock: z.boolean().default(false),
   markRefunded: z.boolean().default(false),
 });

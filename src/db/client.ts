@@ -90,6 +90,9 @@ async function initPostgresSchema(pool: any, db: Db) {
     await pool.query('ALTER TABLE "coupons" ADD COLUMN IF NOT EXISTS "name" text;');
     await pool.query('ALTER TABLE "coupons" ADD COLUMN IF NOT EXISTS "description" text;');
     await pool.query('ALTER TABLE "order_items" ALTER COLUMN "variant_id" DROP NOT NULL;');
+    await pool.query('ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "cashfree_order_id" text;');
+    await pool.query('ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "payment_session_id" text;');
+    await pool.query('ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "cashfree_payment_id" text;');
   } catch {}
 }
 
@@ -157,6 +160,8 @@ const CORE_DDL = `
     "total_paise" integer NOT NULL,
     "coupon_code" text,
     "razorpay_order_id" text,
+    "cashfree_order_id" text,
+    "payment_session_id" text,
     "courier" text,
     "tracking_number" text,
     "reservation_expires_at" timestamp with time zone,
@@ -212,6 +217,7 @@ const CORE_DDL = `
     "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     "order_id" uuid NOT NULL REFERENCES orders(id),
     "razorpay_payment_id" text UNIQUE,
+    "cashfree_payment_id" text UNIQUE,
     "amount_paise" integer NOT NULL,
     "status" text NOT NULL,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -335,6 +341,9 @@ export async function createLocalDb(dataDir?: string): Promise<Db> {
     await client.query('ALTER TABLE "coupons" ADD COLUMN IF NOT EXISTS "name" text;');
     await client.query('ALTER TABLE "coupons" ADD COLUMN IF NOT EXISTS "description" text;');
     await client.query('ALTER TABLE "order_items" ALTER COLUMN "variant_id" DROP NOT NULL;');
+    await client.query('ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "cashfree_order_id" text;');
+    await client.query('ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "payment_session_id" text;');
+    await client.query('ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "cashfree_payment_id" text;');
   } catch {}
 
   return db;

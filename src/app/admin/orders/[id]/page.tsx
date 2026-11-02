@@ -15,7 +15,8 @@ type OrderItem = {
 
 type Payment = {
   id: string;
-  razorpayPaymentId: string | null;
+  cashfreePaymentId?: string | null;
+  razorpayPaymentId?: string | null;
   amountPaise: number;
   status: string;
   createdAt: string;
@@ -49,7 +50,8 @@ type OrderData = {
   shippingPaise: number;
   totalPaise: number;
   couponCode: string | null;
-  razorpayOrderId: string | null;
+  cashfreeOrderId?: string | null;
+  razorpayOrderId?: string | null;
   courier: string | null;
   trackingNumber: string | null;
   createdAt: string;
@@ -309,8 +311,8 @@ export default function AdminOrderDetailPage() {
                 </span>
               </div>
               <div>
-                <span className="admin-detail-label">Razorpay Order ID</span>
-                <code>{order.razorpayOrderId || "—"}</code>
+                <span className="admin-detail-label">Gateway Order ID</span>
+                <code>{order.cashfreeOrderId || order.razorpayOrderId || "—"}</code>
               </div>
             </div>
 
@@ -320,7 +322,7 @@ export default function AdminOrderDetailPage() {
                 <ul>
                   {payments.map((p) => (
                     <li key={p.id}>
-                      <span>ID: <code>{p.razorpayPaymentId}</code> ({p.status})</span>
+                      <span>ID: <code>{p.cashfreePaymentId || p.razorpayPaymentId || "—"}</code> ({p.status})</span>
                       <strong>{formatINR(p.amountPaise)}</strong>
                     </li>
                   ))}
@@ -465,7 +467,7 @@ export default function AdminOrderDetailPage() {
           <div className="admin-card">
             <h2>Record Manual Refund</h2>
             <p className="admin-card-subtitle">
-              Refunds are initiated manually via the Razorpay dashboard. Record the verification details below to keep store records accurate.
+              Refunds are initiated manually via the Cashfree dashboard. Record the verification details below to keep store records accurate.
             </p>
             {refundMsg && <div className="admin-info-banner">{refundMsg}</div>}
 
@@ -485,7 +487,7 @@ export default function AdminOrderDetailPage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="refnote">Reason / Razorpay Refund Reference *</label>
+                <label htmlFor="refnote">Reason / Cashfree Refund Reference *</label>
                 <input
                   id="refnote"
                   required

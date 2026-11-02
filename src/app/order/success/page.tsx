@@ -147,7 +147,7 @@ export default async function OrderSuccessPage({
             <div className="success-meta-card">
               <h3>Payment summary</h3>
               <p>Status: <span className="badge badge-success">Paid</span></p>
-              <p>Gateway: Razorpay Online</p>
+              <p>Gateway: Cashfree Online</p>
               <p className="success-note">
                 Our team will carefully pack your order in fresh packaging and dispatch it via our trusted courier partners.
               </p>

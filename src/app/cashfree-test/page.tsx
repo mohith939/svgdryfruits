@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { RazorpayCheckoutButton } from "@/components/RazorpayCheckoutButton";
+import { CashfreeCheckoutButton } from "@/components/CashfreeCheckoutButton";
 
-export default function RazorpayTestPage() {
+export default function CashfreeTestPage() {
   const [amountRupees, setAmountRupees] = useState(100); // ₹100 default
   const [logs, setLogs] = useState<string[]>([]);
 
@@ -22,19 +22,19 @@ export default function RazorpayTestPage() {
 
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 32, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: "#143D24", marginTop: 0 }}>
-          Razorpay Standard Checkout Integration
+          Cashfree PG Checkout Integration
         </h1>
         <p style={{ color: "#4b5563", fontSize: 15, lineHeight: 1.6 }}>
-          This page tests the end-to-end integration of Razorpay Standard Web Checkout:
-          backend order creation (<code>/api/create-order</code>), the checkout modal, and backend signature verification (<code>/api/verify-payment</code>).
+          This page tests the end-to-end integration of Cashfree Payment Gateway:
+          backend order creation (<code>/api/create-order</code>), obtaining <code>payment_session_id</code>, rendering the Cashfree Web SDK modal, and verifying payment via <code>/api/verify-payment</code>.
         </p>
 
         <div style={{ background: "#f3f4f6", padding: 16, borderRadius: 8, margin: "20px 0" }}>
           <p style={{ margin: 0, fontSize: 14, color: "#374151" }}>
-            <strong>Configured Key ID:</strong> <code>rzp_test_TthV6CQXszsjl8</code>
+            <strong>Gateway:</strong> Cashfree PG Node.js SDK &amp; Cashfree Web JS
           </p>
           <p style={{ margin: "6px 0 0", fontSize: 13, color: "#6b7280" }}>
-            Test Mode Active: You can use Razorpay test cards or UPI to simulate payments.
+            Seamless dev mock fallback is supported when live credentials are not set.
           </p>
         </div>
 
@@ -84,10 +84,8 @@ export default function RazorpayTestPage() {
         </div>
 
         <div style={{ marginTop: 24 }}>
-          <RazorpayCheckoutButton
-            amountPaise={amountRupees * 100}
-            name="SVG Dry Fruits Test"
-            description={`Test Payment of ₹${amountRupees}`}
+          <CashfreeCheckoutButton
+            amountRupees={amountRupees}
             customer={{
               name: "Mohith",
               email: "test@svgdryfruits.com",
@@ -101,8 +99,8 @@ export default function RazorpayTestPage() {
             }}
             className="button button-primary"
           >
-            Pay ₹{amountRupees} with Razorpay
-          </RazorpayCheckoutButton>
+            Pay ₹{amountRupees} with Cashfree
+          </CashfreeCheckoutButton>
         </div>
 
         {logs.length > 0 && (

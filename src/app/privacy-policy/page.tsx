@@ -7,7 +7,7 @@ export default function Privacy() {
   return (
     <PageShell kicker="Privacy policy" title={<>Privacy <em>policy.</em></>} draft>
       <h2>What we collect</h2>
-      <p>To fulfil an order we collect your name, phone number, delivery address and, optionally, your email address. Payment details are handled by Razorpay and are not stored by this website.</p>
+      <p>To fulfil an order we collect your name, phone number, delivery address and, optionally, your email address. Payment details are handled by Cashfree and are not stored by this website.</p>
       <h2>How it’s used</h2>
       <p>Your details are used to process, deliver and support your order.</p>
       <h2>Retention, sharing and your rights</h2>

@@ -4,13 +4,13 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { auditEvents, coupons, orders, payments } from "@/db/schema";
 import { commitReservations } from "@/lib/inventory";
-import { verifyPaymentSignature } from "@/lib/razorpay";
+import { fetchCashfreeOrder, isCashfreeConfigured } from "@/lib/cashfree";
 
 const verifySchema = z.object({
   orderId: z.string().uuid(),
-  razorpayOrderId: z.string().min(1),
-  razorpayPaymentId: z.string().min(1),
-  razorpaySignature: z.string().min(1),
+  cashfreeOrderId: z.string().optional(),
+  cashfreePaymentId: z.string().optional(),
+  isMock: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -22,24 +22,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid payment verification data" }, { status: 400 });
     }
 
-    const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = parsed.data;
-
-    // Verify cryptographic HMAC signature
-    const isValid = verifyPaymentSignature({
-      razorpayOrderId,
-      razorpayPaymentId,
-      razorpaySignature,
-    });
-
-    if (!isValid) {
-      return NextResponse.json({ error: "Payment verification failed. Invalid gateway signature." }, { status: 400 });
-    }
+    const { orderId, cashfreeOrderId, cashfreePaymentId, isMock } = parsed.data;
 
     const db = await getDb();
     const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Verify with Cashfree API if configured and not a dev mock
+    const cfId = cashfreeOrderId || order.cashfreeOrderId;
+    const isMockOrder = Boolean(isMock || cfId?.startsWith("order_sim_") || cfId?.startsWith("sim_") || !isCashfreeConfigured());
+
+    if (!isMockOrder && cfId) {
+      try {
+        const cfOrder = await fetchCashfreeOrder(cfId);
+        if (cfOrder.order_status !== "PAID") {
+          return NextResponse.json(
+            { error: `Payment not completed. Status: ${cfOrder.order_status}` },
+            { status: 400 }
+          );
+        }
+      } catch (err: any) {
+        console.error("Cashfree order fetch error during verify:", err);
+        return NextResponse.json(
+          { error: "Failed to verify order status with Cashfree" },
+          { status: 400 }
+        );
+      }
     }
 
     // Idempotent: if already paid, return success without double processing
@@ -55,9 +66,10 @@ export async function POST(req: Request) {
     // Atomically commit inventory and transition order state
     await db.transaction(async (tx) => {
       // Record payment
+      const paymentRef = cashfreePaymentId || `cf_pay_${Date.now()}`;
       await tx.insert(payments).values({
         orderId: order.id,
-        razorpayPaymentId,
+        cashfreePaymentId: paymentRef,
         amountPaise: order.totalPaise,
         status: "captured",
       }).onConflictDoNothing();
@@ -84,7 +96,7 @@ export async function POST(req: Request) {
         action: "payment_captured",
         detail: {
           orderNumber: order.orderNumber,
-          razorpayPaymentId,
+          cashfreePaymentId: paymentRef,
           amountPaise: order.totalPaise,
         },
       });

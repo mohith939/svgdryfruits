@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearCart, pruneMissing, useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/money";
 import { Icon } from "@/components/Icon";
-import { loadRazorpayScript } from "@/lib/razorpay-client";
+import { launchCashfreeCheckout } from "@/lib/cashfree-client";
 
 type PricedCart = {
   lines: {
@@ -40,12 +39,12 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
-  const [mockRazorpayModal, setMockRazorpayModal] = useState<{
+  const [mockCashfreeModal, setMockCashfreeModal] = useState<{
     orderId: string;
     orderNumber: string;
     trackingToken: string;
-    razorpayOrderId: string;
+    cashfreeOrderId: string;
+    paymentSessionId: string;
     amountPaise: number;
     currency: string;
   } | null>(null);
@@ -168,85 +167,50 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Check if test / mock mode (e.g. when Razorpay credentials aren't set in dev environment)
+      // Check if test / mock mode (e.g. when Cashfree credentials aren't set in dev environment)
       if (orderData.isMock) {
-        setMockRazorpayModal(orderData);
+        setMockCashfreeModal(orderData);
         setSubmitting(false);
         return;
       }
 
-      // Live / Sandbox Razorpay checkout
-      const scriptReady = await loadRazorpayScript();
-      if (typeof window !== "undefined" && (window as unknown as { Razorpay?: unknown }).Razorpay) {
-        const RazorpayClass = (
-          window as unknown as {
-            Razorpay: new (opts: unknown) => {
-              open: () => void;
-              on: (event: string, callback: (res: any) => void) => void;
-            };
-          }
-        ).Razorpay;
-        const rzp = new RazorpayClass({
-          key: orderData.keyId,
-          amount: orderData.amountPaise,
-          currency: "INR",
-          name: "SVG Dry Fruits",
-          description: `Order ${orderData.orderNumber}`,
-          image: "/assets/svg-dry-fruits-logo.jpg",
-          order_id: orderData.razorpayOrderId,
-          handler: async function (response: {
-            razorpay_order_id: string;
-            razorpay_payment_id: string;
-            razorpay_signature: string;
-          }) {
-            const vRes = await fetch("/api/checkout/verify", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({
-                orderId: orderData.orderId,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-              }),
-            });
-
-            if (vRes.ok) {
-              clearCart();
-              sessionStorage.removeItem(COUPON_KEY);
-              router.push(`/order/success?orderNumber=${encodeURIComponent(orderData.orderNumber)}&token=${encodeURIComponent(orderData.trackingToken)}`);
-            } else {
-              const vErr = await vRes.json();
-              setError(vErr.error || "Payment received but order verification failed. Please contact us.");
-              setSubmitting(false);
-            }
-          },
-          prefill: {
-            name: form.name.trim(),
-            email: form.email.trim(),
-            contact: form.phone.trim(),
-          },
-          theme: {
-            color: "#203c32",
-          },
-          modal: {
-            ondismiss: function () {
-              setSubmitting(false);
-            },
-          },
+      // Live / Sandbox Cashfree checkout using official Cashfree JS SDK
+      try {
+        const result = await launchCashfreeCheckout({
+          paymentSessionId: orderData.paymentSessionId,
+          redirectTarget: "_modal",
+          mode: orderData.cfEnvironment?.toLowerCase() === "sandbox" ? "sandbox" : "production",
         });
 
-        rzp.on("payment.failed", function (response: any) {
+        if (result?.error) {
+          setError(result.error.message || "Payment was cancelled or failed.");
           setSubmitting(false);
-          const failureReason =
-            response?.error?.description ||
-            response?.error?.reason ||
-            "Payment failed or was declined. Please try again with another payment method.";
-          setError(failureReason);
+          return;
+        }
+
+        // Verify order on backend
+        const vRes = await fetch("/api/checkout/verify", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            orderId: orderData.orderId,
+            cashfreeOrderId: orderData.cashfreeOrderId,
+            cashfreePaymentId: result?.paymentDetails?.paymentId,
+          }),
         });
 
-        rzp.open();
-      } else {
-        setError("Unable to load Razorpay payment gateway. Please check your internet connection or ad-blocker and try again.");
+        if (vRes.ok) {
+          clearCart();
+          sessionStorage.removeItem(COUPON_KEY);
+          router.push(`/order/success?orderNumber=${encodeURIComponent(orderData.orderNumber)}&token=${encodeURIComponent(orderData.trackingToken)}`);
+        } else {
+          const vErr = await vRes.json();
+          setError(vErr.error || "Payment received but order verification failed. Please contact us.");
+          setSubmitting(false);
+        }
+      } catch (cfErr: any) {
+        console.error("Cashfree checkout error:", cfErr);
+        setError(cfErr?.message || "Unable to launch Cashfree payment checkout. Please try again.");
         setSubmitting(false);
       }
     } catch (err: unknown) {
@@ -257,17 +221,17 @@ export default function CheckoutPage() {
   }
 
   async function handleApproveMockPayment() {
-    if (!mockRazorpayModal) return;
+    if (!mockCashfreeModal) return;
     setMockApproving(true);
     try {
       const verifyRes = await fetch("/api/checkout/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          orderId: mockRazorpayModal.orderId,
-          razorpayOrderId: mockRazorpayModal.razorpayOrderId,
-          razorpayPaymentId: `pay_sim_${Date.now()}`,
-          razorpaySignature: "mock_signature_approved",
+          orderId: mockCashfreeModal.orderId,
+          cashfreeOrderId: mockCashfreeModal.cashfreeOrderId,
+          cashfreePaymentId: `cf_pay_sim_${Date.now()}`,
+          isMock: true,
         }),
       });
 
@@ -276,17 +240,17 @@ export default function CheckoutPage() {
         sessionStorage.removeItem(COUPON_KEY);
         router.push(
           `/order/success?orderNumber=${encodeURIComponent(
-            mockRazorpayModal.orderNumber
-          )}&token=${encodeURIComponent(mockRazorpayModal.trackingToken)}`
+            mockCashfreeModal.orderNumber
+          )}&token=${encodeURIComponent(mockCashfreeModal.trackingToken)}`
         );
       } else {
         const vErr = await verifyRes.json();
         setError(vErr.error || "Payment verification failed.");
-        setMockRazorpayModal(null);
+        setMockCashfreeModal(null);
       }
     } catch {
       setError("Error finalizing payment.");
-      setMockRazorpayModal(null);
+      setMockCashfreeModal(null);
     } finally {
       setMockApproving(false);
     }
@@ -325,11 +289,6 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <Script
-        src="https://checkout.razorpay.com/v1/checkout.js"
-        onLoad={() => setScriptLoaded(true)}
-      />
-
       <section className="checkout-page">
         <div className="checkout-head">
           <div className="breadcrumbs">
@@ -473,7 +432,7 @@ export default function CheckoutPage() {
               <div className="payment-method-card">
                 <div className="payment-method-header">
                   <Icon name="card" size={24} />
-                  <strong>Razorpay Secure Online Payment</strong>
+                  <strong>Cashfree Secure Online Payment</strong>
                 </div>
                 <p>Pay securely using UPI (Google Pay, PhonePe, Paytm), NetBanking, Credit or Debit Cards. Cash on delivery is not offered.</p>
               </div>
@@ -483,7 +442,7 @@ export default function CheckoutPage() {
                 className="button button-primary checkout-submit-btn"
                 disabled={submitting || unavailable}
               >
-                {submitting ? "Processing payment…" : unavailable ? "Fix unavailable items" : `Pay ${formatINR(data.totals.totalPaise)} with Razorpay`}
+                {submitting ? "Processing payment…" : unavailable ? "Fix unavailable items" : `Pay ${formatINR(data.totals.totalPaise)} with Cashfree`}
               </button>
 
               <p className="checkout-guarantee">
@@ -547,9 +506,9 @@ export default function CheckoutPage() {
         </div>
 
         {/* =====================================================================
-            RAZORPAY PAYMENT GATEWAY MODAL (TEST SIMULATOR & GATEWAY PREVIEW)
+            CASHFREE PAYMENT GATEWAY MODAL (TEST SIMULATOR & GATEWAY PREVIEW)
             ===================================================================== */}
-        {mockRazorpayModal && (
+        {mockCashfreeModal && (
           <div
             style={{
               position: "fixed",
@@ -578,10 +537,10 @@ export default function CheckoutPage() {
                 fontFamily: "system-ui, -apple-system, sans-serif",
               }}
             >
-              {/* Razorpay Branded Topbar */}
+              {/* Cashfree Branded Topbar */}
               <div
                 style={{
-                  background: "#0c2340",
+                  background: "#203c32",
                   color: "#FFFFFF",
                   padding: "18px 20px",
                   display: "flex",
@@ -601,14 +560,14 @@ export default function CheckoutPage() {
                       SVG Dry Fruits
                     </strong>
                     <span style={{ fontSize: 11, opacity: 0.75 }}>
-                      Order {mockRazorpayModal.orderNumber}
+                      Order {mockCashfreeModal.orderNumber}
                     </span>
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <span style={{ display: "block", fontSize: 11, opacity: 0.75 }}>Payable</span>
                   <strong style={{ fontSize: 18, color: "#58c977" }}>
-                    {formatINR(mockRazorpayModal.amountPaise)}
+                    {formatINR(mockCashfreeModal.amountPaise)}
                   </strong>
                 </div>
               </div>
@@ -629,7 +588,7 @@ export default function CheckoutPage() {
               >
                 <span>⚡</span>
                 <span>
-                  <strong>Razorpay Test Sandbox:</strong> Select any payment method and click approve to simulate an authentic payment.
+                  <strong>Cashfree Test Sandbox:</strong> Select any payment method and click approve to simulate an authentic payment.
                 </span>
               </div>
 
@@ -765,11 +724,11 @@ export default function CheckoutPage() {
                   >
                     {mockApproving
                       ? "Verifying Payment…"
-                      : `Pay ${formatINR(mockRazorpayModal.amountPaise)}`}
+                      : `Pay ${formatINR(mockCashfreeModal.amountPaise)}`}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setMockRazorpayModal(null)}
+                    onClick={() => setMockCashfreeModal(null)}
                     disabled={mockApproving}
                     style={{
                       padding: "13px 16px",
@@ -799,7 +758,7 @@ export default function CheckoutPage() {
                 >
                   <span>🔒 Secured by 256-bit SSL</span>
                   <span>&bull;</span>
-                  <span>Razorpay Verified</span>
+                  <span>Cashfree Verified</span>
                 </div>
               </div>
             </div>

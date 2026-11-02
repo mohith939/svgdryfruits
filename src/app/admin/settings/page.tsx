@@ -13,7 +13,8 @@ type SettingsData = {
     siteUrl: string;
     whatsappNumber: string;
     contactEmail: string;
-    razorpayKeyConfigured: boolean;
+    cashfreeConfigured?: boolean;
+    razorpayKeyConfigured?: boolean;
   };
 };
 
@@ -139,9 +140,9 @@ export default function AdminSettingsPage() {
           <h2>Integration &amp; Environment Status</h2>
           <div className="admin-details-grid">
             <div>
-              <span className="admin-detail-label">Razorpay Gateway Keys</span>
-              <span className={`badge ${data.env.razorpayKeyConfigured ? "badge-success" : "badge-warning"}`}>
-                {data.env.razorpayKeyConfigured ? "Production/Test Keys Configured" : "Simulated Test Mode"}
+              <span className="admin-detail-label">Cashfree Gateway Credentials</span>
+              <span className={`badge ${data.env.cashfreeConfigured ?? data.env.razorpayKeyConfigured ? "badge-success" : "badge-warning"}`}>
+                {data.env.cashfreeConfigured ?? data.env.razorpayKeyConfigured ? "Production/Sandbox Configured" : "Simulated Dev Mode"}
               </span>
             </div>
             <div>

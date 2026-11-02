@@ -6,7 +6,7 @@ import { getDb } from "@/db/client";
 import { categories, orderItems, orders, products, variants } from "@/db/schema";
 import { priceCart } from "@/lib/cart-server";
 import { InsufficientStockError, reserveStock } from "@/lib/inventory";
-import { createGatewayOrder, getRazorpayKeyId } from "@/lib/razorpay";
+import { createCashfreeOrder, getCashfreeEnvironment } from "@/lib/cashfree";
 import { findCatalogVariant, REAL_CATEGORIES_BY_SLUG } from "@/lib/catalog-data";
 
 const checkoutSchema = z.object({
@@ -70,11 +70,15 @@ export async function POST(req: Request) {
     const trackingToken = crypto.randomBytes(16).toString("hex");
     const reservationExpiresAt = new Date(Date.now() + 15 * 60_000); // 15 mins TTL
 
-    // Create Razorpay order first
-    const gatewayOrder = await createGatewayOrder({
-      amountPaise: priced.totals.totalPaise,
-      receipt: orderNumber,
-      notes: { orderNumber, customerPhone: customer.phone },
+    // Create Cashfree order
+    const orderAmountRupees = priced.totals.totalPaise / 100;
+    const gatewayOrder = await createCashfreeOrder({
+      orderId: orderNumber,
+      orderAmount: orderAmountRupees,
+      customerPhone: customer.phone,
+      customerName: customer.name,
+      customerEmail: customer.email || undefined,
+      orderNote: `SVG Dry Fruits Order ${orderNumber}`,
     });
 
     const db = await getDb();
@@ -136,7 +140,8 @@ export async function POST(req: Request) {
       shippingPaise: priced.totals.shippingPaise,
       totalPaise: priced.totals.totalPaise,
       couponCode: couponCode || null,
-      razorpayOrderId: gatewayOrder.id,
+      cashfreeOrderId: gatewayOrder.orderId,
+      paymentSessionId: gatewayOrder.paymentSessionId,
       reservationExpiresAt,
     }).returning();
 
@@ -166,16 +171,16 @@ export async function POST(req: Request) {
       throw err;
     }
 
-    const keyId = getRazorpayKeyId();
-
     return NextResponse.json({
       orderId: createdOrder.id,
       orderNumber: createdOrder.orderNumber,
       trackingToken: createdOrder.trackingToken,
-      razorpayOrderId: gatewayOrder.id,
+      cashfreeOrderId: gatewayOrder.orderId,
+      paymentSessionId: gatewayOrder.paymentSessionId,
       amountPaise: priced.totals.totalPaise,
+      amountRupees: orderAmountRupees,
       currency: "INR",
-      keyId,
+      cfEnvironment: getCashfreeEnvironment(),
       isMock: gatewayOrder.isMock,
       customer: {
         name: customer.name,

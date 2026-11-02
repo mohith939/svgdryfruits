@@ -34,7 +34,7 @@ const steps: StepItem[] = [
     n: "03",
     badgeImg: "/assets/step-badge-3.png",
     title: "Pay securely",
-    body: "Checkout with Razorpay. Prices and stock are confirmed on our server.",
+    body: "Checkout with Cashfree. Prices and stock are confirmed on our server.",
     actionText: "Secure Checkout",
     actionHref: "/checkout",
   },

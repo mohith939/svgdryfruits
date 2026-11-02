@@ -17,7 +17,7 @@ const marquee = ["Almonds", "Cashews", "Pistachios", "Walnuts", "Dates", "Raisin
 const perks = [
   { icon: "scale", title: "Fixed pack sizes", body: "250 g, 500 g or 1 kg" },
   { icon: "user", title: "Guest checkout", body: "No account needed" },
-  { icon: "shield", title: "Secure payments", body: "Online via Razorpay" },
+  { icon: "shield", title: "Secure payments", body: "Online via Cashfree" },
   { icon: "truck", title: "Order tracking", body: "Follow every order" },
 ];
 
@@ -25,7 +25,7 @@ const faqs = [
   { q: "Do I need an account to order?", a: "No. SVG Dry Fruits uses guest checkout, so you can order with just your delivery details." },
   { q: "Which pack sizes are available?", a: "Products are sold in fixed 250 g, 500 g and 1 kg packs. Not every product is offered in every size; each product page shows what is available." },
   { q: "How are shipping charges decided?", a: "Shipping is set by SVG Dry Fruits and shown clearly in your bag and at checkout before you pay." },
-  { q: "How can I pay?", a: "Online through Razorpay. Cash on delivery is not offered." },
+  { q: "How can I pay?", a: "Online through Cashfree. Cash on delivery is not offered." },
   { q: "Where can I read the returns policy?", a: "See the Returns page linked in the footer. Questions are welcome through the Contact page." },
 ];
 

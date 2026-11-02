@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { createLocalDb, type Db } from "@/db/client";
 import { categories, coupons, orders, products, variants, reservations } from "@/db/schema";
 import { commitReservations, reserveStock } from "@/lib/inventory";
-import { verifyPaymentSignature } from "@/lib/razorpay";
+import { fetchCashfreeOrder } from "@/lib/cashfree";
 
 let db: Db;
 let prodId: string;
@@ -35,7 +35,7 @@ describe("checkout and payment verification", () => {
       discountPaise: 0,
       shippingPaise: 0,
       totalPaise: 29900,
-      razorpayOrderId: "order_sim_123",
+      cashfreeOrderId: "order_sim_123",
       reservationExpiresAt: new Date(Date.now() + 15 * 60_000),
     }).returning();
 
@@ -53,12 +53,8 @@ describe("checkout and payment verification", () => {
     expect(vBefore.stock).toBe(10);
 
     // 3. Payment verification
-    const sigValid = verifyPaymentSignature({
-      razorpayOrderId: "order_sim_123",
-      razorpayPaymentId: "pay_sim_999",
-      razorpaySignature: "mock_signature_approved",
-    });
-    expect(sigValid).toBe(true);
+    const cfOrder = await fetchCashfreeOrder("order_sim_123");
+    expect(cfOrder.order_status).toBe("PAID");
 
     // Commit reservations
     await commitReservations(db, order.id);
