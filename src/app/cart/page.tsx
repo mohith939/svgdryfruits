@@ -350,7 +350,7 @@ export default function CartPage() {
                 <div key={l.variantId} className="cart-v3-item-row">
                   {/* PRODUCT */}
                   <div className="cart-v3-cell-product">
-                    <Link href={`/products/${l.productSlug}`} className="cart-v3-thumb-link">
+                    <Link href={l.productSlug ? `/products/${l.productSlug}` : "/shop"} className="cart-v3-thumb-link">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={l.imageUrl ?? "/assets/shop-pistachios-hd.jpg"}
@@ -359,7 +359,7 @@ export default function CartPage() {
                       />
                     </Link>
                     <div className="cart-v3-product-details">
-                      <Link href={`/products/${l.productSlug}`} className="cart-v3-product-name">
+                      <Link href={l.productSlug ? `/products/${l.productSlug}` : "/shop"} className="cart-v3-product-name">
                         {l.productName}
                       </Link>
                       <span className="cart-v3-variant-label">{l.variantLabel}</span>
