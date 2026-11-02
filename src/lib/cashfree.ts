@@ -35,6 +35,10 @@ export function getCashfreeEnvironment(): CFEnvironment {
   return CFEnvironment.PRODUCTION;
 }
 
+export function getCashfreeMode(): "production" | "sandbox" {
+  return getCashfreeEnvironment() === CFEnvironment.PRODUCTION ? "production" : "sandbox";
+}
+
 export function isCashfreeConfigured(): boolean {
   return Boolean(getCashfreeClientId() && getCashfreeClientSecret());
 }

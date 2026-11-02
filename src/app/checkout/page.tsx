@@ -179,7 +179,9 @@ export default function CheckoutPage() {
         const result = await launchCashfreeCheckout({
           paymentSessionId: orderData.paymentSessionId,
           redirectTarget: "_modal",
-          mode: orderData.cfEnvironment?.toLowerCase() === "sandbox" ? "sandbox" : "production",
+          mode: String(orderData.cfEnvironment || "").toLowerCase().includes("sandbox") || orderData.cfEnvironment === 1
+            ? "sandbox"
+            : "production",
         });
 
         if (result?.error) {

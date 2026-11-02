@@ -6,7 +6,7 @@ import { getDb } from "@/db/client";
 import { categories, orderItems, orders, products, variants } from "@/db/schema";
 import { priceCart } from "@/lib/cart-server";
 import { InsufficientStockError, reserveStock } from "@/lib/inventory";
-import { createCashfreeOrder, getCashfreeEnvironment } from "@/lib/cashfree";
+import { createCashfreeOrder, getCashfreeMode } from "@/lib/cashfree";
 import { findCatalogVariant, REAL_CATEGORIES_BY_SLUG } from "@/lib/catalog-data";
 
 const checkoutSchema = z.object({
@@ -180,7 +180,7 @@ export async function POST(req: Request) {
       amountPaise: priced.totals.totalPaise,
       amountRupees: orderAmountRupees,
       currency: "INR",
-      cfEnvironment: getCashfreeEnvironment(),
+      cfEnvironment: getCashfreeMode(),
       isMock: gatewayOrder.isMock,
       customer: {
         name: customer.name,

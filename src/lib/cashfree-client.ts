@@ -4,14 +4,16 @@ import { load } from "@cashfreepayments/cashfree-js";
 
 let cachedInstances: Record<string, Promise<any>> = {};
 
-export function getCashfreeClientInstance(mode?: "production" | "sandbox") {
+export function getCashfreeClientInstance(mode?: "production" | "sandbox" | string | number) {
   if (typeof window === "undefined") return null;
 
-  const targetMode =
-    mode ||
-    ((process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT || "production").toLowerCase() === "sandbox"
-      ? "sandbox"
-      : "production");
+  const isSandbox =
+    mode === "sandbox" ||
+    mode === 1 ||
+    String(mode || "").toLowerCase() === "sandbox" ||
+    (process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT || "").toLowerCase() === "sandbox";
+
+  const targetMode: "sandbox" | "production" = isSandbox ? "sandbox" : "production";
 
   if (!cachedInstances[targetMode]) {
     cachedInstances[targetMode] = load({ mode: targetMode });
