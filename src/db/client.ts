@@ -12,20 +12,64 @@ interface GlobalDbStore {
 
 const globalForDb = globalThis as unknown as GlobalDbStore;
 
-// Uses DATABASE_URL (any PostgreSQL) when set; otherwise an embedded local PGlite database.
+export function getDatabaseConfig(): any {
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (url) {
+    const isLocal = url.includes("localhost") || url.includes("127.0.0.1");
+    const sslMode = (process.env.DB_SSL || process.env.PGSSLMODE || "").toLowerCase();
+    let ssl: any = undefined;
+    if (sslMode === "true" || sslMode === "require") {
+      ssl = { rejectUnauthorized: false };
+    } else if (sslMode === "false" || sslMode === "disable" || isLocal) {
+      ssl = false;
+    } else if (url.includes("sslmode=require")) {
+      ssl = { rejectUnauthorized: false };
+    }
+    return { connectionString: url, ssl };
+  }
+
+  const host = process.env.DB_HOST || process.env.PGHOST;
+  const user = process.env.DB_USER || process.env.PGUSER;
+  const password = process.env.DB_PASSWORD || process.env.PGPASSWORD;
+  const database = process.env.DB_NAME || process.env.PGDATABASE;
+  const port = Number(process.env.DB_PORT || process.env.PGPORT || 5432);
+
+  if (user && database) {
+    const isLocal = !host || host === "localhost" || host === "127.0.0.1";
+    const sslMode = (process.env.DB_SSL || process.env.PGSSLMODE || "").toLowerCase();
+    const ssl = (sslMode === "true" || sslMode === "require")
+      ? { rejectUnauthorized: false }
+      : (sslMode === "false" || sslMode === "disable" || isLocal)
+      ? false
+      : undefined;
+
+    return {
+      host: host || "localhost",
+      port,
+      user,
+      password: password || "",
+      database,
+      ssl,
+    };
+  }
+
+  return null;
+}
+
+// Uses DATABASE_URL or DB_* credentials (Sunlight Host / PostgreSQL) when set; otherwise an embedded local PGlite database.
 export async function getDb(): Promise<Db> {
   if (globalForDb.cachedDb) return globalForDb.cachedDb;
   if (globalForDb.cachedDbPromise) return globalForDb.cachedDbPromise;
 
   globalForDb.cachedDbPromise = (async () => {
-    const url = process.env.DATABASE_URL;
-    if (url) {
+    const config = getDatabaseConfig();
+    if (config) {
       const { Pool } = await import("pg");
       const { drizzle } = await import("drizzle-orm/node-postgres");
-      const pool = new Pool({ connectionString: url });
+      const pool = new Pool(config);
       const db = drizzle(pool, { schema }) as unknown as Db;
 
-      // Auto-ensure schema on remote Postgres / Neon if tables do not exist
+      // Auto-ensure schema on remote Postgres / Sunlight Host if tables do not exist
       if (!globalForDb.migrated) {
         await initPostgresSchema(pool, db);
         globalForDb.migrated = true;
@@ -53,24 +97,11 @@ async function initPostgresSchema(pool: any, db: Db) {
       console.log("[DB] Products table not found on remote Postgres. Initializing tables & seeding...");
       await pool.query(CORE_DDL);
       try {
-        const { REAL_CATEGORIES } = await import("@/lib/catalog-data");
-        for (const c of REAL_CATEGORIES) {
-          await db
-            .insert(schema.categories)
-            .values({
-              id: c.id,
-              slug: c.slug,
-              name: c.name,
-              description: c.description ?? null,
-              imageUrl: c.imageUrl ?? null,
-              sortOrder: c.sortOrder ?? 0,
-              active: true,
-            })
-            .onConflictDoNothing();
-        }
-        console.log("[DB] Categories auto-seeded successfully.");
+        const { seedRealData } = await import("@/lib/seed-catalog");
+        await seedRealData();
+        console.log("[DB] Real categories and catalog auto-seeded successfully.");
       } catch (catErr) {
-        console.warn("[DB] Auto-seed categories notice:", catErr);
+        console.warn("[DB] Auto-seed notice:", catErr);
       }
       try {
         const { bootstrapAdminFromEnv } = await import("@/lib/auth");
@@ -97,6 +128,7 @@ async function initPostgresSchema(pool: any, db: Db) {
 }
 
 const CORE_DDL = `
+  CREATE EXTENSION IF NOT EXISTS "pgcrypto";
   CREATE TABLE IF NOT EXISTS "admins" (
     "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     "email" text NOT NULL UNIQUE,
