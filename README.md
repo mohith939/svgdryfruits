@@ -79,11 +79,13 @@ Deploying SVG Dry Fruits on **Sunlight Host** or any standard cPanel web hosting
 In your cPanel `public_html` directory, create or edit the `.env` file:
 
 ```env
-# Database Credentials (from Step 1)
-DB_HOST=localhost
+# Database Credentials
+# Note for StackCP / Sunlight Host: Use your database server host (e.g. sdb-81.hosting.stackcp.net)
+# Note for standard cPanel: Use localhost
+DB_HOST=sdb-81.hosting.stackcp.net
 DB_PORT=3306
-DB_NAME=cpaneluser_svgdryfruits
-DB_USER=cpaneluser_svguser
+DB_NAME=balaji_SVG-3530383727fd
+DB_USER=balaji_svguser
 DB_PASS=YourDatabasePasswordHere
 
 # Website URL
