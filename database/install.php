@@ -13,21 +13,92 @@ $message = '';
 $error = '';
 $installed = false;
 
-// 1. Live MySQL Connection Test
+// 1. Check for submitted credentials update
+$envUpdatedMsg = '';
+$envFile = __DIR__ . '/../.env';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_env') {
+    $subHost = trim($_POST['db_host'] ?? '');
+    $subPort = (int)($_POST['db_port'] ?? 3306);
+    $subName = trim($_POST['db_name'] ?? '');
+    $subUser = trim($_POST['db_user'] ?? '');
+    $subPass = trim($_POST['db_pass'] ?? '');
+
+    // Test connection with these credentials
+    try {
+        $testDsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $subHost, $subPort, $subName);
+        $multi = defined('PDO::MYSQL_ATTR_MULTI_STATEMENTS') ? PDO::MYSQL_ATTR_MULTI_STATEMENTS : 1000;
+        $testPdo = new PDO($testDsn, $subUser, $subPass, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            $multi                       => true
+        ]);
+
+        // Connection worked! Now save to .env
+        $envContent = file_exists($envFile) ? file_get_contents($envFile) : '';
+        if ($envContent === '') {
+            $exampleFile = __DIR__ . '/../.env.example';
+            $envContent = file_exists($exampleFile) ? file_get_contents($exampleFile) : '';
+        }
+
+        $replacements = [
+            'DB_HOST' => $subHost,
+            'DB_PORT' => $subPort,
+            'DB_NAME' => $subName,
+            'DB_USER' => $subUser,
+            'DB_PASS' => $subPass,
+        ];
+
+        foreach ($replacements as $k => $v) {
+            if (preg_match("/^{$k}=.*$/m", $envContent)) {
+                $envContent = preg_replace("/^{$k}=.*$/m", "{$k}={$v}", $envContent);
+            } else {
+                $envContent .= "\n{$k}={$v}";
+            }
+        }
+
+        $saved = @file_put_contents($envFile, $envContent);
+        if ($saved !== false) {
+            $envUpdatedMsg = "Credentials verified and saved to .env successfully!";
+            // Reload into constants/ENV
+            putenv("DB_HOST={$subHost}");
+            putenv("DB_PORT={$subPort}");
+            putenv("DB_NAME={$subName}");
+            putenv("DB_USER={$subUser}");
+            putenv("DB_PASS={$subPass}");
+            $_ENV['DB_HOST'] = $subHost;
+            $_ENV['DB_PORT'] = $subPort;
+            $_ENV['DB_NAME'] = $subName;
+            $_ENV['DB_USER'] = $subUser;
+            $_ENV['DB_PASS'] = $subPass;
+        } else {
+            $envUpdatedMsg = "Connection successful! However, .env is not writable by PHP. Please update .env manually in File Manager.";
+        }
+    } catch (Throwable $e) {
+        $error = "Connection test failed: " . $e->getMessage();
+    }
+}
+
+// 2. Live MySQL Connection Test
+$activeHost = env('DB_HOST', DB_HOST);
+$activePort = (int)env('DB_PORT', DB_PORT);
+$activeName = env('DB_NAME', DB_NAME);
+$activeUser = env('DB_USER', DB_USER);
+$activePass = env('DB_PASS', DB_PASS);
+
 $mysqlConnected = false;
 $mysqlError = '';
 $isPlaceholder = (
-    strpos(DB_NAME, 'cpaneluser') !== false ||
-    strpos(DB_USER, 'cpaneluser') !== false ||
-    DB_PASS === 'YourDatabasePasswordHere' ||
-    DB_PASS === ''
+    strpos($activeName, 'cpaneluser') !== false ||
+    strpos($activeUser, 'cpaneluser') !== false ||
+    $activePass === 'YourDatabasePasswordHere' ||
+    $activePass === ''
 );
 
 $pdo = null;
 try {
-    $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', DB_HOST, DB_PORT, DB_NAME);
+    $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $activeHost, $activePort, $activeName);
     $multi = defined('PDO::MYSQL_ATTR_MULTI_STATEMENTS') ? PDO::MYSQL_ATTR_MULTI_STATEMENTS : 1000;
-    $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+    $pdo = new PDO($dsn, $activeUser, $activePass, [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         $multi                       => true
@@ -37,8 +108,8 @@ try {
     $mysqlError = $e->getMessage();
 }
 
-// 2. Handle 1-Click Installation
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// 3. Handle 1-Click Installation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST['action'] === 'install')) {
     if (!$mysqlConnected || !$pdo) {
         $error = "Cannot install: MySQL connection failed. " . $mysqlError;
     } else {
@@ -207,12 +278,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     <?php endif; ?>
 
+    <?php if ($envUpdatedMsg): ?>
+      <div class="alert-success">
+        <strong>✓ <?= htmlspecialchars($envUpdatedMsg) ?></strong>
+      </div>
+    <?php endif; ?>
+
+    <?php if (strpos($mysqlError, '2002') !== false || strpos($mysqlError, 'No such file or directory') !== false): ?>
+      <div class="alert-warning" style="background: #fff8e1; border: 1px solid #ffe082;">
+        <strong style="color: #c43800; font-size: 15px;">👉 StackCP / Sunlight Host Notice:</strong><br>
+        StackCP does <strong>not</strong> run MySQL locally on <code>localhost</code>. In your StackCP panel, your database server hostname is:
+        <div style="margin: 8px 0; font-size: 15px;">
+          <code>DB_HOST=sdb-81.hosting.stackcp.net</code>
+        </div>
+        Please update your Host to <code>sdb-81.hosting.stackcp.net</code> below or in your <code>.env</code> file.
+      </div>
+    <?php endif; ?>
+
     <?php if ($isPlaceholder && !$installed): ?>
       <div class="alert-warning">
         <strong>⚠️ Placeholder Credentials Detected:</strong><br>
-        Your <code>.env</code> file currently contains the example placeholders:
-        <code>cpaneluser_svgdryfruits</code> or <code>YourDatabasePasswordHere</code>.<br>
-        In cPanel, your database name and username must start with your <strong>actual cPanel account username</strong> (e.g. <code>svgdryfr_...</code>).
+        Your <code>.env</code> file currently contains example placeholders.
       </div>
     <?php endif; ?>
 
@@ -229,16 +315,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </td>
       </tr>
       <tr>
+        <td style="color: #777;">MySQL Host</td>
+        <td><code><?= htmlspecialchars($activeHost) ?>:<?= $activePort ?></code></td>
+      </tr>
+      <tr>
         <td style="color: #777;">Target Database</td>
-        <td><code><?= htmlspecialchars(DB_NAME) ?></code></td>
+        <td><code><?= htmlspecialchars($activeName) ?></code></td>
       </tr>
       <tr>
         <td style="color: #777;">Database User</td>
-        <td><code><?= htmlspecialchars(DB_USER) ?></code></td>
-      </tr>
-      <tr>
-        <td style="color: #777;">MySQL Host</td>
-        <td><code><?= htmlspecialchars(DB_HOST) ?>:<?= DB_PORT ?></code></td>
+        <td><code><?= htmlspecialchars($activeUser) ?></code></td>
       </tr>
       <tr>
         <td style="color: #777;">Admin Email</td>
@@ -253,30 +339,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </table>
 
     <?php if (!$mysqlConnected && !$installed): ?>
+      <div style="background: #ffffff; border: 1px solid #d4ded9; border-radius: 8px; padding: 22px; margin: 25px 0;">
+        <h3 style="margin: 0 0 12px 0; color: #203c32; font-size: 17px;">
+          ⚙️ Update Credentials Directly
+        </h3>
+        <p style="font-size: 13px; color: #666; margin-bottom: 16px;">
+          Enter your StackCP database settings below to test the connection and save them to <code>.env</code>:
+        </p>
+        <form method="POST">
+          <input type="hidden" name="action" value="save_env">
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 4px;">DB Host</label>
+              <input type="text" name="db_host" value="<?= htmlspecialchars($activeHost === 'localhost' ? 'sdb-81.hosting.stackcp.net' : $activeHost) ?>" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 4px;">Port</label>
+              <input type="number" name="db_port" value="<?= htmlspecialchars((string)$activePort) ?>" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">
+            </div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 4px;">Database Name</label>
+            <input type="text" name="db_name" value="<?= htmlspecialchars($activeName) ?>" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 4px;">Database User</label>
+            <input type="text" name="db_user" value="<?= htmlspecialchars($activeUser) ?>" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 4px;">
+              Database Password
+              <span style="font-weight: normal; color: #888;">(Make sure you set &amp; saved this in StackCP)</span>
+            </label>
+            <input type="password" name="db_pass" placeholder="Enter password for <?= htmlspecialchars($activeUser) ?>" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">
+          </div>
+          <button type="submit" style="background: #2b5948; color: #fff; padding: 10px 18px; border: none; border-radius: 5px; font-weight: 600; cursor: pointer;">
+            Save &amp; Test Connection
+          </button>
+        </form>
+      </div>
+
       <div class="guide-box">
-        <strong>How to fix this in Sunlight Host cPanel:</strong>
+        <strong>StackCP Checklist:</strong>
         <ol>
-          <li>Open your <strong>cPanel</strong> dashboard.</li>
-          <li>Under <strong>Databases</strong>, click <strong>MySQL® Databases</strong>.</li>
-          <li>Look at <strong>Current Databases</strong>: your actual database name looks like <code>prefix_svgdryfruits</code> (where <code>prefix</code> is your cPanel username, NOT <code>cpaneluser</code>).</li>
-          <li>Under <strong>Current Users</strong>: find or create your database user (e.g. <code>prefix_svguser</code>).</li>
-          <li>Under <strong>Add User To Database</strong>: select that user and database, click <strong>Add</strong>, and check <strong>ALL PRIVILEGES</strong>.</li>
-          <li>Open cPanel <strong>File Manager</strong> &rarr; <code>public_html/.env</code>, and enter your actual values:
-            <pre style="background: #fff; padding: 10px; border-radius: 4px; margin: 8px 0; font-size: 12px; border: 1px solid #e1e8ed;">DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=yourprefix_svgdryfruits
-DB_USER=yourprefix_svguser
-DB_PASS=YourActualPasswordSetInCpanel</pre>
+          <li>In your StackCP <strong>Manage MySQL Databases</strong>:
+            <br>Verify your <strong>Database Server Host</strong> is <code>sdb-81.hosting.stackcp.net</code>.
           </li>
-          <li>Save the <code>.env</code> file and refresh this page!</li>
+          <li>For user <strong><?= htmlspecialchars($activeUser) ?></strong>:
+            <br>If it says <em>"Last Changed: Never"</em>, enter a password in the <strong>New password</strong> box and click the green <strong>Save</strong> button.
+          </li>
+          <li>Ensure <strong><?= htmlspecialchars($activeUser) ?></strong> is granted permissions on database <strong><?= htmlspecialchars($activeName) ?></strong>.</li>
         </ol>
       </div>
     <?php endif; ?>
 
     <?php if (!$installed): ?>
       <form method="POST">
+        <input type="hidden" name="action" value="install">
         <button type="submit" class="btn-install" <?= !$mysqlConnected ? 'disabled' : '' ?>>
-          <?= $mysqlConnected ? 'Initialize Database &amp; Seed Catalog' : 'Fix .env Credentials to Continue' ?>
+          <?= $mysqlConnected ? 'Initialize Database &amp; Seed Catalog' : 'Connect MySQL to Continue' ?>
         </button>
       </form>
     <?php endif; ?>
