@@ -24,18 +24,28 @@ class Database {
                 );
 
                 $initAttr = defined('Pdo\Mysql::ATTR_INIT_COMMAND') ? \Pdo\Mysql::ATTR_INIT_COMMAND : 1002;
+                $multiStatements = defined('PDO::MYSQL_ATTR_MULTI_STATEMENTS') ? PDO::MYSQL_ATTR_MULTI_STATEMENTS : 1000;
                 $options = [
                     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES   => false,
                     $initAttr                    => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
+                    $multiStatements             => true,
                 ];
 
                 self::$instance = new PDO($dsn, DB_USER, DB_PASS, $options);
                 self::$driver = 'mysql';
                 return self::$instance;
             } catch (Throwable $e) {
-                // If local development without local MySQL server, fallback to local SQLite
+                // If on production / live domain or explicit database credentials are provided, throw MySQL error
+                $host = $_SERVER['HTTP_HOST'] ?? '';
+                $isLocal = strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false || php_sapi_name() === 'cli' || php_sapi_name() === 'cli-server';
+                
+                if (!$isLocal || (!empty(DB_PASS) && DB_PASS !== '')) {
+                    throw new Exception("MySQL Connection Error: " . $e->getMessage());
+                }
+
+                // If local dev without MySQL, fallback to local SQLite
                 $sqlitePath = ROOT_PATH . '/database/database.sqlite';
                 if (!file_exists($sqlitePath)) {
                     require_once ROOT_PATH . '/database/init_sqlite.php';
