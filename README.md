@@ -1,140 +1,211 @@
 # SVG Dry Fruits — Online Storefront & Administration
 
-A production-oriented, premium ecommerce website for Indian dry-fruits brand **SVG Dry Fruits**. Built with Next.js 16, React 19, TypeScript, Drizzle ORM, PostgreSQL / embedded PGlite, and Razorpay payment integration.
+A modern, high-performance, native PHP ecommerce platform built for Indian luxury dry-fruits brand **SVG Dry Fruits**. Engineered for standard cPanel shared hosting (such as **Sunlight Host**) with native MySQL support, zero Node.js dependencies, clean URL routing, and Cashfree Payment Gateway integration.
 
 ---
 
-## Key Features
+## 🌟 Key Features
 
-1. **Brand Identity & Storefront**
+1. **Storefront & Brand Design (1:1 Visual Parity)**
    - Distinctive warm ivory, deep emerald green (`#073D26`), champagne gold, and cocoa palette.
-   - Original SVG Dry Fruits circular logo preserved across header, footer, and admin portal.
+   - Circular SVG Dry Fruits logo across header, footer, and admin portal.
+   - Rotating hero dry fruits bowl animation (`heroBowlSpin`).
+   - 4 organic floating corner ingredients (`floatTL`, `floatTR`, `floatBL`, `floatBR`).
    - Fixed-weight pack sizes: **250 g**, **500 g**, and **1 kg** with per-variant stock tracking.
-   - Product catalog, search, category browsing, and product details with instant variant price switching.
-   - Floating WhatsApp support button (`wa.me`) using `NEXT_PUBLIC_WHATSAPP_NUMBER`.
+   - Dynamic weight pill selection with live price recalculation.
+   - Finstics partnership spotlight card in the botanical footer.
+   - Floating WhatsApp support button (`wa.me`).
 
-2. **Cart & Guest Checkout**
-   - Persistent guest cart surviving browser refreshes without mandatory customer login.
-   - Server-side price, coupon, and inventory re-validation (client prices are never trusted).
-   - Dynamic free-shipping qualification bar.
-   - Guest checkout collecting structured Indian delivery addresses (PIN code, state, city, street, landmark, mobile number).
+2. **Shopping Bag & Cashfree Checkout**
+   - Session-based cart with real-time stock and coupon discount calculation.
+   - Live Cashfree Payment Gateway integration (SDK version `2026-01-01` / Drop-in v3 Modal).
+   - Cashfree Drop-in popup modal displaying UPI (Google Pay, PhonePe, Paytm, BHIM, QR code), Cards, and Netbanking.
+   - Delivery address collection with 6-digit Indian PIN code and 10-digit mobile number validation.
+   - Auto-verifying order confirmation screen (`/order-success`).
 
-3. **Payments & Inventory Reservation**
-   - Official Cashfree Payment Gateway integration (SDK `cashfree-pg` & `@cashfreepayments/cashfree-js`).
-   - Atomic database inventory holds (`reserveStock`) with 15-minute TTL to prevent concurrent overselling.
-   - Server-side order generation with `payment_session_id` and verification (`/api/checkout/verify`).
-   - Idempotent commit transition (`commitReservations`) ensuring exactly-once inventory deduction.
-   - Cashfree webhook listener (`/api/webhooks/cashfree`) with signature verification and duplicate event deduplication.
-   - Safe local simulated test mode when gateway API credentials are not yet configured in development.
+3. **Order Tracking (`/track`)**
+   - Visual timeline: Placed → Confirmed → Processing → Packed → Dispatched → Delivered.
+   - Order search by Order Number (`SVG-YYYYMMDD-XXXX`) or Tracking Token.
+   - Express courier name and tracking/AWB reference display.
 
-4. **Order Confirmation & Customer Tracking**
-   - Verified post-purchase confirmation page (`/order/success`) providing order receipt and private tracking token.
-   - Customer-facing tracking page (`/track` and `/track-order`) with visual order timeline:
-     - Placed → Confirmed → Processing → Packed → Dispatched → Delivered.
-     - Displays courier name and tracking/AWB number once entered by the administrator.
-     - Anti-enumeration protection: requires matching order number + private token or customer mobile phone.
-
-5. **Administrator Portal (`/admin`)**
-   - Password-authenticated admin login using salted `scrypt` hashing and secure HTTP-only cookies (`svg_admin_session`).
-   - **Overview**: Real-time KPI metrics (Verified Revenue, Total Orders, Orders Awaiting Fulfillment, Low Stock Alerts) and recent order activity.
-   - **Products & Stock**: Full catalog management, adding/editing products, updating pack sizes (250 g, 500 g, 1 kg), prices, and stock levels.
-   - **Combos & Hampers**: Link single product variants to gift combos so combo purchases automatically deduct component stock.
-   - **Orders & Shipping**: Search and filter orders by payment and fulfillment status, update courier tracking info, and manage order lifecycle.
-   - **Manual Refund Recording**: Record manual Cashfree refunds with audit notes and optional automatic inventory restocking.
-   - **Coupons**: Percentage and flat rupee discounts, cart minimums, usage caps, and active toggles.
-   - **Store Settings**: Flat shipping fee, free shipping threshold, and live integration status inspection.
+4. **Complete Admin Portal (`/admin`)**
+   - Secure session authentication with bcrypt password hashing.
+   - **Overview**: 4 KPI cards (Verified Revenue, Total Orders, Awaiting Fulfilment, Low Stock Alerts) + Recent Orders.
+   - **Products & Stock**: Full catalog table, stock badges, search/filter toolbar, add/edit product forms.
+   - **Combos & Hampers**: Luxury hamper bundle builder with dynamic "Max Packable" inventory calculation and bottleneck indicators.
+   - **Categories**: Icon preset selection, category ordering, and active toggles.
+   - **Orders & Fulfilment**: Order status filters, customer avatar color themes, 1-Click Shadowfax dispatch, and manual refund recording.
+   - **Coupons**: Percentage and flat rupee discounts, cart minimums, usage counters, and expiration controls.
+   - **Store Settings**: Flat shipping fee, free shipping threshold, Cashfree PG status, WhatsApp, and database diagnostics.
 
 ---
 
-## Technology Stack
+## 🚀 Sunlight Host (cPanel) Deployment Guide
 
-- **Framework**: Next.js 16 (App Router & Turbopack)
-- **UI**: React 19, Semantic HTML5, CSS Custom Properties Design System
-- **Language**: TypeScript (strict mode)
-- **Database**: Drizzle ORM with embedded local PGlite (`.data/pglite`) for instant zero-dependency local dev, and native PostgreSQL via `pg` when `DATABASE_URL` is set.
-- **Payments**: Official `cashfree-pg` and `@cashfreepayments/cashfree-js` SDKs.
-- **Validation**: Zod schema validation on all route handlers.
-- **Testing**: Vitest unit and concurrency test suite.
+Deploying SVG Dry Fruits on **Sunlight Host** or any standard cPanel web hosting is fast and requires **zero Node.js or npm builds**.
 
----
+### Step 1: Create a MySQL Database in cPanel
 
-## Getting Started
-
-### 1. Prerequisites
-- Node.js 18+ or 20+
-- npm
-
-### 2. Installation
-```bash
-git clone <repo-url>
-cd SVG
-npm install
-```
-
-### 3. Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-
-| Variable | Description |
-| :--- | :--- |
-| `DATABASE_URL` | Optional PostgreSQL connection string. If blank, uses embedded local PGlite (`.data/pglite`). |
-| `NEXT_PUBLIC_SITE_URL` | Public site domain (default: `http://localhost:3000`). |
-| `CASHFREE_CLIENT_ID` | Cashfree App/Client ID. |
-| `CASHFREE_CLIENT_SECRET` | Cashfree Secret Key. |
-| `CASHFREE_ENVIRONMENT` | Gateway environment: `SANDBOX` or `PRODUCTION`. |
-| `NEXT_PUBLIC_CASHFREE_CLIENT_ID` | Public Cashfree client ID for frontend checkout. |
-| `NEXT_PUBLIC_CASHFREE_ENVIRONMENT` | Frontend environment: `sandbox` or `production`. |
-| `NEXT_PUBLIC_WHATSAPP_NUMBER` | Business WhatsApp mobile number (e.g. `919876543210`). |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | Business customer support email. |
-| `ADMIN_BOOTSTRAP_EMAIL` | Initial administrator login email. |
-| `ADMIN_BOOTSTRAP_PASSWORD` | Initial administrator login password (min 8 characters). |
-
-*(Note: When Cashfree credentials are left blank in local development, checkout operates in a simulated test mode, allowing full end-to-end testing without external credentials).*
-
-### 4. Database Seed & Initial Admin Setup
-Seed initial demo dry-fruit products:
-```bash
-npm run db:seed
-```
-
-Create or reset an administrator account:
-```bash
-npx tsx scripts/bootstrap-admin.ts admin@svgdryfruits.com AdminPassword123!
-```
-
-### 5. Running Development Server
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-Access the admin portal at [http://localhost:3000/admin](http://localhost:3000/admin).
+1. Log in to your **Sunlight Host cPanel**.
+2. Under the **Databases** section, click **MySQL® Database Wizard**.
+3. **Step 1 — Create a Database**:
+   - Enter a name, e.g. `svgdryfruits`.
+   - Your full database name will be: `cpaneluser_svgdryfruits`.
+4. **Step 2 — Create Database User**:
+   - Username: e.g. `svguser` (full username: `cpaneluser_svguser`).
+   - Password: Click *Password Generator* or enter a strong password. **Save this password.**
+5. **Step 3 — Add User to Database**:
+   - Check **ALL PRIVILEGES** and click **Make Changes**.
 
 ---
 
-## Scripts & Verification
+### Step 2: Deploy Files via Git or File Manager
 
-- **Typecheck**: `npm run typecheck`
-- **Run Tests**: `npm test`
-- **Production Build**: `npm run build`
-- **Start Production Server**: `npm run start`
+#### Option A: Using Git Version Control in cPanel (Recommended)
+1. In cPanel, click **Git™ Version Control** → **Create**.
+2. **Clone URL**: `https://github.com/mohith939/svgdryfruits.git`
+3. **Repository Path**: `/home/cpaneluser/public_html` (or your domain's document root).
+4. Click **Create** to clone the repository.
+
+#### Option B: Using cPanel File Manager
+1. In cPanel, open **File Manager** and navigate to `public_html`.
+2. Upload the repository ZIP file and click **Extract**.
+3. Ensure all files (`index.php`, `.htaccess`, `config/`, `views/`, `src/`, `assets/`, etc.) are directly inside `public_html`.
 
 ---
 
-## Order & Payment Lifecycle Machine
+### Step 3: Configure Environment Variables (`.env`)
+
+In your cPanel `public_html` directory, create or edit the `.env` file:
+
+```env
+# Database Credentials (from Step 1)
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=cpaneluser_svgdryfruits
+DB_USER=cpaneluser_svguser
+DB_PASS=YourDatabasePasswordHere
+
+# Website URL
+APP_URL=https://www.svgdryfruits.com
+NEXT_PUBLIC_SITE_URL=https://www.svgdryfruits.com
+
+# Cashfree Payments (Production)
+CASHFREE_CLIENT_ID=1499458c9b9b6e272481a2656918549941
+CASHFREE_CLIENT_SECRET=your_cashfree_secret_key_here
+CASHFREE_ENVIRONMENT=PRODUCTION
+
+# Admin Portal Credentials
+ADMIN_BOOTSTRAP_EMAIL=svgdryfruits@gmail.com
+ADMIN_BOOTSTRAP_PASSWORD=Mohith@123
+
+# Business & Support
+NEXT_PUBLIC_WHATSAPP_NUMBER=918340956469
+NEXT_PUBLIC_CONTACT_EMAIL=svgdryfruits@gmail.com
+```
+
+---
+
+### Step 4: 1-Click Database Setup & Seeding
+
+1. Open your browser and navigate to:
+   ```
+   https://www.svgdryfruits.com/database/install.php
+   ```
+2. Click **"Run 1-Click Setup & Seed"**.
+3. The installer will automatically:
+   - Create all 7 MySQL tables (`categories`, `products`, `variants`, `combos`, `coupons`, `orders`, `order_items`, `shipping_settings`, `admins`).
+   - Seed the initial catalog with authentic dry fruits, pack sizes (250g, 500g, 1kg), prices, and images.
+   - Provision your secure admin login account.
+4. *(Optional for security)* Delete or rename `database/install.php` once setup is complete.
+
+---
+
+### Step 5: Log in to the Admin Dashboard
+
+- Navigate to: **`https://www.svgdryfruits.com/admin`**
+- **Email:** `svgdryfruits@gmail.com`
+- **Password:** `Mohith@123`
+
+---
+
+## 💻 Local Development Setup
+
+To test or run locally on your computer with PHP's built-in server:
+
+```bash
+# Clone the repository
+git clone https://github.com/mohith939/svgdryfruits.git
+cd svgdryfruits
+
+# Start the local development server (uses auto SQLite fallback if MySQL is not running)
+php -S 127.0.0.1:8080 index.php
+```
+
+Visit **`http://localhost:8080/`** in your browser.
+
+---
+
+## 📁 Project Directory Structure
 
 ```
-Guest Checkout -> Pending Payment (Stock Held with 15m TTL)
-                       │
-       ┌───────────────┴───────────────┐
-       ▼                               ▼
-Payment Verified (HMAC Signature)  Payment Failed / Expired
-       │                               │
-Stock Deducted (Committed)         Hold Released
-Status: Confirmed                  Status: Failed
-       │
-Processing -> Packed -> Shipped (Courier AWB) -> Delivered
-       │
-Manual Cancellation / Refund -> Optional Inventory Restocked
+.
+├── .htaccess                 # Apache rewrite rules & security headers
+├── .env.example              # Sample environment configuration
+├── index.php                 # Front controller & clean URL router
+├── api/                      # REST API endpoints
+│   ├── cart.php              # Bag add, update, remove, clear
+│   ├── checkout.php          # Order creation & Cashfree session
+│   ├── coupon.php            # Promo code validation
+│   ├── verify.php            # Payment status verification
+│   └── webhook.php           # Cashfree webhook listener (HMAC verified)
+├── assets/                   # High-res photography, logos, badges (128 files)
+├── config/                   # Configuration & drivers
+│   ├── config.php            # App constants & env loader
+│   ├── database.php          # PDO connection (MySQL + SQLite fallback)
+│   └── cashfree.php          # Cashfree PG integration
+├── css/                      # CSS styling
+│   └── style.css             # Complete design system & keyframe animations
+├── database/                 # Database schema & setup
+│   ├── schema.sql            # MySQL schema (cPanel)
+│   ├── seed.sql              # Initial product catalog seeder
+│   ├── install.php           # 1-Click web installer
+│   └── init_sqlite.php       # SQLite local dev seeder
+├── public/                   # Alternate document root mirror
+├── src/                      # Core backend classes
+│   ├── Auth.php              # Admin session authentication
+│   ├── Cart.php              # Session shopping cart
+│   ├── Helpers.php           # Currency, buffering, routing helpers
+│   ├── Icon.php              # SVG icon library
+│   └── Models.php            # Database query layer & stock manager
+└── views/                    # Template views
+    ├── home.php              # Homepage with rotating bowl animation
+    ├── shop.php              # Full product catalog
+    ├── product.php           # Product detail view with weight pills
+    ├── cart.php              # Shopping bag view
+    ├── checkout.php          # Checkout form with Cashfree Drop-in
+    ├── order_success.php     # Order confirmation & receipt
+    ├── track.php             # Customer order tracking
+    ├── admin/                # 10 Admin management screens
+    │   ├── dashboard.php     # Revenue & order KPIs
+    │   ├── products.php      # Products & stock management
+    │   ├── product_form.php  # Add & edit product
+    │   ├── categories.php    # Category builder
+    │   ├── combos.php        # Luxury hamper bundle builder
+    │   ├── orders.php        # Orders list & status updater
+    │   ├── order_detail.php  # Order snapshot & dispatch
+    │   ├── coupons.php       # Promo codes
+    │   ├── settings.php      # Store settings & shipping fees
+    │   └── login.php         # Admin login
+    ├── layouts/              # Header, footer, and admin navigation
+    └── pages/                # Terms, Privacy, Shipping, Return policies
 ```
+
+---
+
+## 🔒 Security Best Practices
+
+- **Zero Client-Side Pricing Trust**: Prices and discounts are recalculated strictly on the server against the database.
+- **Cashfree Webhook HMAC Signature**: Webhook payloads are verified using SHA-256 HMAC and a 5-minute replay-attack protection window.
+- **Directory Protection**: Root `.htaccess` strictly forbids public access to `.env`, `.git`, `config/`, `src/`, `views/`, and `.sql` files.
+- **Inventory Concurrency Protection**: Stock is checked and atomically deducted during checkout.
