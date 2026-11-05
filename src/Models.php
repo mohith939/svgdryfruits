@@ -144,8 +144,91 @@ class Models {
         $stmt->execute([trim($code)]);
     }
 
-    // --- Shipping Settings ---
-    public static function getShippingSettings(): array {
+    // --- Schema Self-Healing & Upgrade ---
+    private static bool $schemaChecked = false;
+    public static function ensureSchema(): void {
+        if (self::$schemaChecked) return;
+        self::$schemaChecked = true;
+        $pdo = Database::getConnection();
+        $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+        // 1. Ensure shipping_options table exists
+        if ($driver === 'sqlite') {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS shipping_options (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    estimated_days TEXT,
+                    rate_paise INTEGER NOT NULL DEFAULT 4900,
+                    free_above_paise INTEGER,
+                    min_subtotal_paise INTEGER NOT NULL DEFAULT 0,
+                    active INTEGER NOT NULL DEFAULT 1,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+        } else {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS `shipping_options` (
+                    `id` VARCHAR(64) NOT NULL,
+                    `name` VARCHAR(128) NOT NULL,
+                    `description` TEXT NULL,
+                    `estimated_days` VARCHAR(64) NULL,
+                    `rate_paise` INT NOT NULL DEFAULT 4900,
+                    `free_above_paise` INT NULL DEFAULT 99900,
+                    `min_subtotal_paise` INT NOT NULL DEFAULT 0,
+                    `active` TINYINT(1) NOT NULL DEFAULT 1,
+                    `sort_order` INT NOT NULL DEFAULT 0,
+                    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+        }
+
+        // Seed default options if empty
+        $count = (int)$pdo->query("SELECT COUNT(*) FROM shipping_options")->fetchColumn();
+        if ($count === 0) {
+            $pdo->exec("
+                INSERT INTO shipping_options (id, name, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
+                VALUES 
+                ('ship_standard', 'Standard Delivery', 'Carefully packed & shipped via Bluedart / Delhivery / DTDC surface express.', '3 – 5 Business Days', 4900, 99900, 0, 1, 1),
+                ('ship_express', 'Priority Air Express', 'Faster delivery via dedicated air cargo for urgent gifting & festivities.', '1 – 2 Business Days', 12900, 199900, 0, 1, 2)
+            ");
+        }
+
+        // 2. Ensure contact columns in shipping_settings
+        $contactCols = [
+            'contact_phone' => "VARCHAR(32) NOT NULL DEFAULT '919059123456'",
+            'contact_email' => "VARCHAR(128) NOT NULL DEFAULT 'svgdryfruits@gmail.com'",
+            'whatsapp_number' => "VARCHAR(32) NOT NULL DEFAULT '919059123456'",
+            'store_address' => "TEXT NULL",
+        ];
+        foreach ($contactCols as $col => $def) {
+            try {
+                $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN `{$col}` {$def}");
+            } catch (Throwable $e) {
+                // Column already exists or driver syntax difference
+            }
+        }
+
+        // 3. Ensure shipping_option columns in orders
+        $orderCols = [
+            'shipping_option_id' => "VARCHAR(64) NULL",
+            'shipping_option_name' => "VARCHAR(128) NULL",
+        ];
+        foreach ($orderCols as $col => $def) {
+            try {
+                $pdo->exec("ALTER TABLE orders ADD COLUMN `{$col}` {$def}");
+            } catch (Throwable $e) {
+                // Column already exists
+            }
+        }
+    }
+
+    // --- Store & Contact Settings ---
+    public static function getStoreSettings(): array {
+        self::ensureSchema();
         $pdo = Database::getConnection();
         $row = $pdo->query("SELECT * FROM shipping_settings WHERE id = 1 LIMIT 1")->fetch();
         if (!$row) {
@@ -153,13 +236,111 @@ class Models {
                 'flat_charge_paise' => 4900,
                 'free_threshold_paise' => 99900,
                 'active' => 1,
+                'contact_phone' => WHATSAPP_NUMBER,
+                'contact_email' => CONTACT_EMAIL,
+                'whatsapp_number' => WHATSAPP_NUMBER,
+                'store_address' => 'SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India',
             ];
         }
-        return $row;
+
+        return [
+            'flat_charge_paise' => (int)($row['flat_charge_paise'] ?? 4900),
+            'free_threshold_paise' => isset($row['free_threshold_paise']) ? (int)$row['free_threshold_paise'] : 99900,
+            'active' => (int)($row['active'] ?? 1),
+            'contact_phone' => !empty($row['contact_phone']) ? $row['contact_phone'] : WHATSAPP_NUMBER,
+            'contact_email' => !empty($row['contact_email']) ? $row['contact_email'] : CONTACT_EMAIL,
+            'whatsapp_number' => !empty($row['whatsapp_number']) ? $row['whatsapp_number'] : WHATSAPP_NUMBER,
+            'store_address' => !empty($row['store_address']) ? $row['store_address'] : 'SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India',
+        ];
+    }
+
+    public static function saveStoreSettings(array $data): void {
+        self::ensureSchema();
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("
+            UPDATE shipping_settings 
+            SET contact_phone = ?, contact_email = ?, whatsapp_number = ?, store_address = ?
+            WHERE id = 1
+        ");
+        $stmt->execute([
+            trim($data['contact_phone'] ?? WHATSAPP_NUMBER),
+            trim($data['contact_email'] ?? CONTACT_EMAIL),
+            trim($data['whatsapp_number'] ?? WHATSAPP_NUMBER),
+            trim($data['store_address'] ?? ''),
+        ]);
+    }
+
+    // --- Shipping Settings & Options ---
+    public static function getShippingSettings(): array {
+        return self::getStoreSettings();
+    }
+
+    public static function getShippingOptions(bool $activeOnly = false): array {
+        self::ensureSchema();
+        $pdo = Database::getConnection();
+        $sql = "SELECT * FROM shipping_options";
+        if ($activeOnly) {
+            $sql .= " WHERE active = 1";
+        }
+        $sql .= " ORDER BY sort_order ASC, rate_paise ASC";
+        return $pdo->query($sql)->fetchAll();
+    }
+
+    public static function getShippingOptionById(string $id): ?array {
+        self::ensureSchema();
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM shipping_options WHERE id = ? LIMIT 1");
+        $stmt->execute([$id]);
+        return $stmt->fetch() ?: null;
+    }
+
+    public static function saveShippingOption(array $data): void {
+        self::ensureSchema();
+        $pdo = Database::getConnection();
+        $id = $data['id'] ?? ('ship_' . bin2hex(random_bytes(6)));
+        $name = trim($data['name']);
+        $description = trim($data['description'] ?? '');
+        $estimatedDays = trim($data['estimated_days'] ?? '');
+        $ratePaise = (int)($data['rate_paise'] ?? 4900);
+        $freeAbovePaise = isset($data['free_above_paise']) && $data['free_above_paise'] !== '' ? (int)$data['free_above_paise'] : null;
+        $minSubtotalPaise = (int)($data['min_subtotal_paise'] ?? 0);
+        $active = !empty($data['active']) ? 1 : 0;
+        $sortOrder = (int)($data['sort_order'] ?? 0);
+
+        $exists = self::getShippingOptionById($id);
+        if ($exists) {
+            $stmt = $pdo->prepare("
+                UPDATE shipping_options 
+                SET name = ?, description = ?, estimated_days = ?, rate_paise = ?, free_above_paise = ?, min_subtotal_paise = ?, active = ?, sort_order = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$name, $description, $estimatedDays, $ratePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder, $id]);
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO shipping_options (id, name, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([$id, $name, $description, $estimatedDays, $ratePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder]);
+        }
+    }
+
+    public static function deleteShippingOption(string $id): void {
+        self::ensureSchema();
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("DELETE FROM shipping_options WHERE id = ?");
+        $stmt->execute([$id]);
+    }
+
+    public static function toggleShippingOption(string $id): void {
+        self::ensureSchema();
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE shipping_options SET active = 1 - active WHERE id = ?");
+        $stmt->execute([$id]);
     }
 
     // --- Orders ---
     public static function createOrder(array $data, array $items): string {
+        self::ensureSchema();
         $pdo = Database::getConnection();
         $pdo->beginTransaction();
 
@@ -169,12 +350,14 @@ class Models {
                     id, order_number, tracking_token, payment_status, fulfillment_status,
                     customer_name, customer_email, customer_phone, shipping_address,
                     subtotal_paise, discount_paise, shipping_paise, total_paise,
-                    coupon_code, cashfree_order_id, payment_session_id
+                    coupon_code, shipping_option_id, shipping_option_name,
+                    cashfree_order_id, payment_session_id
                 ) VALUES (
                     ?, ?, ?, ?, ?,
                     ?, ?, ?, ?,
                     ?, ?, ?, ?,
-                    ?, ?, ?
+                    ?, ?, ?,
+                    ?, ?
                 )
             ");
 
@@ -193,6 +376,8 @@ class Models {
                 $data['shipping_paise'] ?? 0,
                 $data['total_paise'],
                 $data['coupon_code'] ?? null,
+                $data['shipping_option_id'] ?? null,
+                $data['shipping_option_name'] ?? null,
                 $data['cashfree_order_id'] ?? null,
                 $data['payment_session_id'] ?? null,
             ]);

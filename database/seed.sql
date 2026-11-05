@@ -2,6 +2,7 @@
 -- Automatically populates categories, all authentic dry fruits products, pack variants, and shipping rules
 
 SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
 
 -- 1. Categories
 INSERT INTO `categories` (`id`, `slug`, `name`, `description`, `image_url`, `sort_order`, `active`) VALUES
@@ -10,7 +11,7 @@ INSERT INTO `categories` (`id`, `slug`, `name`, `description`, `image_url`, `sor
 ('a0000001-0000-4000-8000-000000000003', 'seeds', 'Nutrient Seeds', 'Nutrient-dense raw and roasted seeds packed with protein and zinc.', '/assets/cat-hd-seeds.png', 3, 1),
 ('a0000001-0000-4000-8000-000000000004', 'healthy-mix', 'Healthy Mix', 'Curated energy trail mixes and wholesome nutrient blends.', '/assets/cat-hd-healthy-mix.png', 4, 1),
 ('a0000001-0000-4000-8000-000000000005', 'combos', 'Combos', 'Curated celebration packs, mixed hampers, and value bundles.', '/assets/cat-hd-gift-boxes.png', 5, 1)
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `description`=VALUES(`description`), `image_url`=VALUES(`image_url`);
+ON DUPLICATE KEY UPDATE `id`=VALUES(`id`), `name`=VALUES(`name`), `description`=VALUES(`description`), `image_url`=VALUES(`image_url`);
 
 -- 2. Products
 INSERT INTO `products` (`id`, `category_id`, `slug`, `name`, `description`, `image_url`, `images`, `is_combo`, `active`, `is_demo`) VALUES
@@ -27,7 +28,7 @@ INSERT INTO `products` (`id`, `category_id`, `slug`, `name`, `description`, `ima
 ('b0000001-0000-4000-8000-000000000011', 'a0000001-0000-4000-8000-000000000004', 'healthy-mix', 'Royal Daily Healthy Mix', 'Supercharged energizing trail mix of roasted California almonds, crunchy cashews, pistachios, walnuts, cranberries, and pumpkin seeds.', '/assets/shop-mixed-nuts.jpg', '["/assets/shop-mixed-nuts.jpg"]', 0, 1, 0),
 ('b0000001-0000-4000-8000-000000000012', 'a0000001-0000-4000-8000-000000000005', 'festive-gift-box', 'Festive Dry Fruits Gift Box', 'Luxury artisan wooden gift hamper featuring 4 individual air-sealed glass canisters of California Almonds, Royal Cashews, Pistachios, and Afghan Anjeer.', '/assets/mixed-fruit-reference.jpg', '["/assets/mixed-fruit-reference.jpg"]', 1, 1, 0),
 ('b0000001-0000-4000-8000-000000000013', 'a0000001-0000-4000-8000-000000000001', 'organic-walnuts', 'Organic Himalayan Walnuts', 'Certified 100% organic handpicked wild walnuts harvested from pristine Himalayan orchards in Kashmir. Zero additives or preservatives.', '/assets/collection-walnuts.jpg', '["/assets/collection-walnuts.jpg"]', 0, 1, 0)
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `description`=VALUES(`description`), `image_url`=VALUES(`image_url`);
+ON DUPLICATE KEY UPDATE `category_id`=VALUES(`category_id`), `name`=VALUES(`name`), `description`=VALUES(`description`), `image_url`=VALUES(`image_url`);
 
 -- 3. Variants
 INSERT INTO `variants` (`id`, `product_id`, `sku`, `label`, `price_paise`, `compare_price_paise`, `stock`, `low_stock_threshold`, `active`) VALUES
@@ -80,7 +81,7 @@ INSERT INTO `variants` (`id`, `product_id`, `sku`, `label`, `price_paise`, `comp
 -- Organic Walnuts
 ('c0000001-0001-4000-8000-000000000013', 'b0000001-0000-4000-8000-000000000013', 'ORG-WAL-250', '250 g', 49900, 57900, 25, 5, 1),
 ('c0000001-0002-4000-8000-000000000013', 'b0000001-0000-4000-8000-000000000013', 'ORG-WAL-500', '500 g', 94900, 109900, 20, 5, 1)
-ON DUPLICATE KEY UPDATE `label`=VALUES(`label`), `price_paise`=VALUES(`price_paise`), `compare_price_paise`=VALUES(`compare_price_paise`);
+ON DUPLICATE KEY UPDATE `product_id`=VALUES(`product_id`), `label`=VALUES(`label`), `price_paise`=VALUES(`price_paise`), `compare_price_paise`=VALUES(`compare_price_paise`);
 
 -- 4. Coupons
 INSERT INTO `coupons` (`id`, `code`, `name`, `description`, `type`, `value`, `min_subtotal_paise`, `max_discount_paise`, `active`) VALUES
@@ -88,13 +89,21 @@ INSERT INTO `coupons` (`id`, `code`, `name`, `description`, `type`, `value`, `mi
 ('d0000001-0002-4000-8000-000000000002', 'FESTIVE50', 'Festive ₹50 Off', 'Flat ₹50 discount on orders above ₹999', 'flat', 5000, 99900, 5000, 1)
 ON DUPLICATE KEY UPDATE `value`=VALUES(`value`);
 
--- 5. Shipping settings (Free delivery over ₹999, else ₹49)
-INSERT INTO `shipping_settings` (`id`, `flat_charge_paise`, `free_threshold_paise`, `active`) VALUES
-(1, 4900, 99900, 1)
-ON DUPLICATE KEY UPDATE `flat_charge_paise`=VALUES(`flat_charge_paise`), `free_threshold_paise`=VALUES(`free_threshold_paise`);
+-- 5. Shipping settings & Store Contact Information
+INSERT INTO `shipping_settings` (`id`, `flat_charge_paise`, `free_threshold_paise`, `active`, `contact_phone`, `contact_email`, `whatsapp_number`, `store_address`) VALUES
+(1, 4900, 99900, 1, '919059123456', 'svgdryfruits@gmail.com', '919059123456', 'SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India')
+ON DUPLICATE KEY UPDATE `flat_charge_paise`=VALUES(`flat_charge_paise`), `free_threshold_paise`=VALUES(`free_threshold_paise`), `contact_phone`=VALUES(`contact_phone`), `contact_email`=VALUES(`contact_email`), `whatsapp_number`=VALUES(`whatsapp_number`);
 
--- 6. Initial Admin User (svgdryfruits@gmail.com / Mohith@123)
+-- 6. Shipping Options (Multi-Condition Delivery Rates)
+INSERT INTO `shipping_options` (`id`, `name`, `description`, `estimated_days`, `rate_paise`, `free_above_paise`, `min_subtotal_paise`, `active`, `sort_order`) VALUES
+('ship_standard', 'Standard Delivery', 'Carefully packed & shipped via Bluedart / Delhivery / DTDC surface express.', '3 – 5 Business Days', 4900, 99900, 0, 1, 1),
+('ship_express', 'Priority Air Express', 'Faster delivery via dedicated air cargo for urgent gifting & festivities.', '1 – 2 Business Days', 12900, 199900, 0, 1, 2)
+ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `description`=VALUES(`description`), `rate_paise`=VALUES(`rate_paise`), `free_above_paise`=VALUES(`free_above_paise`);
+
+-- 7. Initial Admin User (svgdryfruits@gmail.com / Mohith@123)
 -- Hash generated via password_hash('Mohith@123', PASSWORD_BCRYPT)
 INSERT INTO `admins` (`id`, `email`, `password_hash`) VALUES
 ('e0000001-0001-4000-8000-000000000001', 'svgdryfruits@gmail.com', '$2y$10$w85xN8eG6509e5Xw7u7MceBfv033rWJqj1m92Gz7xXN1XmB/LgCiq')
 ON DUPLICATE KEY UPDATE `email`=VALUES(`email`);
+
+SET FOREIGN_KEY_CHECKS = 1;

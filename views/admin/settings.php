@@ -9,29 +9,41 @@ require_once ROOT_PATH . '/src/Models.php';
 
 $pdo = Database::getConnection();
 
-// Handle saving shipping settings
+// Handle saving settings
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $active = isset($_POST['active']) ? 1 : 0;
-    $flatINR = (float)($_POST['flat_charge'] ?? 0);
-    $freeINR = trim($_POST['free_threshold'] ?? '');
+    $action = $_POST['action'] ?? 'save_shipping';
 
-    $flatPaise = (int)round($flatINR * 100);
-    $freePaise = ($freeINR !== '') ? (int)round((float)$freeINR * 100) : null;
+    if ($action === 'save_contact') {
+        Models::saveStoreSettings([
+            'contact_phone' => trim($_POST['contact_phone'] ?? ''),
+            'contact_email' => trim($_POST['contact_email'] ?? ''),
+            'whatsapp_number' => trim($_POST['whatsapp_number'] ?? ''),
+            'store_address' => trim($_POST['store_address'] ?? ''),
+        ]);
+        Helpers::setFlash('success', 'Store contact information updated successfully! Changes are live on /contact and the footer.');
+    } else {
+        $active = isset($_POST['active']) ? 1 : 0;
+        $flatINR = (float)($_POST['flat_charge'] ?? 0);
+        $freeINR = trim($_POST['free_threshold'] ?? '');
 
-    $stmt = $pdo->prepare("
-        UPDATE shipping_settings 
-        SET flat_charge_paise = ?, free_threshold_paise = ?, active = ?
-        WHERE id = 1
-    ");
-    $stmt->execute([$flatPaise, $freePaise, $active]);
+        $flatPaise = (int)round($flatINR * 100);
+        $freePaise = ($freeINR !== '') ? (int)round((float)$freeINR * 100) : null;
 
-    Helpers::setFlash('success', 'Shipping rules saved successfully.');
+        $stmt = $pdo->prepare("
+            UPDATE shipping_settings 
+            SET flat_charge_paise = ?, free_threshold_paise = ?, active = ?
+            WHERE id = 1
+        ");
+        $stmt->execute([$flatPaise, $freePaise, $active]);
+        Helpers::setFlash('success', 'Shipping rules saved successfully.');
+    }
+
     Helpers::redirect(Helpers::url('admin/settings'));
 }
 
-$shipping = Models::getShippingSettings();
-$flatINR = round($shipping['flat_charge_paise'] / 100);
-$freeINR = $shipping['free_threshold_paise'] ? round($shipping['free_threshold_paise'] / 100) : '';
+$settings = Models::getStoreSettings();
+$flatINR = round($settings['flat_charge_paise'] / 100);
+$freeINR = $settings['free_threshold_paise'] ? round($settings['free_threshold_paise'] / 100) : '';
 
 $cashfreeConfigured = !empty(CASHFREE_APP_ID) && !empty(CASHFREE_SECRET_KEY);
 
@@ -105,10 +117,78 @@ require __DIR__ . '/../layouts/admin_layout.php';
       </form>
     </div>
 
-    <!-- Integration & Environment Status Box -->
+    <!-- Store Contact & Support Settings Card -->
     <div class="admin-card">
+      <h2>Store Contact &amp; Support Details</h2>
+      <p class="admin-card-subtitle">
+        Manage customer support mobile, WhatsApp number, email, and dispatch address displayed on the <a href="<?= Helpers::url('contact') ?>" target="_blank" style="color: #073D26; font-weight: 600;">/contact</a> page and site footer.
+      </p>
+
+      <form class="admin-form" method="POST">
+        <input type="hidden" name="action" value="save_contact">
+
+        <div class="form-group">
+          <label for="contact_phone">Customer Care Mobile / Phone</label>
+          <input
+            id="contact_phone"
+            type="text"
+            name="contact_phone"
+            value="<?= htmlspecialchars($settings['contact_phone']) ?>"
+            placeholder="e.g. 919059123456"
+            required
+          >
+          <span class="field-hint" style="display: block; font-size: 12px; color: #7C7265; margin-top: 4px;">
+            Displayed on Contact page for customer calls &amp; inquiries.
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="whatsapp_number">Official WhatsApp Number (with country code)</label>
+          <input
+            id="whatsapp_number"
+            type="text"
+            name="whatsapp_number"
+            value="<?= htmlspecialchars($settings['whatsapp_number']) ?>"
+            placeholder="e.g. 919059123456"
+            required
+          >
+          <span class="field-hint" style="display: block; font-size: 12px; color: #7C7265; margin-top: 4px;">
+            Powers the bottom-right floating WhatsApp chat button and instant order support links.
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="contact_email">Support &amp; Inquiries Email Address</label>
+          <input
+            id="contact_email"
+            type="email"
+            name="contact_email"
+            value="<?= htmlspecialchars($settings['contact_email']) ?>"
+            placeholder="svgdryfruits@gmail.com"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="store_address">Warehouse / Dispatch Address &amp; Operating Hours</label>
+          <textarea
+            id="store_address"
+            name="store_address"
+            rows="3"
+            placeholder="Address shown on Contact page"
+          ><?= htmlspecialchars($settings['store_address']) ?></textarea>
+        </div>
+
+        <button type="submit" class="button button-primary">
+          Save Contact Information
+        </button>
+      </form>
+    </div>
+
+    <!-- Integration & Environment Status Box -->
+    <div class="admin-card" style="grid-column: 1 / -1;">
       <h2>Integration &amp; Environment Status</h2>
-      <div class="admin-details-grid" style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="admin-details-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
         <div>
           <span class="admin-detail-label" style="display: block; font-size: 11px; text-transform: uppercase; color: #7C7265; font-weight: 700; margin-bottom: 4px;">Cashfree Payments Gateway</span>
           <span class="badge <?= $cashfreeConfigured ? 'badge-success' : 'badge-warning' ?>">
@@ -124,12 +204,16 @@ require __DIR__ . '/../layouts/admin_layout.php';
           <span class="badge badge-success"><?= strtoupper(Database::getDriver()) ?> Connected</span>
         </div>
         <div>
-          <span class="admin-detail-label" style="display: block; font-size: 11px; text-transform: uppercase; color: #7C7265; font-weight: 700; margin-bottom: 4px;">Support WhatsApp Number</span>
-          <span>+91 <?= htmlspecialchars(WHATSAPP_NUMBER) ?></span>
+          <span class="admin-detail-label" style="display: block; font-size: 11px; text-transform: uppercase; color: #7C7265; font-weight: 700; margin-bottom: 4px;">Active Support WhatsApp</span>
+          <a href="https://wa.me/<?= preg_replace('/\D/', '', $settings['whatsapp_number']) ?>" target="_blank" style="color: #25D366; font-weight: 600;">
+            +<?= htmlspecialchars($settings['whatsapp_number']) ?> &rarr;
+          </a>
         </div>
         <div>
-          <span class="admin-detail-label" style="display: block; font-size: 11px; text-transform: uppercase; color: #7C7265; font-weight: 700; margin-bottom: 4px;">Contact Email</span>
-          <span><?= htmlspecialchars(CONTACT_EMAIL) ?></span>
+          <span class="admin-detail-label" style="display: block; font-size: 11px; text-transform: uppercase; color: #7C7265; font-weight: 700; margin-bottom: 4px;">Active Contact Email</span>
+          <a href="mailto:<?= htmlspecialchars($settings['contact_email']) ?>" style="color: #073D26; font-weight: 600;">
+            <?= htmlspecialchars($settings['contact_email']) ?>
+          </a>
         </div>
       </div>
     </div>

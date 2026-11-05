@@ -36,6 +36,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$id]);
             Helpers::setFlash('success', 'Component removed from hamper.');
         }
+    } elseif ($action === 'update_image') {
+        $productId = trim($_POST['product_id'] ?? '');
+        $imageUrl = trim($_POST['image_url'] ?? '');
+
+        if (!empty($_FILES['image_file']['tmp_name'])) {
+            $uploaded = Helpers::handleUpload($_FILES['image_file'], 'combo_');
+            if ($uploaded) {
+                $imageUrl = $uploaded;
+            }
+        }
+
+        if ($productId && $imageUrl) {
+            $stmt = $pdo->prepare("UPDATE products SET image_url = ? WHERE id = ?");
+            $stmt->execute([$imageUrl, $productId]);
+            Helpers::setFlash('success', 'Combo hamper image updated successfully!');
+        } else {
+            Helpers::setFlash('error', 'Please select an image file or enter an image URL.');
+        }
     }
 
     Helpers::redirect(Helpers::url('admin/combos'));
@@ -184,19 +202,29 @@ require __DIR__ . '/../layouts/admin_layout.php';
       <div class="admin-card" style="margin-bottom: 24px;">
         <!-- Combo Header -->
         <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ECE7DE; padding-bottom: 14px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <?php if (!empty($prod['image_url'])): ?>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="position: relative; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 2px solid #DFD7CA; background: #fff; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
               <img
-                src="<?= Helpers::asset(ltrim($prod['image_url'], '/')) ?>"
+                src="<?= Helpers::asset(ltrim($prod['image_url'] ?? '/assets/mixed-fruit-reference.jpg', '/')) ?>"
                 alt="<?= htmlspecialchars($prod['name']) ?>"
-                style="width: 52px; height: 52px; border-radius: 8px; object-fit: cover; border: 1px solid #DFD7CA;"
+                style="width: 100%; height: 100%; object-fit: cover;"
+                onerror="this.src='<?= Helpers::asset('mixed-fruit-reference.jpg') ?>'"
               >
-            <?php endif; ?>
+            </div>
             <div>
-              <h2 style="margin: 0 0 2px; font-size: 18px; color: #073D26;">
-                <?= htmlspecialchars($prod['name']) ?>
-              </h2>
-              <span style="font-size: 12px; color: #776F62;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <h2 style="margin: 0; font-size: 19px; color: #073D26;">
+                  <?= htmlspecialchars($prod['name']) ?>
+                </h2>
+                <button
+                  type="button"
+                  onclick="openComboImageModal('<?= $prod['id'] ?>', '<?= htmlspecialchars(addslashes($prod['name'])) ?>', '<?= htmlspecialchars(addslashes($prod['image_url'] ?? '/assets/mixed-fruit-reference.jpg')) ?>')"
+                  style="font-size: 11.5px; padding: 4px 9px; background: #FAF7F2; border: 1px solid #C8BCAC; border-radius: 6px; color: #073D26; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"
+                >
+                  📷 Change Photo
+                </button>
+              </div>
+              <span style="font-size: 12px; color: #776F62; display: block; margin-top: 3px;">
                 /<?= htmlspecialchars($prod['slug']) ?> &bull; Gift Hamper Product
               </span>
             </div>
@@ -206,14 +234,14 @@ require __DIR__ . '/../layouts/admin_layout.php';
               href="<?= Helpers::url('products/' . $prod['slug']) ?>"
               target="_blank"
               class="button button-outline"
-              style="font-size: 12px; padding: 4px 10px; background: #fff; color: #073D26;"
+              style="font-size: 12px; padding: 6px 12px; background: #fff; color: #073D26; border-radius: 6px;"
             >
               View on Storefront ↗
             </a>
             <a
               href="<?= Helpers::url('admin/products/edit?id=' . $prod['id']) ?>"
               class="button button-outline"
-              style="font-size: 12px; padding: 4px 10px; background: #fff; color: #073D26;"
+              style="font-size: 12px; padding: 6px 12px; background: #fff; color: #073D26; border-radius: 6px;"
             >
               Edit Product Details
             </a>
@@ -371,5 +399,187 @@ require __DIR__ . '/../layouts/admin_layout.php';
     <?php endforeach; ?>
   <?php endif; ?>
 </div>
+
+<!-- Modal: Change Combo Hamper Image -->
+<div id="comboImageModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+  <div style="background: #fff; border-radius: 12px; max-width: 520px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid #DFD7CA;">
+    <div style="background: #073D26; color: #fff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+      <h3 style="margin: 0; font-size: 18px; color: #E2C376; font-family: Georgia, serif;">
+        📷 Update Combo Photo
+      </h3>
+      <button type="button" onclick="closeComboImageModal()" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" style="padding: 24px;">
+      <input type="hidden" name="action" value="update_image">
+      <input type="hidden" id="modal_combo_product_id" name="product_id" value="">
+
+      <p style="margin: 0 0 16px; font-size: 14px; color: #555;">
+        Updating image for: <strong id="modal_combo_product_name" style="color: #073D26;">Combo Hamper</strong>
+      </p>
+
+      <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 18px;">
+        <!-- Preview Box -->
+        <div style="width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 2px solid #DFD7CA; background: #FAF7F2; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+          <img
+            id="modal_combo_preview"
+            src="<?= Helpers::asset('mixed-fruit-reference.jpg') ?>"
+            alt="Preview"
+            style="width: 100%; height: 100%; object-fit: cover;"
+          >
+        </div>
+
+        <div style="flex: 1;">
+          <input
+            type="file"
+            id="combo_file_input"
+            name="image_file"
+            accept="image/*"
+            style="display: none;"
+            onchange="handleComboFileChange(this)"
+          >
+          <button
+            type="button"
+            class="button button-primary"
+            onclick="document.getElementById('combo_file_input').click()"
+            style="padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 6px;"
+          >
+            📁 Choose Image from Device
+          </button>
+          <div id="combo_upload_status" style="font-size: 12px; color: #777;">
+            PNG, JPG, WEBP, or SVG under 10MB
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label for="modal_combo_url" style="display: block; font-size: 12px; font-weight: 700; color: #555; margin-bottom: 4px;">
+          Or Image URL / Path:
+        </label>
+        <input
+          type="text"
+          id="modal_combo_url"
+          name="image_url"
+          style="width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 6px; border: 1px solid #CCC; font-family: monospace; font-size: 13px;"
+          oninput="updateModalPreview(this.value)"
+        >
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <span style="display: block; font-size: 12px; font-weight: 700; color: #776F62; margin-bottom: 8px;">
+          Hamper Presets:
+        </span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <?php 
+          $comboPresets = [
+            ['name' => 'Festive Wooden Box', 'path' => '/assets/mixed-fruit-reference.jpg'],
+            ['name' => 'Dry Fruit Assortment', 'path' => '/assets/mixed dry fruits.png'],
+            ['name' => 'Gift Hampers', 'path' => '/assets/cat-hd-gift-boxes.png'],
+            ['name' => 'Royal Nut Mix', 'path' => '/assets/shop-mixed-nuts.jpg'],
+            ['name' => 'Deluxe Gift Set', 'path' => '/assets/pdp-hero-main.jpg'],
+          ];
+          foreach ($comboPresets as $cp):
+          ?>
+            <button
+              type="button"
+              class="btn-action"
+              style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 6px; background: #FAF7F2; border: 1px solid #DFD7CA; font-size: 11.5px; cursor: pointer;"
+              onclick="selectComboPreset('<?= $cp['path'] ?>')"
+            >
+              <img src="<?= Helpers::asset(ltrim($cp['path'], '/')) ?>" alt="" style="width: 16px; height: 16px; border-radius: 3px; object-fit: cover;">
+              <span><?= $cp['name'] ?></span>
+            </button>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #ECE7DE; padding-top: 16px;">
+        <button
+          type="button"
+          class="button button-outline"
+          onclick="closeComboImageModal()"
+          style="background: #fff; padding: 8px 16px;"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="button button-primary"
+          style="padding: 8px 20px; font-weight: 700;"
+        >
+          Save Photo
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openComboImageModal(id, name, currentImg) {
+    document.getElementById('modal_combo_product_id').value = id;
+    document.getElementById('modal_combo_product_name').textContent = name;
+    document.getElementById('modal_combo_url').value = currentImg;
+    updateModalPreview(currentImg);
+    document.getElementById('combo_upload_status').textContent = 'PNG, JPG, WEBP, or SVG under 10MB';
+    const modal = document.getElementById('comboImageModal');
+    modal.style.display = 'flex';
+  }
+
+  function closeComboImageModal() {
+    document.getElementById('comboImageModal').style.display = 'none';
+  }
+
+  function updateModalPreview(src) {
+    const preview = document.getElementById('modal_combo_preview');
+    if (!src) return;
+    if (src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http')) {
+      preview.src = src;
+    } else {
+      let clean = src.replace(/^\/?assets\//, '');
+      preview.src = '<?= Helpers::url('assets') ?>/' + clean;
+    }
+  }
+
+  function selectComboPreset(path) {
+    document.getElementById('modal_combo_url').value = path;
+    updateModalPreview(path);
+  }
+
+  function handleComboFileChange(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Selected file exceeds 10MB limit.');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('modal_combo_preview').src = e.target.result;
+      document.getElementById('combo_upload_status').innerHTML = '<strong>' + file.name + '</strong> (' + Math.round(file.size / 1024) + ' KB) selected';
+    };
+    reader.readAsDataURL(file);
+
+    // Instant async upload to server
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('prefix', 'combo');
+
+    fetch('<?= Helpers::url('api/upload.php') ?>', {
+      method: 'POST',
+      body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success && res.url) {
+        document.getElementById('modal_combo_url').value = res.url;
+        document.getElementById('combo_upload_status').innerHTML = '✓ Uploaded: <strong>' + res.url + '</strong>';
+      }
+    })
+    .catch(() => {});
+  }
+</script>
 
 <?php require __DIR__ . '/../layouts/admin_layout_bottom.php'; ?>

@@ -88,6 +88,8 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `shipping_paise` INT NOT NULL DEFAULT 0,
   `total_paise` INT NOT NULL,
   `coupon_code` VARCHAR(64) NULL,
+  `shipping_option_id` VARCHAR(64) NULL,
+  `shipping_option_name` VARCHAR(128) NULL,
   `cashfree_order_id` VARCHAR(128) NULL,
   `payment_session_id` VARCHAR(255) NULL,
   `courier` VARCHAR(128) NULL,
@@ -114,16 +116,35 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   CONSTRAINT `fk_order_items_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. Shipping Settings
+-- 7. Shipping Settings & Store Contact
 CREATE TABLE IF NOT EXISTS `shipping_settings` (
   `id` INT NOT NULL DEFAULT 1,
-  `flat_charge_paise` INT NOT NULL DEFAULT 0,
+  `flat_charge_paise` INT NOT NULL DEFAULT 4900,
   `free_threshold_paise` INT NULL DEFAULT 99900,
   `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `contact_phone` VARCHAR(32) NOT NULL DEFAULT '919059123456',
+  `contact_email` VARCHAR(128) NOT NULL DEFAULT 'svgdryfruits@gmail.com',
+  `whatsapp_number` VARCHAR(32) NOT NULL DEFAULT '919059123456',
+  `store_address` TEXT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 8. Admins
+-- 8. Shipping Options (Multi-Condition Delivery Rates)
+CREATE TABLE IF NOT EXISTS `shipping_options` (
+  `id` VARCHAR(64) NOT NULL,
+  `name` VARCHAR(128) NOT NULL,
+  `description` TEXT NULL,
+  `estimated_days` VARCHAR(64) NULL,
+  `rate_paise` INT NOT NULL DEFAULT 4900,
+  `free_above_paise` INT NULL DEFAULT 99900,
+  `min_subtotal_paise` INT NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. Admins
 CREATE TABLE IF NOT EXISTS `admins` (
   `id` VARCHAR(64) NOT NULL,
   `email` VARCHAR(128) NOT NULL,
@@ -133,7 +154,7 @@ CREATE TABLE IF NOT EXISTS `admins` (
   UNIQUE KEY `idx_admins_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 9. Combo Items (Hampers & Bundles)
+-- 10. Combo Items (Hampers & Bundles)
 CREATE TABLE IF NOT EXISTS `combo_items` (
   `id` VARCHAR(64) NOT NULL,
   `combo_variant_id` VARCHAR(64) NOT NULL,

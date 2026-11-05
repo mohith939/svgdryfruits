@@ -172,6 +172,10 @@ try {
             Helpers::render('admin/coupons');
             break;
 
+        case $path === 'admin/shipping':
+            Helpers::render('admin/shipping');
+            break;
+
         case $path === 'admin/settings':
             Helpers::render('admin/settings');
             break;

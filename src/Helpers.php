@@ -86,4 +86,50 @@ class Helpers {
         }
         require $viewFile;
     }
+
+    public static function handleUpload(?array $file, string $prefix = 'img_'): ?string {
+        if (!$file || empty($file['tmp_name']) || $file['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($ext === 'jpeg') $ext = 'jpg';
+        if (!in_array($ext, $allowedExts, true)) {
+            return null;
+        }
+
+        // Limit size: 10MB
+        if ($file['size'] > 10 * 1024 * 1024) {
+            return null;
+        }
+
+        $filename = $prefix . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+
+        $targetDirs = [
+            ROOT_PATH . '/assets/uploads',
+            ROOT_PATH . '/public/assets/uploads',
+        ];
+
+        $savedAny = false;
+        $firstSaved = '';
+        foreach ($targetDirs as $dir) {
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0777, true);
+            }
+            if (is_dir($dir)) {
+                $dest = $dir . '/' . $filename;
+                if (!$savedAny) {
+                    if (@move_uploaded_file($file['tmp_name'], $dest)) {
+                        $savedAny = true;
+                        $firstSaved = $dest;
+                    }
+                } elseif ($firstSaved && file_exists($firstSaved)) {
+                    @copy($firstSaved, $dest);
+                }
+            }
+        }
+
+        return $savedAny ? '/assets/uploads/' . $filename : null;
+    }
 }

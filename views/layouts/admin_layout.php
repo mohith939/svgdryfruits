@@ -57,6 +57,13 @@ $navItems = [
         'svg' => '<line x1="19" y1="5" x2="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" />',
     ],
     [
+        'id' => 'shipping',
+        'label' => 'Shipping',
+        'href' => Helpers::url('admin/shipping'),
+        'exact' => false,
+        'svg' => '<rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />',
+    ],
+    [
         'id' => 'settings',
         'label' => 'Settings',
         'href' => Helpers::url('admin/settings'),

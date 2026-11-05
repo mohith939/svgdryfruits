@@ -85,7 +85,26 @@ class Cart {
         unset($_SESSION['applied_coupon']);
     }
 
-    public static function getDetails(): array {
+    public static function setShippingOption(string $id): void {
+        self::init();
+        $_SESSION['selected_shipping_id'] = $id;
+    }
+
+    public static function getEligibleShippingOptions(int $subtotalPaise): array {
+        $all = Models::getShippingOptions(true);
+        $eligible = [];
+        foreach ($all as $opt) {
+            if ($subtotalPaise >= (int)($opt['min_subtotal_paise'] ?? 0)) {
+                $isFree = ($opt['free_above_paise'] !== null && $subtotalPaise >= (int)$opt['free_above_paise']);
+                $opt['effective_paise'] = $isFree ? 0 : (int)$opt['rate_paise'];
+                $opt['is_free'] = $isFree;
+                $eligible[] = $opt;
+            }
+        }
+        return $eligible;
+    }
+
+    public static function getDetails(?string $shippingOptionId = null): array {
         self::init();
         $items = [];
         $subtotalPaise = 0;
@@ -144,14 +163,35 @@ class Cart {
             }
         }
 
-        // Calculate shipping
-        $shipping = Models::getShippingSettings();
+        // Multi-condition shipping resolution
+        $eligibleShipping = self::getEligibleShippingOptions($subtotalPaise);
+        $selectedId = $shippingOptionId ?? ($_SESSION['selected_shipping_id'] ?? null);
+
+        $selectedOption = null;
+        if ($selectedId) {
+            foreach ($eligibleShipping as $opt) {
+                if ($opt['id'] === $selectedId) {
+                    $selectedOption = $opt;
+                    break;
+                }
+            }
+        }
+        if (!$selectedOption && !empty($eligibleShipping)) {
+            $selectedOption = $eligibleShipping[0];
+        }
+
         $shippingPaise = 0;
-        if (!empty($shipping['active'])) {
-            if ($shipping['free_threshold_paise'] !== null && $subtotalPaise >= $shipping['free_threshold_paise']) {
-                $shippingPaise = 0;
-            } else {
-                $shippingPaise = (int)$shipping['flat_charge_paise'];
+        if ($selectedOption) {
+            $shippingPaise = (int)$selectedOption['effective_paise'];
+        } else {
+            // Fallback to legacy shipping_settings if no shipping_options exist
+            $shipping = Models::getShippingSettings();
+            if (!empty($shipping['active'])) {
+                if ($shipping['free_threshold_paise'] !== null && $subtotalPaise >= $shipping['free_threshold_paise']) {
+                    $shippingPaise = 0;
+                } else {
+                    $shippingPaise = (int)$shipping['flat_charge_paise'];
+                }
             }
         }
 
@@ -165,6 +205,8 @@ class Cart {
             'shipping_paise' => $shippingPaise,
             'total_paise' => $totalPaise,
             'applied_coupon' => $appliedCoupon,
+            'eligible_shipping' => $eligibleShipping,
+            'selected_shipping' => $selectedOption,
         ];
     }
 }

@@ -5,9 +5,10 @@
  */
 declare(strict_types=1);
 require_once ROOT_PATH . '/src/Helpers.php';
-require_once ROOT_PATH . '/src/Icon.php';
+require_once ROOT_PATH . '/src/Models.php';
 
-$wa = preg_replace('/\D/', '', WHATSAPP_NUMBER);
+$storeSettings = Models::getStoreSettings();
+$wa = preg_replace('/\D/', '', (string)($storeSettings['whatsapp_number'] ?? WHATSAPP_NUMBER));
 ?>
   </main>
 

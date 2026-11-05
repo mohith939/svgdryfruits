@@ -43,6 +43,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $categoryId = trim($_POST['category_id'] ?? '') ?: null;
     $description = trim($_POST['description'] ?? '');
     $imageUrl = trim($_POST['image_url'] ?? '/assets/mixed-nuts-reference.jpg');
+
+    // Handle direct file upload from device
+    if (!empty($_FILES['image_file']['tmp_name'])) {
+        $uploaded = Helpers::handleUpload($_FILES['image_file'], 'prod_');
+        if ($uploaded) {
+            $imageUrl = $uploaded;
+        }
+    }
+
     $isCombo = isset($_POST['is_combo']) ? 1 : 0;
     $active = isset($_POST['active']) ? 1 : 0;
 
@@ -120,15 +129,16 @@ require __DIR__ . '/../layouts/admin_layout.php';
       <h1><?= $isEdit ? 'Edit' : 'Add' ?> <em>Product</em></h1>
       <p>Configure product information, pack size variants, selling prices in INR, and inventory.</p>
     </div>
-    <div style="display: flex; gap: 10px; align-items: center;">
-      <a href="<?= Helpers::url('admin/products') ?>" class="button button-outline" style="background:#fff;">
-        ← Back to Products
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <a href="<?= Helpers::url('admin/products') ?>" style="display: inline-flex; align-items: center; gap: 8px; background: #073D26; color: #FFFFFF; font-weight: 700; font-size: 14px; padding: 11px 20px; border-radius: 8px; border: 1px solid #135538; box-shadow: 0 4px 12px rgba(7, 61, 38, 0.25); text-decoration: none; transition: transform 0.15s, background 0.15s;">
+        <span style="font-size: 18px; line-height: 1;">&larr;</span>
+        <span>Back to Products</span>
       </a>
       <?php if ($isEdit && !empty($product)): ?>
         <form method="POST" action="<?= Helpers::url('admin/products') ?>" style="display: inline;" onsubmit="return confirm('Are you sure you want to PERMANENTLY delete \'<?= htmlspecialchars(addslashes($product['name'] ?? 'this product')) ?>\'? This action cannot be undone.');">
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
-          <button type="submit" class="button" style="background: #FFF5F5; color: #C53030; border: 1px solid #FEB2B2; padding: 8px 14px; font-weight: 600; cursor: pointer;">
+          <button type="submit" class="button" style="background: #FFF5F5; color: #C53030; border: 1px solid #FEB2B2; padding: 10px 16px; font-weight: 600; cursor: pointer; border-radius: 8px;">
             🗑️ Delete Product
           </button>
         </form>
@@ -136,7 +146,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
     </div>
   </div>
 
-  <form method="POST" class="admin-form">
+  <form method="POST" class="admin-form" enctype="multipart/form-data">
     <div class="admin-two-cols">
       <!-- Left Column: Primary Details -->
       <div class="admin-col">
@@ -180,23 +190,99 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
           <div class="form-group">
             <label for="prod_desc">Description</label>
-            <textarea id="prod_desc" name="description" rows="4" placeholder="Rich editorial description of this premium dry fruit..."><?= htmlspecialchars($product['description'] ?? '') ?></textarea>
+            <textarea id="prod_desc" name="description" rows="3" placeholder="Rich editorial description of this premium dry fruit..."><?= htmlspecialchars($product['description'] ?? '') ?></textarea>
           </div>
 
-          <div class="form-group">
-            <label for="prod_img">Product Image Asset Path</label>
-            <input
-              id="prod_img"
-              name="image_url"
-              placeholder="/assets/shop-cashews.jpg"
-              value="<?= htmlspecialchars($product['image_url'] ?? '/assets/mixed-nuts-reference.jpg') ?>"
-            >
-            <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
-              <span style="font-size: 12px; color: #7C7265;">Presets:</span>
-              <button type="button" class="btn-action" onclick="document.getElementById('prod_img').value='/assets/shop-cashews.jpg'">Cashews</button>
-              <button type="button" class="btn-action" onclick="document.getElementById('prod_img').value='/assets/shop-pistachios-hd.jpg'">Pistachios</button>
-              <button type="button" class="btn-action" onclick="document.getElementById('prod_img').value='/assets/shop-walnuts.jpg'">Walnuts</button>
-              <button type="button" class="btn-action" onclick="document.getElementById('prod_img').value='/assets/cat-hd-nuts.png'">Nuts</button>
+          <!-- Product Image & Real File Upload Card Section -->
+          <div class="form-group" style="background: #FDFBF7; border: 1px solid #E5DFD5; border-radius: 10px; padding: 18px; margin-top: 15px;">
+            <label style="font-size: 14px; font-weight: 700; color: #073D26; margin-bottom: 8px; display: block;">
+              📷 Product Image &amp; Media
+            </label>
+
+            <div style="display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap;">
+              <!-- Live Preview Box -->
+              <div style="width: 110px; height: 110px; border-radius: 10px; overflow: hidden; border: 2px solid #D9D2C5; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.06); flex-shrink: 0;">
+                <img
+                  id="prod_preview"
+                  src="<?= Helpers::asset(ltrim($product['image_url'] ?? '/assets/mixed-nuts-reference.jpg', '/')) ?>"
+                  alt="Product Preview"
+                  style="width: 100%; height: 100%; object-fit: cover;"
+                  onerror="this.src='<?= Helpers::asset('mixed-nuts-reference.jpg') ?>'"
+                >
+              </div>
+
+              <!-- Upload & Controls -->
+              <div style="flex: 1; min-width: 240px;">
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+                  <input
+                    type="file"
+                    id="prod_file"
+                    name="image_file"
+                    accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                    style="display: none;"
+                    onchange="handleProductFileSelect(this)"
+                  >
+                  <button
+                    type="button"
+                    class="button button-primary"
+                    onclick="document.getElementById('prod_file').click()"
+                    style="padding: 9px 16px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;"
+                  >
+                    📁 Upload Image from Device
+                  </button>
+                  <span id="upload_status" style="font-size: 12px; color: #666;">PNG, JPG, WEBP, or SVG up to 10MB</span>
+                </div>
+
+                <div style="margin-top: 8px;">
+                  <label for="prod_img" style="font-size: 12px; color: #7C7265; font-weight: 600; display: block; margin-bottom: 4px;">
+                    Or specify image path / URL:
+                  </label>
+                  <input
+                    id="prod_img"
+                    name="image_url"
+                    placeholder="/assets/shop-cashews.jpg"
+                    value="<?= htmlspecialchars($product['image_url'] ?? '/assets/mixed-nuts-reference.jpg') ?>"
+                    oninput="updateImagePreview(this.value)"
+                    style="font-family: monospace; font-size: 13px; background: #fff;"
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Visual Presets Picker -->
+            <div style="margin-top: 14px; border-top: 1px dashed #E5DFD5; padding-top: 12px;">
+              <span style="font-size: 12px; font-weight: 700; color: #7C7265; display: block; margin-bottom: 8px;">
+                Quick Catalog Presets:
+              </span>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <?php 
+                $presets = [
+                  ['name' => 'Almonds', 'path' => '/assets/pdp-hero-almonds.jpg'],
+                  ['name' => 'Cashews', 'path' => '/assets/shop-cashews.jpg'],
+                  ['name' => 'Pistachios', 'path' => '/assets/shop-pistachios-hd.jpg'],
+                  ['name' => 'Walnuts', 'path' => '/assets/shop-walnuts.jpg'],
+                  ['name' => 'Dates', 'path' => '/assets/shop-premium-dates.jpg'],
+                  ['name' => 'Figs', 'path' => '/assets/shop-dried-figs.jpg'],
+                  ['name' => 'Raisins', 'path' => '/assets/shop-golden-raisins.jpg'],
+                  ['name' => 'Apricots', 'path' => '/assets/shop-dried-apricots.jpg'],
+                  ['name' => 'Pumpkin Seeds', 'path' => '/assets/shop-pumpkin-seeds.jpg'],
+                  ['name' => 'Sunflower Seeds', 'path' => '/assets/shop-sunflower-seeds.jpg'],
+                  ['name' => 'Healthy Mix', 'path' => '/assets/shop-mixed-nuts.jpg'],
+                  ['name' => 'Gift Hamper', 'path' => '/assets/mixed-fruit-reference.jpg'],
+                ];
+                foreach ($presets as $p):
+                ?>
+                  <button
+                    type="button"
+                    class="btn-action"
+                    style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 6px; background: #fff; border: 1px solid #D5CEBF; font-size: 12px; cursor: pointer;"
+                    onclick="selectPreset('<?= $p['path'] ?>')"
+                  >
+                    <img src="<?= Helpers::asset(ltrim($p['path'], '/')) ?>" alt="" style="width: 16px; height: 16px; border-radius: 3px; object-fit: cover;">
+                    <span><?= $p['name'] ?></span>
+                  </button>
+                <?php endforeach; ?>
+              </div>
             </div>
           </div>
         </div>
@@ -293,6 +379,61 @@ require __DIR__ . '/../layouts/admin_layout.php';
   document.getElementById('prod_slug').addEventListener('input', function() {
     this.dataset.manual = 'true';
   });
+
+  function updateImagePreview(src) {
+    const preview = document.getElementById('prod_preview');
+    if (!src) return;
+    if (src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http')) {
+      preview.src = src;
+    } else {
+      let clean = src.replace(/^\/?assets\//, '');
+      preview.src = '<?= Helpers::url('assets') ?>/' + clean;
+    }
+  }
+
+  function selectPreset(path) {
+    document.getElementById('prod_img').value = path;
+    updateImagePreview(path);
+    document.getElementById('upload_status').textContent = 'Selected preset: ' + path;
+  }
+
+  function handleProductFileSelect(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Selected file exceeds 10MB limit.');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('prod_preview').src = e.target.result;
+      document.getElementById('upload_status').innerHTML = '<strong>' + file.name + '</strong> (' + Math.round(file.size / 1024) + ' KB) selected';
+    };
+    reader.readAsDataURL(file);
+
+    // Instant async upload to server
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('prefix', 'prod');
+
+    fetch('<?= Helpers::url('api/upload.php') ?>', {
+      method: 'POST',
+      body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success && res.url) {
+        document.getElementById('prod_img').value = res.url;
+        document.getElementById('upload_status').innerHTML = '✓ Uploaded &amp; Saved: <strong>' + res.url + '</strong>';
+      }
+    })
+    .catch(() => {
+      // Fallback: standard multipart form POST will save it!
+    });
+  }
 
   function addVariantRow() {
     const tbody = document.querySelector('#variantsTable tbody');

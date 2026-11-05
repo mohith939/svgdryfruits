@@ -96,8 +96,68 @@ require __DIR__ . '/layouts/header.php';
         </div>
       </div>
 
+      <!-- Step 3: Multi-Option Delivery Methods -->
+      <?php 
+        $eligibleShipping = $cart['eligible_shipping'] ?? [];
+        $selectedShipping = $cart['selected_shipping'] ?? null;
+      ?>
+      <div class="checkout-section-box shipping-method-section-box" style="margin-bottom: 24px;">
+        <h2>3. Delivery method</h2>
+        <p style="font-size: 13.5px; color: var(--muted); margin-bottom: 14px;">
+          Choose your preferred courier speed and delivery option:
+        </p>
+
+        <div class="shipping-options-list" style="display: flex; flex-direction: column; gap: 10px;">
+          <?php foreach ($eligibleShipping as $idx => $opt): 
+            $isSelected = ($selectedShipping && $selectedShipping['id'] === $opt['id']);
+            $feePaise = (int)$opt['effective_paise'];
+            $feeLabel = ($feePaise === 0) ? 'FREE' : Helpers::formatPaise($feePaise);
+          ?>
+            <label
+              class="shipping-option-card <?= $isSelected ? 'is-selected' : '' ?>"
+              id="ship_card_<?= $opt['id'] ?>"
+              style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 2px solid <?= $isSelected ? '#073D26' : '#DFD7CA' ?>; border-radius: 10px; cursor: pointer; background: <?= $isSelected ? '#F8FBF9' : '#fff' ?>; transition: all 0.2s;"
+            >
+              <input
+                type="radio"
+                name="shipping_option_id"
+                value="<?= htmlspecialchars($opt['id']) ?>"
+                data-rate="<?= $feePaise ?>"
+                data-name="<?= htmlspecialchars($opt['name']) ?>"
+                <?= $isSelected ? 'checked' : '' ?>
+                onchange="selectShippingOption(this)"
+                style="margin-top: 4px; accent-color: #073D26; width: 18px; height: 18px;"
+              >
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <strong style="color: #073D26; font-size: 15.5px;"><?= htmlspecialchars($opt['name']) ?></strong>
+                  <span style="font-weight: 700; font-size: 15px; color: <?= ($feePaise === 0) ? '#2E7D32' : '#073D26' ?>;">
+                    <?= $feeLabel ?>
+                  </span>
+                </div>
+                <?php if (!empty($opt['estimated_days'])): ?>
+                  <span style="display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #F4EFE6; color: #5D4F3C; font-weight: 600; margin-bottom: 4px;">
+                    ⏱ Estimated: <?= htmlspecialchars($opt['estimated_days']) ?>
+                  </span>
+                <?php endif; ?>
+                <?php if (!empty($opt['description'])): ?>
+                  <p style="margin: 3px 0 0; font-size: 13px; color: #666; line-height: 1.4;">
+                    <?= htmlspecialchars($opt['description']) ?>
+                  </p>
+                <?php endif; ?>
+                <?php if (!empty($opt['free_above_paise']) && $subtotal < $opt['free_above_paise']): ?>
+                  <p style="margin: 4px 0 0 0; font-size: 12px; color: #8E6D38; font-weight: 600;">
+                    Add <?= Helpers::formatPaise($opt['free_above_paise'] - $subtotal) ?> more for FREE shipping on this option!
+                  </p>
+                <?php endif; ?>
+              </div>
+            </label>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
       <div class="checkout-section-box payment-section-box">
-        <h2>3. Payment method</h2>
+        <h2>4. Payment method</h2>
         <div class="payment-method-card">
           <div class="payment-method-header">
             <?= Icon::render('card', ['size' => 24]) ?>
@@ -152,11 +212,11 @@ require __DIR__ . '/layouts/header.php';
         <?php endif; ?>
         <div>
           <dt>Shipping</dt>
-          <dd><?= $shipping === 0 ? 'Free' : Helpers::formatPaise($shipping) ?></dd>
+          <dd id="summary-shipping-val"><?= $shipping === 0 ? 'Free' : Helpers::formatPaise($shipping) ?></dd>
         </div>
         <div class="checkout-grand-total">
           <dt>Total payable</dt>
-          <dd><?= Helpers::formatPaise($total) ?></dd>
+          <dd id="summary-total-val"><?= Helpers::formatPaise($total) ?></dd>
         </div>
       </dl>
 
@@ -168,6 +228,47 @@ require __DIR__ . '/layouts/header.php';
 </section>
 
 <script>
+var baseSubtotalPaise = <?= (int)$subtotal ?>;
+var discountPaise = <?= (int)$discount ?>;
+var currentShippingPaise = <?= (int)$shipping ?>;
+
+function formatINR(paise) {
+  var rupees = paise / 100;
+  return '₹' + rupees.toLocaleString('en-IN', { maximumFractionDigits: (paise % 100 === 0) ? 0 : 2 });
+}
+
+function selectShippingOption(radio) {
+  var rate = parseInt(radio.getAttribute('data-rate'), 10) || 0;
+  var name = radio.getAttribute('data-name') || '';
+  currentShippingPaise = rate;
+
+  document.querySelectorAll('.shipping-option-card').forEach(function(card) {
+    card.style.borderColor = '#DFD7CA';
+    card.style.backgroundColor = '#fff';
+  });
+  var parent = radio.closest('.shipping-option-card');
+  if (parent) {
+    parent.style.borderColor = '#073D26';
+    parent.style.backgroundColor = '#F8FBF9';
+  }
+
+  var shippingEl = document.getElementById('summary-shipping-val');
+  if (shippingEl) {
+    shippingEl.textContent = (rate === 0) ? 'Free' : formatINR(rate);
+  }
+
+  var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise + rate);
+  var totalEl = document.getElementById('summary-total-val');
+  if (totalEl) {
+    totalEl.textContent = formatINR(newTotalPaise);
+  }
+
+  var submitBtn = document.getElementById('checkout-submit-btn');
+  if (submitBtn) {
+    submitBtn.textContent = 'Pay ' + formatINR(newTotalPaise) + ' with Cashfree';
+  }
+}
+
 function handleCheckoutSubmit(e) {
   e.preventDefault();
   var btn = document.getElementById('checkout-submit-btn');
@@ -179,6 +280,10 @@ function handleCheckoutSubmit(e) {
     btn.disabled = true;
     btn.textContent = 'Redirecting to Cashfree…';
   }
+
+  var selectedShippingRadio = document.querySelector('input[name="shipping_option_id"]:checked');
+  var shippingOptId = selectedShippingRadio ? selectedShippingRadio.value : '';
+  var shippingOptName = selectedShippingRadio ? selectedShippingRadio.getAttribute('data-name') : '';
 
   var payload = {
     name: document.getElementById('name').value.trim(),
@@ -196,7 +301,9 @@ function handleCheckoutSubmit(e) {
     state: document.getElementById('state').value.trim(),
     shipping_state: document.getElementById('state').value.trim(),
     pincode: document.getElementById('pincode').value.trim(),
-    shipping_pincode: document.getElementById('pincode').value.trim()
+    shipping_pincode: document.getElementById('pincode').value.trim(),
+    shipping_option_id: shippingOptId,
+    shipping_option_name: shippingOptName
   };
 
 

@@ -114,12 +114,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
         $error = "Cannot install: MySQL connection failed. " . $mysqlError;
     } else {
         try {
+            $pdo->exec("SET NAMES utf8mb4;");
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+
+            $resetTables = !empty($_POST['reset_tables']);
+            if ($resetTables) {
+                $tablesToDrop = [
+                    'refunds', 'combo_items', 'order_items', 'orders',
+                    'variants', 'products', 'categories', 'coupons',
+                    'shipping_options', 'shipping_settings', 'admins'
+                ];
+                foreach ($tablesToDrop as $t) {
+                    try {
+                        $pdo->exec("DROP TABLE IF EXISTS `{$t}`");
+                    } catch (Throwable $ignore) {}
+                }
+            }
+
             // Run Schema
             $schemaSql = file_get_contents(__DIR__ . '/schema.sql');
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
             $pdo->exec($schemaSql);
 
             // Run Seed
             $seedSql = file_get_contents(__DIR__ . '/seed.sql');
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
             $pdo->exec($seedSql);
 
             // Ensure Admin Account
@@ -134,9 +153,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
             ");
             $stmt->execute([$adminEmail, $passHash]);
 
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+
             $installed = true;
-            $message = "MySQL database successfully initialized and catalog seeded with categories, pack size variants, coupons, shipping settings, and admin login!";
+            $message = "MySQL database successfully initialized and catalog seeded with categories, pack size variants, coupons, shipping options, and admin login!";
         } catch (Throwable $e) {
+            try { $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;"); } catch (Throwable $ignore) {}
             $error = $e->getMessage();
         }
     }
@@ -396,6 +418,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
     <?php if (!$installed): ?>
       <form method="POST">
         <input type="hidden" name="action" value="install">
+        <label style="display: flex; gap: 10px; align-items: flex-start; margin-bottom: 15px; font-size: 13.5px; color: #333; cursor: pointer; background: #fff; padding: 12px 14px; border: 1px solid #d4ded9; border-radius: 6px;">
+          <input type="checkbox" name="reset_tables" value="1" checked style="margin-top: 3px;">
+          <div>
+            <strong>Clean Fresh Installation (Recommended)</strong>
+            <div style="font-size: 12px; color: #777; margin-top: 2px;">
+              Replaces existing broken/outdated schema tables and seeds all 13 authentic dry fruits products, categories, pack sizes (250g, 500g, 1kg), coupons, and shipping rules fresh.
+            </div>
+          </div>
+        </label>
         <button type="submit" class="btn-install" <?= !$mysqlConnected ? 'disabled' : '' ?>>
           <?= $mysqlConnected ? 'Initialize Database &amp; Seed Catalog' : 'Connect MySQL to Continue' ?>
         </button>

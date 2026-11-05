@@ -20,6 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $imageUrl = trim($_POST['image_url'] ?? '/assets/cat-hd-nuts.png');
         $sortOrder = (int)($_POST['sort_order'] ?? 0);
 
+        if (!empty($_FILES['image_file']['tmp_name'])) {
+            $uploaded = Helpers::handleUpload($_FILES['image_file'], 'cat_');
+            if ($uploaded) {
+                $imageUrl = $uploaded;
+            }
+        }
+
         if ($name && $slug) {
             $id = 'cat_' . bin2hex(random_bytes(8));
             $stmt = $pdo->prepare("
@@ -38,6 +45,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $description = trim($_POST['description'] ?? '');
         $imageUrl = trim($_POST['image_url'] ?? '');
         $sortOrder = (int)($_POST['sort_order'] ?? 0);
+
+        if (!empty($_FILES['image_file']['tmp_name'])) {
+            $uploaded = Helpers::handleUpload($_FILES['image_file'], 'cat_');
+            if ($uploaded) {
+                $imageUrl = $uploaded;
+            }
+        }
 
         if ($id && $name && $slug) {
             $stmt = $pdo->prepare("
@@ -94,7 +108,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
     <!-- Create Category Form -->
     <div class="admin-card">
       <h2>+ Add New Category</h2>
-      <form class="admin-form" method="POST">
+      <form class="admin-form" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="action" value="create">
 
         <div class="form-group-row">
@@ -130,21 +144,61 @@ require __DIR__ . '/../layouts/admin_layout.php';
           ></textarea>
         </div>
 
-        <div class="form-group">
-          <label for="cat-img">Category Icon / Image (Displayed in Shop Tabs)</label>
+        <div class="form-group" style="background: #FDFBF7; border: 1px solid #E5DFD5; border-radius: 8px; padding: 14px;">
+          <label style="font-size: 13px; font-weight: 700; color: #073D26; margin-bottom: 6px; display: block;">
+            Category Icon / Image (Displayed in Shop Tabs)
+          </label>
+
+          <div style="display: flex; gap: 14px; align-items: center; margin-bottom: 10px;">
+            <div style="width: 52px; height: 52px; border-radius: 6px; overflow: hidden; border: 1px solid #DFD7CA; background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <img
+                id="cat_preview"
+                src="<?= Helpers::asset('cat-hd-nuts.png') ?>"
+                alt=""
+                style="width: 100%; height: 100%; object-fit: contain;"
+              >
+            </div>
+            <div>
+              <input
+                type="file"
+                id="cat_file_input"
+                name="image_file"
+                accept="image/*"
+                style="display: none;"
+                onchange="handleCatFileSelect(this)"
+              >
+              <button
+                type="button"
+                class="button button-primary"
+                onclick="document.getElementById('cat_file_input').click()"
+                style="padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer;"
+              >
+                📁 Upload Category Icon
+              </button>
+              <div id="cat_upload_status" style="font-size: 11px; color: #777; margin-top: 3px;">
+                PNG, WEBP, or JPG image
+              </div>
+            </div>
+          </div>
+
+          <label for="cat-img" style="font-size: 11px; color: #7C7265; font-weight: 600; display: block; margin-bottom: 3px;">
+            Or Icon Asset Path:
+          </label>
           <input
             id="cat-img"
             name="image_url"
             value="/assets/cat-hd-nuts.png"
             placeholder="/assets/cat-hd-nuts.png"
+            oninput="updateCatPreview(this.value)"
+            style="font-family: monospace; font-size: 12px; background: #fff;"
           >
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
-            <button type="button" class="btn-action" onclick="document.getElementById('cat-img').value='/assets/cat-hd-nuts.png'">Nuts</button>
-            <button type="button" class="btn-action" onclick="document.getElementById('cat-img').value='/assets/cat-hd-dried-fruits.png'">Dried Fruits</button>
-            <button type="button" class="btn-action" onclick="document.getElementById('cat-img').value='/assets/cat-hd-seeds.png'">Seeds</button>
-            <button type="button" class="btn-action" onclick="document.getElementById('cat-img').value='/assets/cat-hd-healthy-mix.png'">Healthy Mix</button>
-            <button type="button" class="btn-action" onclick="document.getElementById('cat-img').value='/assets/cat-hd-gift-boxes.png'">Combos</button>
-            <button type="button" class="btn-action" onclick="document.getElementById('cat-img').value='/assets/cat-hd-all-products.png'">All Products</button>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+            <button type="button" class="btn-action" onclick="selectCatPreset('/assets/cat-hd-nuts.png')">Nuts</button>
+            <button type="button" class="btn-action" onclick="selectCatPreset('/assets/cat-hd-dried-fruits.png')">Dried Fruits</button>
+            <button type="button" class="btn-action" onclick="selectCatPreset('/assets/cat-hd-seeds.png')">Seeds</button>
+            <button type="button" class="btn-action" onclick="selectCatPreset('/assets/cat-hd-healthy-mix.png')">Healthy Mix</button>
+            <button type="button" class="btn-action" onclick="selectCatPreset('/assets/cat-hd-gift-boxes.png')">Combos</button>
+            <button type="button" class="btn-action" onclick="selectCatPreset('/assets/cat-hd-all-products.png')">All Products</button>
           </div>
         </div>
 
@@ -241,5 +295,59 @@ require __DIR__ . '/../layouts/admin_layout.php';
     </div>
   </div>
 </div>
+
+<script>
+  function updateCatPreview(src) {
+    const preview = document.getElementById('cat_preview');
+    if (!src) return;
+    if (src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http')) {
+      preview.src = src;
+    } else {
+      let clean = src.replace(/^\/?assets\//, '');
+      preview.src = '<?= Helpers::url('assets') ?>/' + clean;
+    }
+  }
+
+  function selectCatPreset(path) {
+    document.getElementById('cat-img').value = path;
+    updateCatPreview(path);
+  }
+
+  function handleCatFileSelect(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Selected file exceeds 10MB limit.');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('cat_preview').src = e.target.result;
+      document.getElementById('cat_upload_status').innerHTML = '<strong>' + file.name + '</strong> selected';
+    };
+    reader.readAsDataURL(file);
+
+    // Async upload to api/upload.php
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('prefix', 'cat');
+
+    fetch('<?= Helpers::url('api/upload.php') ?>', {
+      method: 'POST',
+      body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success && res.url) {
+        document.getElementById('cat-img').value = res.url;
+        document.getElementById('cat_upload_status').innerHTML = '✓ Uploaded: <strong>' + res.url + '</strong>';
+      }
+    })
+    .catch(() => {});
+  }
+</script>
 
 <?php require __DIR__ . '/../layouts/admin_layout_bottom.php'; ?>

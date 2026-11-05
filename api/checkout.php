@@ -29,7 +29,7 @@ $city = trim($input['city'] ?? $input['shipping_city'] ?? '');
 $state = trim($input['state'] ?? $input['shipping_state'] ?? '');
 $pincode = trim($input['pincode'] ?? $input['shipping_pincode'] ?? '');
 $paymentMethod = $input['payment_method'] ?? 'online'; // 'online' or 'cod'
-
+$shippingOptionId = trim((string)($input['shipping_option_id'] ?? ''));
 
 if (strlen($name) < 2) {
     Helpers::json(['success' => false, 'error' => 'Please enter your full name.'], 400);
@@ -43,7 +43,7 @@ if (strlen($street) < 5 || strlen($city) < 2 || strlen($pincode) !== 6) {
     Helpers::json(['success' => false, 'error' => 'Please provide a complete delivery address and 6-digit PIN code.'], 400);
 }
 
-$cart = Cart::getDetails();
+$cart = Cart::getDetails($shippingOptionId ?: null);
 if (empty($cart['items'])) {
     Helpers::json(['success' => false, 'error' => 'Your bag is empty.'], 400);
 }
@@ -87,6 +87,8 @@ $orderData = [
     'shipping_paise' => $cart['shipping_paise'],
     'total_paise' => $cart['total_paise'],
     'coupon_code' => $cart['applied_coupon']['code'] ?? null,
+    'shipping_option_id' => $cart['selected_shipping']['id'] ?? ($shippingOptionId ?: null),
+    'shipping_option_name' => $cart['selected_shipping']['name'] ?? ($input['shipping_option_name'] ?? 'Standard Delivery'),
     'cashfree_order_id' => null,
     'payment_session_id' => null,
 ];
