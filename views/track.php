@@ -151,10 +151,10 @@ require __DIR__ . '/layouts/header.php';
 
   <?php elseif ($order): ?>
     <?php
-      $fStatus = $order['fulfillment_status'];
-      $isDelivered = ($fStatus === 'delivered');
-      $isDispatched = ($fStatus === 'dispatched' || $isDelivered);
-      $isProcessing = ($fStatus === 'processing' || $isDispatched);
+      $fStatus = strtolower(trim((string)$order['fulfillment_status']));
+      $isDelivered = in_array($fStatus, ['delivered', 'completed'], true);
+      $isDispatched = in_array($fStatus, ['dispatched', 'shipped', 'in_transit'], true) || $isDelivered;
+      $isProcessing = in_array($fStatus, ['processing', 'packed', 'confirmed'], true) || $isDispatched;
       $isAwaiting = true;
       $addr = $order['shipping_address'] ?? [];
     ?>
