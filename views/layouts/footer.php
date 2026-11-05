@@ -13,7 +13,7 @@ $wa = preg_replace('/\D/', '', (string)($storeSettings['whatsapp_number'] ?? WHA
   </main>
 
   <footer class="site-footer-v2" aria-labelledby="footer-brand-title">
-    {/* Single High-Res Botanical Footer Background */}
+    <!-- Single High-Res Botanical Footer Background -->
     <div class="footer-bg-layer" aria-hidden="true">
       <img src="<?= Helpers::asset('footer bg.png') ?>" alt="" class="footer-bg-img" />
     </div>

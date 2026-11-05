@@ -84,8 +84,11 @@ CREATE TABLE IF NOT EXISTS orders (
   shipping_paise INTEGER DEFAULT 0,
   total_paise INTEGER NOT NULL,
   coupon_code TEXT,
+  shipping_option_id TEXT,
+  shipping_option_name TEXT,
   cashfree_order_id TEXT,
   payment_session_id TEXT,
+  stock_restored INTEGER DEFAULT 0,
   courier TEXT,
   tracking_number TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -99,6 +102,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   variant_label TEXT NOT NULL,
   unit_price_paise INTEGER NOT NULL,
   quantity INTEGER NOT NULL,
+  stock_restored INTEGER DEFAULT 0,
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
@@ -106,7 +110,24 @@ CREATE TABLE IF NOT EXISTS shipping_settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
   flat_charge_paise INTEGER DEFAULT 0,
   free_threshold_paise INTEGER DEFAULT 99900,
-  active INTEGER DEFAULT 1
+  active INTEGER DEFAULT 1,
+  contact_phone TEXT DEFAULT '919059123456',
+  contact_email TEXT DEFAULT 'svgdryfruits@gmail.com',
+  whatsapp_number TEXT DEFAULT '919059123456',
+  store_address TEXT DEFAULT 'SVG Dry Fruits, Hyderabad, India'
+);
+
+CREATE TABLE IF NOT EXISTS shipping_options (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  estimated_days TEXT,
+  rate_paise INTEGER DEFAULT 4900,
+  free_above_paise INTEGER,
+  min_subtotal_paise INTEGER DEFAULT 0,
+  active INTEGER DEFAULT 1,
+  sort_order INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS admins (
@@ -133,6 +154,7 @@ CREATE TABLE IF NOT EXISTS refunds (
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 ");
+
 
 // 2. Seed Categories
 $categories = [
@@ -235,9 +257,14 @@ INSERT OR REPLACE INTO coupons (id, code, name, description, type, value, min_su
 ('d0000001-0002-4000-8000-000000000002', 'FESTIVE50', 'Festive ₹50 Off', 'Flat ₹50 discount', 'flat', 5000, 99900, 5000, 1);
 ");
 
-// 6. Seed Shipping Settings
+// 6. Seed Shipping Settings & Options
 $pdo->exec("
-INSERT OR REPLACE INTO shipping_settings (id, flat_charge_paise, free_threshold_paise, active) VALUES (1, 4900, 99900, 1);
+INSERT OR REPLACE INTO shipping_settings (id, flat_charge_paise, free_threshold_paise, active, contact_phone, contact_email, whatsapp_number, store_address) 
+VALUES (1, 4900, 99900, 1, '919059123456', 'svgdryfruits@gmail.com', '919059123456', 'SVG Dry Fruits, Hyderabad, India');
+
+INSERT OR REPLACE INTO shipping_options (id, name, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order) VALUES
+('ship_standard', 'Standard Delivery', 'Carefully packed & shipped via surface express.', '3 – 5 Business Days', 4900, 99900, 0, 1, 1),
+('ship_express', 'Priority Air Express', 'Faster delivery via dedicated air cargo.', '1 – 2 Business Days', 12900, 199900, 0, 1, 2);
 ");
 
 // 7. Seed Admin

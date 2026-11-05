@@ -11,6 +11,7 @@ $pdo = Database::getConnection();
 
 // Handle adding or removing bundle components
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add_component') {
@@ -327,6 +328,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                         </td>
                         <td style="text-align: right;">
                           <form method="POST" style="display: inline;" onsubmit="return confirm('Remove this dry fruit from the bundle?');">
+                            <?= Helpers::csrfField() ?>
                             <input type="hidden" name="action" value="remove_component">
                             <input type="hidden" name="id" value="<?= $comp['id'] ?>">
                             <button
@@ -347,6 +349,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
             <!-- Add Component Row -->
             <div style="margin-top: 12px;">
               <form method="POST" style="background: #fff; padding: 14px 16px; border-radius: 8px; border: 1px solid #C5A059; margin-top: 8px;">
+                <?= Helpers::csrfField() ?>
                 <input type="hidden" name="action" value="add_component">
                 <input type="hidden" name="combo_variant_id" value="<?= $v['id'] ?>">
 
@@ -411,6 +414,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
     </div>
 
     <form method="POST" enctype="multipart/form-data" style="padding: 24px;">
+      <?= Helpers::csrfField() ?>
       <input type="hidden" name="action" value="update_image">
       <input type="hidden" id="modal_combo_product_id" name="product_id" value="">
 

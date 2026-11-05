@@ -22,6 +22,7 @@ if (!$order) {
 
 // Handle fulfillment status update or refund recording
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'update_fulfillment') {
@@ -35,6 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE id = ?
         ");
         $stmt->execute([$fulfillmentStatus, $courier ?: null, $trackingNumber ?: null, $id]);
+
+        if ($fulfillmentStatus === 'cancelled') {
+            Models::restoreOrderStock($id);
+        }
+
         Helpers::setFlash('success', 'Order fulfillment status & tracking updated successfully.');
     } elseif ($action === 'dispatch_shadowfax') {
         $awb = 'SFX' . date('ymd') . rand(1000, 9999);
@@ -55,7 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$refId, $id, $amountPaise, $note]);
 
             if (isset($_POST['mark_refunded'])) {
-                $pdo->prepare("UPDATE orders SET payment_status = 'refunded' WHERE id = ?")->execute([$id]);
+                $pdo->prepare("UPDATE orders SET payment_status = 'refunded', fulfillment_status = 'cancelled' WHERE id = ?")->execute([$id]);
+                Models::restoreOrderStock($id);
             }
             Helpers::setFlash('success', 'Manual refund recorded and saved.');
         } else {
@@ -249,6 +256,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                 <?= strtoupper(htmlspecialchars((string)$order['payment_status'])) ?>
               </span>
               <form method="POST" style="display:inline;">
+                <?= Helpers::csrfField() ?>
                 <input type="hidden" name="action" value="sync_cashfree">
                 <button type="submit" class="button button-outline" style="font-size:11px; padding:3px 9px; background:#fff; color:#073D26; border-color:#d4cabc;" title="Query Cashfree API for latest status">
                   🔄 Check Cashfree
@@ -278,6 +286,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
             </p>
           </div>
           <form method="POST">
+            <?= Helpers::csrfField() ?>
             <input type="hidden" name="action" value="dispatch_shadowfax">
             <button
               type="submit"
@@ -309,6 +318,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
       <div class="admin-card">
         <h2>Manual Fulfillment &amp; Dispatch</h2>
         <form class="admin-form" method="POST">
+          <?= Helpers::csrfField() ?>
           <input type="hidden" name="action" value="update_fulfillment">
 
           <div class="form-group">
@@ -359,6 +369,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
         </p>
 
         <form class="admin-form" method="POST">
+          <?= Helpers::csrfField() ?>
           <input type="hidden" name="action" value="record_refund">
 
           <div class="form-group">

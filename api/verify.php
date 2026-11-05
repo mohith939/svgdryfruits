@@ -18,10 +18,16 @@ if (!$orderNumber) {
     Helpers::json(['success' => false, 'error' => 'Order ID is required'], 400);
 }
 
+// Rate limit: max 10 status checks per minute per order
+if (!Helpers::checkRateLimit('verify_order_' . $orderNumber, 10, 60)) {
+    Helpers::json(['success' => false, 'error' => 'Too many verification requests. Please wait a moment.'], 429);
+}
+
 $order = Models::getOrderByNumber($orderNumber);
 if (!$order) {
     Helpers::json(['success' => false, 'error' => 'Order not found'], 404);
 }
+
 
 // If already paid, return success immediately
 if ($order['payment_status'] === 'paid') {

@@ -147,7 +147,10 @@ class Cart {
                 $appliedCoupon = $coupon;
                 if ($coupon['type'] === 'percentage') {
                     $discountPaise = (int)round(($subtotalPaise * $coupon['value']) / 100);
+                } elseif ($coupon['type'] === 'free_shipping') {
+                    $discountPaise = 0;
                 } else {
+                    // 'flat' or 'fixed'
                     $discountPaise = (int)$coupon['value'];
                 }
 
@@ -181,7 +184,9 @@ class Cart {
         }
 
         $shippingPaise = 0;
-        if ($selectedOption) {
+        if ($appliedCoupon && $appliedCoupon['type'] === 'free_shipping') {
+            $shippingPaise = 0;
+        } elseif ($selectedOption) {
             $shippingPaise = (int)$selectedOption['effective_paise'];
         } else {
             // Fallback to legacy shipping_settings if no shipping_options exist
@@ -196,6 +201,7 @@ class Cart {
         }
 
         $totalPaise = max(0, $subtotalPaise - $discountPaise + $shippingPaise);
+
 
         return [
             'items' => $items,

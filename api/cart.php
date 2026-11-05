@@ -60,7 +60,39 @@ if ($method === 'POST') {
         Cart::clear();
         Helpers::json(['success' => true, 'count' => 0]);
     }
+
+    if ($action === 'apply_coupon' || $action === 'apply') {
+        $code = trim($input['code'] ?? '');
+        if (!$code) {
+            Helpers::json(['success' => false, 'error' => 'Please enter a coupon code.'], 400);
+        }
+        $res = Cart::applyCoupon($code);
+        if ($res['success']) {
+            Helpers::json([
+                'success' => true,
+                'message' => $res['message'],
+                'count' => Cart::count(),
+                'cart' => Cart::getDetails()
+            ]);
+        } else {
+            Helpers::json([
+                'success' => false,
+                'error' => $res['message']
+            ], 400);
+        }
+    }
+
+    if ($action === 'remove_coupon' || $action === 'remove_promo') {
+        Cart::removeCoupon();
+        Helpers::json([
+            'success' => true,
+            'message' => 'Coupon removed.',
+            'count' => Cart::count(),
+            'cart' => Cart::getDetails()
+        ]);
+    }
 }
+
 
 // GET cart details
 Helpers::json([

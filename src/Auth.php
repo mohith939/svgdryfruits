@@ -25,6 +25,11 @@ class Auth {
     }
 
     public static function login(string $email, string $password): bool {
+        // Enforce 5 attempts per 5 minutes to prevent brute-force
+        if (!Helpers::checkRateLimit('admin_login', 5, 300)) {
+            throw new Exception("Too many failed login attempts. Please wait 5 minutes before trying again.");
+        }
+
         self::bootstrapAdmin();
 
         $pdo = Database::getConnection();
@@ -47,6 +52,10 @@ class Auth {
             session_regenerate_id(true);
             $_SESSION['admin_user_id'] = $admin['id'];
             $_SESSION['admin_email'] = $admin['email'];
+
+            // Clear login rate limiting on successful login
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+            unset($_SESSION['rate_' . md5('admin_login_' . $ip)]);
             return true;
         }
 

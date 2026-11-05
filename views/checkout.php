@@ -338,7 +338,7 @@ function handleCheckoutSubmit(e) {
 
         cashfree.checkout({
           paymentSessionId: res.payment_session_id,
-          redirectTarget: '_modal'
+          redirectTarget: '_self'
         }).then(function(result) {
           if (result && result.error) {
             console.warn('Cashfree payment error or closed:', result.error);

@@ -38,6 +38,7 @@ $categories = $pdo->query("SELECT * FROM categories ORDER BY name ASC")->fetchAl
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $name = trim($_POST['name'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
     $categoryId = trim($_POST['category_id'] ?? '') ?: null;
@@ -66,9 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmt->execute([$name, $slug, $categoryId, $description, $imageUrl, $isCombo, $active, $id]);
             $productId = $id;
-
-            // Delete old variants and re-insert
-            $pdo->prepare("DELETE FROM variants WHERE product_id = ?")->execute([$productId]);
         } else {
             $productId = 'prod_' . bin2hex(random_bytes(8));
             $stmt = $pdo->prepare("
@@ -78,7 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$productId, $name, $slug, $categoryId, $description, $imageUrl, $isCombo, $active]);
         }
 
-        // Insert variants
+        // Process variants preserving existing IDs
+        $varIds = $_POST['variant_id'] ?? [];
         $labels = $_POST['variant_label'] ?? [];
         $skus = $_POST['variant_sku'] ?? [];
         $prices = $_POST['variant_price'] ?? [];
@@ -86,30 +85,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stocks = $_POST['variant_stock'] ?? [];
         $thresholds = $_POST['variant_threshold'] ?? [];
 
-        $insVar = $pdo->prepare("
-            INSERT INTO variants (id, product_id, sku, label, price_paise, compare_price_paise, stock, low_stock_threshold, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-        ");
-
+        $variantsToSave = [];
         for ($i = 0; $i < count($labels); $i++) {
-            $lbl = trim($labels[$i]);
+            $lbl = trim($labels[$i] ?? '');
             $prc = (float)($prices[$i] ?? 0);
             if ($lbl && $prc > 0) {
                 $sku = trim($skus[$i] ?? '') ?: strtoupper($slug) . '-' . preg_replace('/\s+/', '', $lbl);
                 $pricePaise = (int)round($prc * 100);
                 $cmp = (float)($compares[$i] ?? 0);
                 $comparePaise = $cmp > 0 ? (int)round($cmp * 100) : null;
-                $stk = (int)($stocks[$i] ?? 10);
-                $thold = (int)($thresholds[$i] ?? 5);
-                $varId = 'var_' . bin2hex(random_bytes(8));
-                $insVar->execute([$varId, $productId, $sku, $lbl, $pricePaise, $comparePaise, $stk, $thold]);
+                $stk = max(0, (int)($stocks[$i] ?? 10));
+                $thold = max(0, (int)($thresholds[$i] ?? 5));
+                $vId = !empty($varIds[$i]) ? trim($varIds[$i]) : null;
+
+                $variantsToSave[] = [
+                    'id' => $vId,
+                    'sku' => $sku,
+                    'label' => $lbl,
+                    'price_paise' => $pricePaise,
+                    'compare_price_paise' => $comparePaise,
+                    'stock' => $stk,
+                    'low_stock_threshold' => $thold,
+                ];
             }
         }
+
+        Models::saveProductVariants($productId, $variantsToSave);
 
         Helpers::setFlash('success', $isEdit ? 'Product updated successfully!' : 'Product created successfully!');
         Helpers::redirect(Helpers::url('admin/products'));
     }
 }
+
 
 $pageTitle = $isEdit ? 'Edit Product' : 'Add New Product';
 $activeNav = 'products';
@@ -136,6 +143,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
       </a>
       <?php if ($isEdit && !empty($product)): ?>
         <form method="POST" action="<?= Helpers::url('admin/products') ?>" style="display: inline;" onsubmit="return confirm('Are you sure you want to PERMANENTLY delete \'<?= htmlspecialchars(addslashes($product['name'] ?? 'this product')) ?>\'? This action cannot be undone.');">
+          <?= Helpers::csrfField() ?>
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
           <button type="submit" class="button" style="background: #FFF5F5; color: #C53030; border: 1px solid #FEB2B2; padding: 10px 16px; font-weight: 600; cursor: pointer; border-radius: 8px;">
@@ -147,7 +155,9 @@ require __DIR__ . '/../layouts/admin_layout.php';
   </div>
 
   <form method="POST" class="admin-form" enctype="multipart/form-data">
+    <?= Helpers::csrfField() ?>
     <div class="admin-two-cols">
+
       <!-- Left Column: Primary Details -->
       <div class="admin-col">
         <div class="admin-card">
@@ -313,6 +323,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                 <?php foreach ($variants as $idx => $v): ?>
                   <tr>
                     <td>
+                      <input type="hidden" name="variant_id[]" value="<?= htmlspecialchars($v['id'] ?? '') ?>">
                       <input name="variant_label[]" value="<?= htmlspecialchars($v['label']) ?>" required style="width: 85px;">
                     </td>
                     <td>

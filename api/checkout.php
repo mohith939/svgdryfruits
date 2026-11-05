@@ -58,12 +58,13 @@ foreach ($cart['items'] as $item) {
     }
 }
 
-// Generate Order ID & Token
+// Generate Collision-Free High-Entropy Order ID & Token
 $datePrefix = date('Ymd');
-$rand = rand(1000, 9999);
-$orderNumber = "SVG-{$datePrefix}-{$rand}";
+$randSuffix = strtoupper(bin2hex(random_bytes(3)));
+$orderNumber = "SVG-{$datePrefix}-{$randSuffix}";
 $trackingToken = bin2hex(random_bytes(16));
 $orderId = 'ord_' . bin2hex(random_bytes(12));
+
 
 $shippingAddress = [
     'street' => $street,
@@ -120,6 +121,8 @@ if ($paymentMethod === 'online') {
 
 try {
     Models::createOrder($orderData, $cart['items']);
+    $_SESSION['recent_order_id'] = $orderNumber;
+    $_SESSION['recent_order_token'] = $trackingToken;
     // Clear cart on successful creation
     Cart::clear();
 

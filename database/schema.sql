@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `payment_session_id` VARCHAR(255) NULL,
   `courier` VARCHAR(128) NULL,
   `tracking_number` VARCHAR(128) NULL,
+  `stock_restored` TINYINT(1) NOT NULL DEFAULT 0,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_orders_order_number` (`order_number`),
@@ -111,6 +112,7 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   `variant_label` VARCHAR(128) NOT NULL,
   `unit_price_paise` INT NOT NULL,
   `quantity` INT NOT NULL,
+  `stock_restored` TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_order_items_order_id` (`order_id`),
   CONSTRAINT `fk_order_items_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE

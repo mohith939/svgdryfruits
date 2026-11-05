@@ -11,6 +11,7 @@ $pdo = Database::getConnection();
 
 // Handle form actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'create') {
@@ -109,6 +110,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
     <div class="admin-card">
       <h2>+ Add New Category</h2>
       <form class="admin-form" method="POST" enctype="multipart/form-data">
+        <?= Helpers::csrfField() ?>
         <input type="hidden" name="action" value="create">
 
         <div class="form-group-row">
@@ -261,6 +263,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                   <td><?= (int)$c['sort_order'] ?></td>
                   <td>
                     <form method="POST" style="display:inline;">
+                      <?= Helpers::csrfField() ?>
                       <input type="hidden" name="action" value="toggle_active">
                       <input type="hidden" name="id" value="<?= $c['id'] ?>">
                       <button
@@ -278,6 +281,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                         View ↗
                       </a>
                       <form method="POST" style="display: inline;" onsubmit="return confirm('Delete category <?= htmlspecialchars(addslashes($c['name'])) ?>?');">
+                        <?= Helpers::csrfField() ?>
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<?= $c['id'] ?>">
                         <button type="submit" class="admin-remove-btn">
@@ -332,6 +336,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
     // Async upload to api/upload.php
     const formData = new FormData();
+    formData.append('csrf_token', '<?= Helpers::csrfToken() ?>');
     formData.append('image', file);
     formData.append('prefix', 'cat');
 

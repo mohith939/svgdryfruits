@@ -5,6 +5,7 @@
 declare(strict_types=1);
 require_once ROOT_PATH . '/src/Helpers.php';
 require_once ROOT_PATH . '/src/Models.php';
+require_once ROOT_PATH . '/src/Auth.php';
 
 $orderNumber = trim($_GET['order_id'] ?? '');
 $token = trim($_GET['token'] ?? '');
@@ -14,6 +15,17 @@ if ($orderNumber) {
     $order = Models::getOrderByNumber($orderNumber);
 } elseif ($token) {
     $order = Models::getOrderByToken($token);
+}
+
+$isAuthorized = false;
+if ($order) {
+    if (Auth::check()) {
+        $isAuthorized = true;
+    } elseif (!empty($token) && hash_equals($order['tracking_token'] ?? '', $token)) {
+        $isAuthorized = true;
+    } elseif (!empty($_SESSION['recent_order_id']) && $_SESSION['recent_order_id'] === $order['order_number']) {
+        $isAuthorized = true;
+    }
 }
 
 // Server-side instant auto-fetch from Cashfree
@@ -84,20 +96,29 @@ require __DIR__ . '/layouts/header.php';
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; background:var(--paper); padding:20px; border-radius:6px; margin-bottom:30px; font-size:13px;">
         <div>
           <span style="color:var(--muted); display:block; margin-bottom:4px;">Delivery To:</span>
-          <strong><?= htmlspecialchars($order['customer_name']) ?></strong><br>
-          <?= htmlspecialchars($order['shipping_address']['street'] ?? '') ?><br>
-          <?= htmlspecialchars($order['shipping_address']['city'] ?? '') ?>, <?= htmlspecialchars($order['shipping_address']['state'] ?? '') ?> - <?= htmlspecialchars($order['shipping_address']['pincode'] ?? '') ?><br>
-          Phone: +91 <?= htmlspecialchars($order['customer_phone']) ?>
+          <?php if ($isAuthorized): ?>
+            <strong><?= htmlspecialchars($order['customer_name']) ?></strong><br>
+            <?= htmlspecialchars($order['shipping_address']['street'] ?? '') ?><br>
+            <?= htmlspecialchars($order['shipping_address']['city'] ?? '') ?>, <?= htmlspecialchars($order['shipping_address']['state'] ?? '') ?> - <?= htmlspecialchars($order['shipping_address']['pincode'] ?? '') ?><br>
+            Phone: +91 <?= htmlspecialchars($order['customer_phone']) ?>
+          <?php else: ?>
+            <strong><?= htmlspecialchars(substr($order['customer_name'], 0, 1) . str_repeat('*', max(1, strlen($order['customer_name']) - 1))) ?></strong><br>
+            <?= htmlspecialchars($order['shipping_address']['city'] ?? '') ?>, <?= htmlspecialchars($order['shipping_address']['state'] ?? '') ?><br>
+            Phone: +91 ******<?= htmlspecialchars(substr($order['customer_phone'], -4)) ?><br>
+            <span style="font-size:11px; color:#888;">(Sign in or use your private order link to view full delivery address)</span>
+          <?php endif; ?>
         </div>
         <div>
           <span style="color:var(--muted); display:block; margin-bottom:4px;">Payment Status:</span>
           <span id="payment-status-badge" style="display:inline-block; padding:4px 10px; border-radius:4px; font-weight:700; font-size:12px; text-transform:uppercase; <?= ($order['payment_status'] === 'paid') ? 'background:#e6f4ea; color:#137333;' : 'background:#fff8e1; color:#b06000;' ?>">
             <?= strtoupper(htmlspecialchars($order['payment_status'])) ?>
           </span>
-          <div style="margin-top:14px;">
-            <span style="color:var(--muted); display:block; margin-bottom:4px;">Tracking Reference:</span>
-            <code><?= htmlspecialchars($order['tracking_token']) ?></code>
-          </div>
+          <?php if ($isAuthorized): ?>
+            <div style="margin-top:14px;">
+              <span style="color:var(--muted); display:block; margin-bottom:4px;">Tracking Reference:</span>
+              <code><?= htmlspecialchars($order['tracking_token']) ?></code>
+            </div>
+          <?php endif; ?>
         </div>
       </div>
 

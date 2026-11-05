@@ -11,6 +11,7 @@ $pdo = Database::getConnection();
 
 // Handle coupon creation, update, and deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'create') {
@@ -251,6 +252,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
     </div>
 
     <form method="POST" class="coupon-v3-modal-form">
+      <?= Helpers::csrfField() ?>
       <input type="hidden" name="action" value="create">
 
       <div class="coupon-v3-modal-grid">
@@ -375,9 +377,9 @@ require __DIR__ . '/../layouts/admin_layout.php';
             </tr>
           <?php else: ?>
             <?php foreach ($filtered as $c): 
-              $formattedVal = ($c['type'] === 'fixed') 
+              $formattedVal = in_array($c['type'], ['fixed', 'flat'], true) 
                   ? Helpers::formatPaise((int)$c['value']) 
-                  : (($c['type'] === 'free_shipping') ? 'Free' : $c['value'] . '%');
+                  : (($c['type'] === 'free_shipping') ? 'Free Shipping' : $c['value'] . '%');
             ?>
               <tr>
                 <td style="padding-left: 18px;">
@@ -409,7 +411,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                 <td>
                   <?php if ($c['type'] === 'percentage'): ?>
                     <span class="coupon-v3-type-percentage">Percentage</span>
-                  <?php elseif ($c['type'] === 'fixed'): ?>
+                  <?php elseif (in_array($c['type'], ['fixed', 'flat'], true)): ?>
                     <span class="coupon-v3-type-fixed">Fixed Amount</span>
                   <?php else: ?>
                     <span class="coupon-v3-type-shipping">Free Shipping</span>
@@ -429,6 +431,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                 <!-- Status -->
                 <td>
                   <form method="POST" style="display:inline;">
+                    <?= Helpers::csrfField() ?>
                     <input type="hidden" name="action" value="toggle_active">
                     <input type="hidden" name="id" value="<?= $c['id'] ?>">
                     <button
@@ -444,6 +447,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                 <!-- Actions -->
                 <td style="text-align: right; padding-right: 24px;">
                   <form method="POST" style="display:inline;" onsubmit="return confirm('Delete coupon <?= htmlspecialchars(addslashes($c['code'])) ?>?');">
+                    <?= Helpers::csrfField() ?>
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="id" value="<?= $c['id'] ?>">
                     <button type="submit" class="admin-remove-btn">

@@ -15,16 +15,22 @@ $error = null;
 $email = $_POST['email'] ?? ADMIN_EMAIL;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $email = trim($_POST['email'] ?? '');
     $password = (string)($_POST['password'] ?? '');
 
-    if (Auth::login($email, $password)) {
-        Helpers::redirect(Helpers::url('admin'));
-    } else {
-        $error = 'Invalid email address or password. Please verify your credentials.';
+    try {
+        if (Auth::login($email, $password)) {
+            Helpers::redirect(Helpers::url('admin'));
+        } else {
+            $error = 'Invalid email address or password. Please verify your credentials.';
+        }
+    } catch (Throwable $e) {
+        $error = $e->getMessage();
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -128,6 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <!-- Form -->
         <form method="POST" class="login-v3-form">
+          <?= Helpers::csrfField() ?>
           <!-- Email Address -->
           <div class="login-v3-group">
             <label for="admin-email" class="login-v3-label">Email Address</label>

@@ -11,6 +11,7 @@ $pdo = Database::getConnection();
 
 // Handle product actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'toggle_active') {
@@ -83,14 +84,26 @@ $querySql = "
 ";
 $products = $pdo->query($querySql)->fetchAll();
 
-// Attach variants to all products
-$varStmt = $pdo->prepare("SELECT * FROM variants WHERE product_id = ? ORDER BY price_paise ASC");
+// Batch attach variants to all products without N+1 query loops
 $allItems = [];
-foreach ($products as $p) {
-    $varStmt->execute([$p['id']]);
-    $p['variants'] = $varStmt->fetchAll();
-    $allItems[] = $p;
+if (!empty($products)) {
+    $prodIds = array_column($products, 'id');
+    $placeholders = implode(',', array_fill(0, count($prodIds), '?'));
+    $varStmt = $pdo->prepare("SELECT * FROM variants WHERE product_id IN ($placeholders) ORDER BY price_paise ASC");
+    $varStmt->execute($prodIds);
+    $allVariants = $varStmt->fetchAll();
+
+    $variantMap = [];
+    foreach ($allVariants as $v) {
+        $variantMap[$v['product_id']][] = $v;
+    }
+
+    foreach ($products as $p) {
+        $p['variants'] = $variantMap[$p['id']] ?? [];
+        $allItems[] = $p;
+    }
 }
+
 
 // In-memory filter matching Node.js
 $filtered = array_filter($allItems, function ($p) use ($q, $selectedCategory) {
@@ -428,6 +441,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                       View ↗
                     </a>
                     <form method="POST" style="display: inline;" onsubmit="return confirm('Toggle status for <?= htmlspecialchars(addslashes($p['name'])) ?>?');">
+                      <?= Helpers::csrfField() ?>
                       <input type="hidden" name="action" value="toggle_active">
                       <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
                       <button type="submit" class="button button-outline" style="font-size: 11.5px; padding: 4px 8px; background: #fff; color: #7D7567;">
@@ -435,12 +449,14 @@ require __DIR__ . '/../layouts/admin_layout.php';
                       </button>
                     </form>
                     <form method="POST" style="display: inline;" onsubmit="return confirm('Permanently delete \'<?= htmlspecialchars(addslashes($p['name'])) ?>\'? This action cannot be undone.');">
+                      <?= Helpers::csrfField() ?>
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
                       <button type="submit" class="button button-outline" style="font-size: 11.5px; padding: 4px 8px; background: #FFF5F5; color: #C53030; border-color: #FEB2B2;" title="Permanently delete product">
                         Delete
                       </button>
                     </form>
+
                   </div>
                 </td>
               </tr>
@@ -494,9 +510,11 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
   <!-- Hidden Form for Bulk Actions -->
   <form id="bulkActionForm" method="POST" style="display: none;">
+    <?= Helpers::csrfField() ?>
     <input type="hidden" name="action" id="bulkFormAction" value="">
     <div id="bulkFormInputs"></div>
   </form>
+
 </div>
 
 <script>

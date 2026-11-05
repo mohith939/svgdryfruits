@@ -18,6 +18,12 @@ if (!Auth::check()) {
     Helpers::json(['success' => false, 'error' => 'Unauthorized. Please login to admin.'], 401);
 }
 
+// Check CSRF token if provided
+$token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+if (!empty($token) && !Helpers::verifyCsrf($token)) {
+    Helpers::json(['success' => false, 'error' => 'Invalid or expired CSRF token.'], 403);
+}
+
 $file = $_FILES['file'] ?? $_FILES['image'] ?? null;
 if (!$file) {
     Helpers::json(['success' => false, 'error' => 'No image file uploaded.'], 400);
@@ -27,8 +33,9 @@ $prefix = preg_replace('/[^a-z0-9_-]/i', '', $_POST['prefix'] ?? 'img') . '_';
 $url = Helpers::handleUpload($file, $prefix);
 
 if (!$url) {
-    Helpers::json(['success' => false, 'error' => 'Failed to upload image. Ensure it is JPG, PNG, WEBP, or SVG under 10MB.'], 400);
+    Helpers::json(['success' => false, 'error' => 'Failed to upload image. Ensure it is a valid JPG, PNG, WEBP, or GIF image under 10MB.'], 400);
 }
+
 
 Helpers::json([
     'success' => true,

@@ -11,6 +11,7 @@ $pdo = Database::getConnection();
 
 // Handle CRUD POST actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'create' || $action === 'update') {
@@ -220,6 +221,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
     </div>
 
     <form method="POST" class="admin-form">
+      <?= Helpers::csrfField() ?>
       <input type="hidden" id="form_action" name="action" value="create">
       <input type="hidden" id="form_id" name="id" value="">
 
@@ -422,6 +424,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                 </td>
                 <td>
                   <form method="POST" style="display:inline;">
+                    <?= Helpers::csrfField() ?>
                     <input type="hidden" name="action" value="toggle_active">
                     <input type="hidden" name="id" value="<?= $o['id'] ?>">
                     <button
@@ -445,6 +448,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                       ✏️ Edit
                     </button>
                     <form method="POST" style="display:inline;" onsubmit="return confirm('Delete shipping method \'<?= htmlspecialchars(addslashes($o['name'])) ?>\'?');">
+                      <?= Helpers::csrfField() ?>
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="id" value="<?= $o['id'] ?>">
                       <button

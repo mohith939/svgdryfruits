@@ -8,6 +8,22 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../src/Auth.php';
+require_once __DIR__ . '/../src/Helpers.php';
+
+// Installation Security Lock Check
+$lockFile = __DIR__ . '/.installed';
+$isLocked = file_exists($lockFile);
+$isAdmin = Auth::check();
+$setupToken = env('INSTALL_TOKEN', '');
+$providedToken = trim($_GET['token'] ?? ($_POST['token'] ?? ''));
+$isAuthorized = $isAdmin || (!$isLocked) || ($setupToken !== '' && hash_equals($setupToken, $providedToken));
+
+if ($isLocked && !$isAuthorized) {
+    http_response_code(403);
+    echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Installer Locked</title><style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#fbfaf7;display:flex;align-items:center;justify-content:center;min-height:80vh;margin:0;}.box{max-width:540px;background:#fff;padding:36px;border-radius:10px;border:1px solid #e0dad0;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.05);}h2{color:#073D26;margin:0 0 12px;font-size:24px;}p{color:#666;line-height:1.6;font-size:14.5px;}.btn{display:inline-block;margin-top:16px;padding:12px 24px;background:#073D26;color:#E2C376;text-decoration:none;border-radius:6px;font-weight:700;font-size:14px;}</style></head><body><div class='box'><h2>🔒 Database Installer Locked</h2><p>The database has already been initialized and is locked for security against unauthorized resets or configuration modifications.</p><p style='color:#888;font-size:13px;'>To access this tool again, please login as an administrator first, or remove <code>database/.installed</code>.</p><a href='" . Helpers::url('admin/login') . "' class='btn'>Login to Admin Dashboard &rarr;</a></div></body></html>";
+    exit;
+}
 
 $message = '';
 $error = '';
@@ -156,6 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
 
             $installed = true;
+            @file_put_contents($lockFile, "Installed on " . date('Y-m-d H:i:s') . "\n");
             $message = "MySQL database successfully initialized and catalog seeded with categories, pack size variants, coupons, shipping options, and admin login!";
         } catch (Throwable $e) {
             try { $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;"); } catch (Throwable $ignore) {}

@@ -82,14 +82,24 @@ class Models {
             return [];
         }
         $pdo = Database::getConnection();
-        $varStmt = $pdo->prepare("SELECT * FROM variants WHERE product_id = ? AND active = 1 ORDER BY price_paise ASC");
+        $prodIds = array_column($products, 'id');
+        $placeholders = implode(',', array_fill(0, count($prodIds), '?'));
+        $varStmt = $pdo->prepare("SELECT * FROM variants WHERE product_id IN ($placeholders) AND active = 1 ORDER BY price_paise ASC");
+        $varStmt->execute($prodIds);
+        $allVariants = $varStmt->fetchAll();
+
+        $variantMap = [];
+        foreach ($allVariants as $v) {
+            $variantMap[$v['product_id']][] = $v;
+        }
+
         foreach ($products as &$p) {
-            $varStmt->execute([$p['id']]);
-            $p['variants'] = $varStmt->fetchAll();
+            $p['variants'] = $variantMap[$p['id']] ?? [];
         }
         unset($p);
         return $products;
     }
+
 
 
     public static function getProductBySlug(string $slug): ?array {
@@ -212,17 +222,26 @@ class Models {
             }
         }
 
-        // 3. Ensure shipping_option columns in orders
+        // 3. Ensure shipping_option and stock_restored columns in orders
         $orderCols = [
             'shipping_option_id' => "VARCHAR(64) NULL",
             'shipping_option_name' => "VARCHAR(128) NULL",
+            'stock_restored' => ($driver === 'sqlite' ? "INTEGER DEFAULT 0" : "TINYINT(1) NOT NULL DEFAULT 0"),
         ];
         foreach ($orderCols as $col => $def) {
             try {
-                $pdo->exec("ALTER TABLE orders ADD COLUMN `{$col}` {$def}");
+                $pdo->exec("ALTER TABLE orders ADD COLUMN {$col} {$def}");
             } catch (Throwable $e) {
                 // Column already exists
             }
+        }
+
+        // 4. Ensure stock_restored in order_items
+        try {
+            $colDef = ($driver === 'sqlite') ? "INTEGER DEFAULT 0" : "TINYINT(1) NOT NULL DEFAULT 0";
+            $pdo->exec("ALTER TABLE order_items ADD COLUMN stock_restored {$colDef}");
+        } catch (Throwable $e) {
+            // Column already exists
         }
     }
 
@@ -345,6 +364,7 @@ class Models {
         $pdo->beginTransaction();
 
         try {
+            $data['id'] = $data['id'] ?? ('ord_' . bin2hex(random_bytes(10)));
             $stmt = $pdo->prepare("
                 INSERT INTO orders (
                     id, order_number, tracking_token, payment_status, fulfillment_status,
@@ -459,12 +479,20 @@ class Models {
     public static function updateOrderPayment(string $orderNumber, string $status, ?string $cfOrderId = null): void {
         $pdo = Database::getConnection();
         $fulfillment = ($status === 'paid') ? 'processing' : 'awaiting_payment';
+        if ($status === 'failed') {
+            $fulfillment = 'cancelled';
+        }
         $stmt = $pdo->prepare("
             UPDATE orders 
             SET payment_status = ?, fulfillment_status = ? 
             WHERE order_number = ? OR cashfree_order_id = ?
         ");
         $stmt->execute([$status, $fulfillment, $orderNumber, $cfOrderId]);
+
+        // If payment explicitly failed, restore reserved inventory
+        if ($status === 'failed') {
+            self::restoreOrderStock($orderNumber);
+        }
     }
 
     public static function updateOrderCourier(string $orderId, string $courier, string $trackingNumber, string $fulfillmentStatus): void {
@@ -475,6 +503,107 @@ class Models {
             WHERE id = ?
         ");
         $stmt->execute([$courier, $trackingNumber, $fulfillmentStatus, $orderId]);
+
+        if ($fulfillmentStatus === 'cancelled') {
+            self::restoreOrderStock($orderId);
+        }
+    }
+
+    /**
+     * Restore variant inventory for cancelled or failed orders (idempotent)
+     */
+    public static function restoreOrderStock(string $orderIdOrNumber): bool {
+        self::ensureSchema();
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT id, payment_status, fulfillment_status, stock_restored FROM orders WHERE id = ? OR order_number = ? LIMIT 1");
+        $stmt->execute([$orderIdOrNumber, $orderIdOrNumber]);
+        $order = $stmt->fetch();
+        if (!$order) {
+            return false;
+        }
+
+        // Check if order already has stock restored
+        if (!empty($order['stock_restored'])) {
+            return false; // Already restored, prevent double-restoration
+        }
+
+        $itemsStmt = $pdo->prepare("SELECT id, variant_id, quantity FROM order_items WHERE order_id = ?");
+        $itemsStmt->execute([$order['id']]);
+        $items = $itemsStmt->fetchAll();
+
+        $upStock = $pdo->prepare("UPDATE variants SET stock = stock + ? WHERE id = ?");
+        foreach ($items as $item) {
+            if (!empty($item['variant_id']) && $item['quantity'] > 0) {
+                $upStock->execute([(int)$item['quantity'], (string)$item['variant_id']]);
+            }
+        }
+
+        $pdo->prepare("UPDATE orders SET stock_restored = 1 WHERE id = ?")->execute([$order['id']]);
+        try {
+            $pdo->prepare("UPDATE order_items SET stock_restored = 1 WHERE order_id = ?")->execute([$order['id']]);
+        } catch (Throwable $e) {}
+
+        return true;
+    }
+
+    /**
+     * In-place update of product variants without destroying existing variant IDs
+     */
+    public static function saveProductVariants(string $productId, array $variantsList): void {
+        $pdo = Database::getConnection();
+
+        // 1. Fetch current variant IDs for this product
+        $currStmt = $pdo->prepare("SELECT id FROM variants WHERE product_id = ?");
+        $currStmt->execute([$productId]);
+        $existingIds = $currStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $submittedIds = [];
+        $upStmt = $pdo->prepare("
+            UPDATE variants 
+            SET label = ?, sku = ?, price_paise = ?, compare_price_paise = ?, stock = ?, low_stock_threshold = ?, active = 1
+            WHERE id = ? AND product_id = ?
+        ");
+        $insStmt = $pdo->prepare("
+            INSERT INTO variants (id, product_id, sku, label, price_paise, compare_price_paise, stock, low_stock_threshold, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+        ");
+
+        foreach ($variantsList as $v) {
+            $varId = !empty($v['id']) ? trim((string)$v['id']) : null;
+            $label = trim((string)($v['label'] ?? ''));
+            $sku = trim((string)($v['sku'] ?? ''));
+            $pricePaise = (int)($v['price_paise'] ?? 0);
+            $comparePaise = !empty($v['compare_price_paise']) ? (int)$v['compare_price_paise'] : null;
+            $stock = max(0, (int)($v['stock'] ?? 0));
+            $threshold = max(0, (int)($v['low_stock_threshold'] ?? 5));
+
+            if (!$label || $pricePaise <= 0) {
+                continue;
+            }
+
+            if ($varId && in_array($varId, $existingIds, true)) {
+                $upStmt->execute([$label, $sku, $pricePaise, $comparePaise, $stock, $threshold, $varId, $productId]);
+                $submittedIds[] = $varId;
+            } else {
+                $newId = $varId ?: ('var_' . bin2hex(random_bytes(8)));
+                $insStmt->execute([$newId, $productId, $sku, $label, $pricePaise, $comparePaise, $stock, $threshold]);
+                $submittedIds[] = $newId;
+            }
+        }
+
+        // 2. Remove or deactivate variants removed by the admin
+        $toDelete = array_diff($existingIds, $submittedIds);
+        if (!empty($toDelete)) {
+            $delStmt = $pdo->prepare("DELETE FROM variants WHERE id = ? AND product_id = ?");
+            foreach ($toDelete as $delId) {
+                try {
+                    $delStmt->execute([$delId, $productId]);
+                } catch (Throwable $e) {
+                    // Soft-deactivate if foreign key constraint exists
+                    $pdo->prepare("UPDATE variants SET active = 0 WHERE id = ?")->execute([$delId]);
+                }
+            }
+        }
     }
 
     // --- Admin Dashboard Metrics ---
@@ -501,3 +630,4 @@ class Models {
         ];
     }
 }
+

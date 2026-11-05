@@ -11,6 +11,7 @@ $pdo = Database::getConnection();
 
 // Handle status updates or manual order creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'update_status') {
@@ -19,6 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($orderId && $status) {
             $stmt = $pdo->prepare("UPDATE orders SET fulfillment_status = ? WHERE id = ?");
             $stmt->execute([$status, $orderId]);
+            if ($status === 'cancelled') {
+                Models::restoreOrderStock($orderId);
+            }
             Helpers::setFlash('success', "Order status updated to \"{$status}\".");
         }
     } elseif ($action === 'create_order') {
@@ -205,6 +209,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
     <div class="admin-v3-header-right" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
       <form method="POST" style="display: inline;">
+        <?= Helpers::csrfField() ?>
         <input type="hidden" name="action" value="sync_cashfree">
         <button type="submit" class="button button-outline" style="background: #fff; color: #073D26; border-color: #d4cabc; font-weight: 600; padding: 10px 14px; font-size: 13px;" title="Query Cashfree API and auto-update pending orders">
           🔄 Sync Cashfree Payments
@@ -485,6 +490,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
       <button type="button" onclick="document.getElementById('createOrderModal').style.display='none'" class="coupon-v3-modal-close">✕</button>
     </div>
     <form method="POST">
+      <?= Helpers::csrfField() ?>
       <input type="hidden" name="action" value="create_order">
       <div style="display: flex; flex-direction: column; gap: 14px; padding: 20px 0;">
         <div class="coupon-v3-modal-grid">

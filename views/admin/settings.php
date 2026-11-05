@@ -11,6 +11,7 @@ $pdo = Database::getConnection();
 
 // Handle saving settings
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Helpers::requireCsrf();
     $action = $_POST['action'] ?? 'save_shipping';
 
     if ($action === 'save_contact') {
@@ -70,13 +71,14 @@ require __DIR__ . '/../layouts/admin_layout.php';
     <div class="admin-card">
       <h2>Shipping Rules</h2>
       <form class="admin-form" method="POST">
+        <?= Helpers::csrfField() ?>
         <div class="form-checkbox-row" style="margin-bottom: 12px;">
           <label class="checkbox-label" style="display: flex; gap: 10px; align-items: center; cursor: pointer;">
             <input
               type="checkbox"
               name="active"
               value="1"
-              <?= !empty($shipping['active']) ? 'checked' : '' ?>
+              <?= !empty($settings['shipping_active']) ? 'checked' : '' ?>
             >
             <span><strong>Enable shipping charge calculation</strong></span>
           </label>
@@ -125,6 +127,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
       </p>
 
       <form class="admin-form" method="POST">
+        <?= Helpers::csrfField() ?>
         <input type="hidden" name="action" value="save_contact">
 
         <div class="form-group">
