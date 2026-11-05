@@ -91,68 +91,63 @@ require __DIR__ . '/layouts/header.php';
           </div>
           <div class="form-group">
             <label for="state">State <span class="req">*</span></label>
-            <input id="state" name="state" required placeholder="Telangana" autocomplete="address-level1" />
+            <select id="state" name="state" required onchange="handleStateChange(this.value)" style="height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; background: #fff; width: 100%;">
+              <option value="Telangana" selected>Telangana</option>
+              <option value="Andhra Pradesh">Andhra Pradesh</option>
+              <option value="Karnataka">Karnataka</option>
+              <option value="Tamil Nadu">Tamil Nadu</option>
+              <option value="Kerala">Kerala</option>
+              <option value="Maharashtra">Maharashtra</option>
+              <option value="Delhi">Delhi / NCR</option>
+              <option value="Gujarat">Gujarat</option>
+              <option value="Rajasthan">Rajasthan</option>
+              <option value="Uttar Pradesh">Uttar Pradesh</option>
+              <option value="West Bengal">West Bengal</option>
+              <option value="Madhya Pradesh">Madhya Pradesh</option>
+              <option value="Punjab">Punjab</option>
+              <option value="Haryana">Haryana</option>
+              <option value="Bihar">Bihar</option>
+              <option value="Odisha">Odisha</option>
+              <option value="Assam">Assam</option>
+              <option value="Goa">Goa</option>
+              <option value="Jharkhand">Jharkhand</option>
+              <option value="Chhattisgarh">Chhattisgarh</option>
+              <option value="Uttarakhand">Uttarakhand</option>
+              <option value="Himachal Pradesh">Himachal Pradesh</option>
+              <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+              <option value="Chandigarh">Chandigarh</option>
+              <option value="Puducherry">Puducherry</option>
+              <option value="Other">Other / Rest of India</option>
+            </select>
           </div>
         </div>
       </div>
 
-      <!-- Step 3: Multi-Option Delivery Methods -->
-      <?php 
-        $eligibleShipping = $cart['eligible_shipping'] ?? [];
-        $selectedShipping = $cart['selected_shipping'] ?? null;
-      ?>
+      <!-- Step 3: Automated State-Based Delivery Rate -->
       <div class="checkout-section-box shipping-method-section-box" style="margin-bottom: 24px;">
-        <h2>3. Delivery method</h2>
-        <p style="font-size: 13.5px; color: var(--muted); margin-bottom: 14px;">
-          Choose your preferred courier speed and delivery option:
-        </p>
+        <h2>3. Delivery &amp; Shipping</h2>
 
-        <div class="shipping-options-list" style="display: flex; flex-direction: column; gap: 10px;">
-          <?php foreach ($eligibleShipping as $idx => $opt): 
-            $isSelected = ($selectedShipping && $selectedShipping['id'] === $opt['id']);
-            $feePaise = (int)$opt['effective_paise'];
-            $feeLabel = ($feePaise === 0) ? 'FREE' : Helpers::formatPaise($feePaise);
-          ?>
-            <label
-              class="shipping-option-card <?= $isSelected ? 'is-selected' : '' ?>"
-              id="ship_card_<?= $opt['id'] ?>"
-              style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 2px solid <?= $isSelected ? '#073D26' : '#DFD7CA' ?>; border-radius: 10px; cursor: pointer; background: <?= $isSelected ? '#F8FBF9' : '#fff' ?>; transition: all 0.2s;"
-            >
-              <input
-                type="radio"
-                name="shipping_option_id"
-                value="<?= htmlspecialchars($opt['id']) ?>"
-                data-rate="<?= $feePaise ?>"
-                data-name="<?= htmlspecialchars($opt['name']) ?>"
-                <?= $isSelected ? 'checked' : '' ?>
-                onchange="selectShippingOption(this)"
-                style="margin-top: 4px; accent-color: #073D26; width: 18px; height: 18px;"
-              >
-              <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <strong style="color: #073D26; font-size: 15.5px;"><?= htmlspecialchars($opt['name']) ?></strong>
-                  <span style="font-weight: 700; font-size: 15px; color: <?= ($feePaise === 0) ? '#2E7D32' : '#073D26' ?>;">
-                    <?= $feeLabel ?>
-                  </span>
-                </div>
-                <?php if (!empty($opt['estimated_days'])): ?>
-                  <span style="display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #F4EFE6; color: #5D4F3C; font-weight: 600; margin-bottom: 4px;">
-                    ⏱ Estimated: <?= htmlspecialchars($opt['estimated_days']) ?>
-                  </span>
-                <?php endif; ?>
-                <?php if (!empty($opt['description'])): ?>
-                  <p style="margin: 3px 0 0; font-size: 13px; color: #666; line-height: 1.4;">
-                    <?= htmlspecialchars($opt['description']) ?>
-                  </p>
-                <?php endif; ?>
-                <?php if (!empty($opt['free_above_paise']) && $subtotal < $opt['free_above_paise']): ?>
-                  <p style="margin: 4px 0 0 0; font-size: 12px; color: #8E6D38; font-weight: 600;">
-                    Add <?= Helpers::formatPaise($opt['free_above_paise'] - $subtotal) ?> more for FREE shipping on this option!
-                  </p>
-                <?php endif; ?>
-              </div>
-            </label>
-          <?php endforeach; ?>
+        <div id="shipping-rate-card" style="padding: 16px 18px; border: 2px solid #073D26; border-radius: 10px; background: #F8FBF9; display: flex; align-items: flex-start; gap: 14px;">
+          <div style="font-size: 26px; line-height: 1; padding-top: 2px;">🚚</div>
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
+              <strong id="shipping-rule-name" style="color: #073D26; font-size: 16px;">
+                Direct Delivery to <span id="shipping-rule-state">Telangana</span>
+              </strong>
+              <span id="shipping-rate-badge" style="font-weight: 700; font-size: 15px; color: #073D26; background: #EAF5EC; padding: 4px 10px; border-radius: 6px;">
+                <?= $shipping === 0 ? 'FREE DELIVERY' : Helpers::formatPaise($shipping) ?>
+              </span>
+            </div>
+            <p id="shipping-rule-desc" style="margin: 4px 0 6px; font-size: 13.5px; color: #444; line-height: 1.45;">
+              Dispatched from our Hyderabad &amp; Kakinada packing facilities. Shipping is calculated automatically based on your destination state.
+            </p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+              <span id="shipping-rule-sla" style="display: inline-block; font-size: 11.5px; padding: 2px 8px; border-radius: 4px; background: #F4EFE6; color: #5D4F3C; font-weight: 600;">
+                ⏱ Estimated: 1 – 3 Business Days
+              </span>
+              <span id="shipping-free-hint" style="font-size: 12px; color: #8E6D38; font-weight: 600;"></span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -231,36 +226,114 @@ require __DIR__ . '/layouts/header.php';
 var baseSubtotalPaise = <?= (int)$subtotal ?>;
 var discountPaise = <?= (int)$discount ?>;
 var currentShippingPaise = <?= (int)$shipping ?>;
+var shippingRules = <?= json_encode(Models::getShippingOptions(true)) ?>;
+var currentShippingRule = null;
 
 function formatINR(paise) {
   var rupees = paise / 100;
   return '₹' + rupees.toLocaleString('en-IN', { maximumFractionDigits: (paise % 100 === 0) ? 0 : 2 });
 }
 
-function selectShippingOption(radio) {
-  var rate = parseInt(radio.getAttribute('data-rate'), 10) || 0;
-  var name = radio.getAttribute('data-name') || '';
-  currentShippingPaise = rate;
+function resolveShippingRule(stateName) {
+  var clean = (stateName || '').toLowerCase().trim();
+  var matched = null;
+  var fallbackAll = null;
 
-  document.querySelectorAll('.shipping-option-card').forEach(function(card) {
-    card.style.borderColor = '#DFD7CA';
-    card.style.backgroundColor = '#fff';
-  });
-  var parent = radio.closest('.shipping-option-card');
-  if (parent) {
-    parent.style.borderColor = '#073D26';
-    parent.style.backgroundColor = '#F8FBF9';
+  for (var i = 0; i < shippingRules.length; i++) {
+    var opt = shippingRules[i];
+    var targets = (opt.target_states || 'ALL').toLowerCase().trim();
+    if (targets === 'all' || targets === '*' || targets === '') {
+      if (!fallbackAll) fallbackAll = opt;
+      continue;
+    }
+    if (clean !== '') {
+      var parts = targets.split(',').map(function(s) { return s.trim(); });
+      for (var j = 0; j < parts.length; j++) {
+        var s = parts[j];
+        if (s === clean || clean.indexOf(s) !== -1 || s.indexOf(clean) !== -1) {
+          matched = opt;
+          break;
+        }
+      }
+      if (matched) break;
+    }
   }
 
-  var shippingEl = document.getElementById('summary-shipping-val');
-  if (shippingEl) {
-    shippingEl.textContent = (rate === 0) ? 'Free' : formatINR(rate);
+  return matched || fallbackAll || (shippingRules.length > 0 ? shippingRules[0] : null);
+}
+
+function handleStateChange(stateName) {
+  var rule = resolveShippingRule(stateName);
+  currentShippingRule = rule;
+
+  var ratePaise = 4900;
+  var sla = '1 – 3 Business Days';
+  var desc = 'Dispatched from our Hyderabad & Kakinada packing facilities. Shipping is calculated automatically based on your destination state.';
+  var ruleName = 'Direct Delivery to ' + (stateName || 'Your State');
+  var freeAbove = null;
+
+  if (rule) {
+    sla = rule.estimated_days || sla;
+    desc = rule.description || desc;
+    ruleName = rule.name || ruleName;
+    freeAbove = rule.free_above_paise ? parseInt(rule.free_above_paise, 10) : null;
+    if (freeAbove !== null && baseSubtotalPaise >= freeAbove) {
+      ratePaise = 0;
+    } else {
+      ratePaise = parseInt(rule.rate_paise, 10) || 0;
+    }
   }
 
-  var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise + rate);
-  var totalEl = document.getElementById('summary-total-val');
-  if (totalEl) {
-    totalEl.textContent = formatINR(newTotalPaise);
+  currentShippingPaise = ratePaise;
+
+  var stateEl = document.getElementById('shipping-rule-state');
+  if (stateEl) stateEl.textContent = stateName;
+
+  var nameEl = document.getElementById('shipping-rule-name');
+  if (nameEl) nameEl.textContent = ruleName;
+
+  var descEl = document.getElementById('shipping-rule-desc');
+  if (descEl) descEl.textContent = desc;
+
+  var slaEl = document.getElementById('shipping-rule-sla');
+  if (slaEl) slaEl.textContent = '⏱ Estimated: ' + sla;
+
+  var badgeEl = document.getElementById('shipping-rate-badge');
+  if (badgeEl) {
+    if (ratePaise === 0) {
+      badgeEl.textContent = 'FREE DELIVERY';
+      badgeEl.style.color = '#2E7D32';
+      badgeEl.style.background = '#EAF5EC';
+    } else {
+      badgeEl.textContent = formatINR(ratePaise);
+      badgeEl.style.color = '#073D26';
+      badgeEl.style.background = '#F4EFE6';
+    }
+  }
+
+  var hintEl = document.getElementById('shipping-free-hint');
+  if (hintEl) {
+    if (freeAbove !== null && baseSubtotalPaise < freeAbove) {
+      var diff = freeAbove - baseSubtotalPaise;
+      hintEl.textContent = '• Add ' + formatINR(diff) + ' more for FREE delivery!';
+      hintEl.style.display = 'inline';
+    } else if (freeAbove !== null && baseSubtotalPaise >= freeAbove) {
+      hintEl.textContent = '• 🎉 You unlocked FREE delivery!';
+      hintEl.style.display = 'inline';
+    } else {
+      hintEl.style.display = 'none';
+    }
+  }
+
+  var summaryShipping = document.getElementById('summary-shipping-val');
+  if (summaryShipping) {
+    summaryShipping.textContent = (ratePaise === 0) ? 'Free' : formatINR(ratePaise);
+  }
+
+  var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise + ratePaise);
+  var summaryTotal = document.getElementById('summary-total-val');
+  if (summaryTotal) {
+    summaryTotal.textContent = formatINR(newTotalPaise);
   }
 
   var submitBtn = document.getElementById('checkout-submit-btn');
@@ -268,6 +341,14 @@ function selectShippingOption(radio) {
     submitBtn.textContent = 'Pay ' + formatINR(newTotalPaise) + ' with Cashfree';
   }
 }
+
+// Initialize state-based rate on page load
+document.addEventListener('DOMContentLoaded', function() {
+  var stateSelect = document.getElementById('state');
+  if (stateSelect) {
+    handleStateChange(stateSelect.value);
+  }
+});
 
 function handleCheckoutSubmit(e) {
   e.preventDefault();
@@ -281,10 +362,7 @@ function handleCheckoutSubmit(e) {
     btn.textContent = 'Redirecting to Cashfree…';
   }
 
-  var selectedShippingRadio = document.querySelector('input[name="shipping_option_id"]:checked');
-  var shippingOptId = selectedShippingRadio ? selectedShippingRadio.value : '';
-  var shippingOptName = selectedShippingRadio ? selectedShippingRadio.getAttribute('data-name') : '';
-
+  var stateValue = document.getElementById('state').value.trim();
   var payload = {
     name: document.getElementById('name').value.trim(),
     customer_name: document.getElementById('name').value.trim(),
@@ -298,14 +376,12 @@ function handleCheckoutSubmit(e) {
     shipping_landmark: document.getElementById('landmark').value.trim(),
     city: document.getElementById('city').value.trim(),
     shipping_city: document.getElementById('city').value.trim(),
-    state: document.getElementById('state').value.trim(),
-    shipping_state: document.getElementById('state').value.trim(),
+    state: stateValue,
+    shipping_state: stateValue,
     pincode: document.getElementById('pincode').value.trim(),
     shipping_pincode: document.getElementById('pincode').value.trim(),
-    shipping_option_id: shippingOptId,
-    shipping_option_name: shippingOptName
+    shipping_option_id: currentShippingRule ? currentShippingRule.id : ''
   };
-
 
   fetch(window.SVG_APP.apiUrl + '/checkout.php', {
     method: 'POST',
@@ -331,14 +407,13 @@ function handleCheckoutSubmit(e) {
         throw new Error('Cashfree did not return a payment session ID. Please try again.');
       }
 
-      // Check if Cashfree Drop-in SDK is available
       if (typeof window.Cashfree === 'function') {
         var mode = (window.SVG_APP && window.SVG_APP.cashfreeMode) ? window.SVG_APP.cashfreeMode : 'production';
         var cashfree = window.Cashfree({ mode: mode });
 
         cashfree.checkout({
           paymentSessionId: res.payment_session_id,
-          redirectTarget: '_self'
+          redirectTarget: '_modal'
         }).then(function(result) {
           if (result && result.error) {
             console.warn('Cashfree payment error or closed:', result.error);
@@ -346,12 +421,16 @@ function handleCheckoutSubmit(e) {
             if (errBanner) errBanner.style.display = 'flex';
             if (btn) {
               btn.disabled = false;
-              btn.textContent = 'Pay <?= Helpers::formatPaise($total) ?> with Cashfree';
+              handleStateChange(document.getElementById('state').value);
             }
             return;
           }
-          if (result && (result.paymentDetails || result.redirect)) {
-            // Payment successful! Redirect to order confirmed screen
+          if (result && result.redirect) {
+            // Browser navigating to 3DS / bank
+            return;
+          }
+          if (result && result.paymentDetails) {
+            // Payment success! Redirect to order confirmed screen
             window.location.href = res.redirect_url;
           }
         }).catch(function(cfErr) {
@@ -362,6 +441,8 @@ function handleCheckoutSubmit(e) {
               paymentSessionId: res.payment_session_id,
               redirectTarget: '_self'
             });
+          } else {
+            window.location.href = res.redirect_url;
           }
         });
       } else {
@@ -374,7 +455,7 @@ function handleCheckoutSubmit(e) {
       if (errBanner) errBanner.style.display = 'flex';
       if (btn) {
         btn.disabled = false;
-        btn.textContent = 'Pay <?= Helpers::formatPaise($total) ?> with Cashfree';
+        handleStateChange(document.getElementById('state').value);
       }
     });
 }

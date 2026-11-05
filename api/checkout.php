@@ -43,7 +43,7 @@ if (strlen($street) < 5 || strlen($city) < 2 || strlen($pincode) !== 6) {
     Helpers::json(['success' => false, 'error' => 'Please provide a complete delivery address and 6-digit PIN code.'], 400);
 }
 
-$cart = Cart::getDetails($shippingOptionId ?: null);
+$cart = Cart::getDetails(null, $state);
 if (empty($cart['items'])) {
     Helpers::json(['success' => false, 'error' => 'Your bag is empty.'], 400);
 }
@@ -65,13 +65,21 @@ foreach ($cart['items'] as $item) {
     }
 }
 
+// Resolve state-based shipping pricing dynamically from database rules
+$shippingOpt = Models::getShippingOptionForState($state, $cart['subtotal_paise']);
+$shippingPaise = (int)$shippingOpt['effective_paise'];
+if (!empty($cart['applied_coupon']) && $cart['applied_coupon']['type'] === 'free_shipping') {
+    $shippingPaise = 0;
+}
+$discountPaise = (int)$cart['discount_paise'];
+$totalPaise = max(0, $cart['subtotal_paise'] - $discountPaise + $shippingPaise);
+
 // Generate Collision-Free High-Entropy Order ID & Token
 $datePrefix = date('Ymd');
 $randSuffix = strtoupper(bin2hex(random_bytes(3)));
 $orderNumber = "SVG-{$datePrefix}-{$randSuffix}";
 $trackingToken = bin2hex(random_bytes(16));
 $orderId = 'ord_' . bin2hex(random_bytes(12));
-
 
 $shippingAddress = [
     'street' => $street,
@@ -91,12 +99,12 @@ $orderData = [
     'customer_phone' => $phone,
     'shipping_address' => $shippingAddress,
     'subtotal_paise' => $cart['subtotal_paise'],
-    'discount_paise' => $cart['discount_paise'],
-    'shipping_paise' => $cart['shipping_paise'],
-    'total_paise' => $cart['total_paise'],
+    'discount_paise' => $discountPaise,
+    'shipping_paise' => $shippingPaise,
+    'total_paise' => $totalPaise,
     'coupon_code' => $cart['applied_coupon']['code'] ?? null,
-    'shipping_option_id' => $cart['selected_shipping']['id'] ?? ($shippingOptionId ?: null),
-    'shipping_option_name' => $cart['selected_shipping']['name'] ?? ($input['shipping_option_name'] ?? 'Standard Delivery'),
+    'shipping_option_id' => $shippingOpt['id'] ?? 'ship_default',
+    'shipping_option_name' => $shippingOpt['name'] ?? 'State Delivery',
     'cashfree_order_id' => null,
     'payment_session_id' => null,
 ];
@@ -105,7 +113,7 @@ $orderData = [
 if ($paymentMethod === 'online') {
     try {
         $cashfree = new CashfreePG();
-        $orderAmountRupees = Helpers::paiseToRupees($cart['total_paise']);
+        $orderAmountRupees = Helpers::paiseToRupees($totalPaise);
         $returnUrl = APP_URL . "/order-success?order_id={$orderNumber}&token={$trackingToken}";
 
         $cfResponse = $cashfree->createOrder([

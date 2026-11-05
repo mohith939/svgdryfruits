@@ -130,11 +130,20 @@ require __DIR__ . '/layouts/header.php';
                 <?php endforeach; ?>
               </div>
 
-              <!-- Footer: Price + Cart Action -->
-              <div class="eoc-card-footer">
-                <span class="eoc-card-price">
-                  <?= $firstVar ? Helpers::formatPaise((int)$firstVar['price_paise']) : '₹—' ?>
-                </span>
+              <!-- Footer: Price + Quantity Stepper + Cart Action -->
+              <div class="eoc-card-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span class="eoc-card-price">
+                    <?= $firstVar ? Helpers::formatPaise((int)$firstVar['price_paise']) : '₹—' ?>
+                  </span>
+
+                  <!-- Compact - / + Quantity Stepper -->
+                  <div class="eoc-card-qty-stepper" style="display: inline-flex; align-items: center; border: 1.5px solid #073D26; border-radius: 6px; overflow: hidden; background: #fff;">
+                    <button type="button" onclick="adjustCardQty(this, -1)" style="border: none; background: #FAF8F5; color: #073D26; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; font-size: 14px; padding: 0;" aria-label="Decrease quantity">−</button>
+                    <span class="eoc-card-qty-val" style="min-width: 22px; text-align: center; font-size: 12px; font-weight: 700; color: #073D26; padding: 0 2px;">1</span>
+                    <button type="button" onclick="adjustCardQty(this, 1)" style="border: none; background: #FAF8F5; color: #073D26; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; font-size: 14px; padding: 0;" aria-label="Increase quantity">+</button>
+                  </div>
+                </div>
 
                 <div class="eoc-cart-action">
                   <button type="button" 

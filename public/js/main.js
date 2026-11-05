@@ -200,6 +200,17 @@
     }
   };
 
+  // --- Card Quantity Stepper (- and +) ---
+  window.adjustCardQty = function (btn, diff) {
+    var card = btn.closest('.coll-card, .eoc-card');
+    if (!card) return;
+    var qtyVal = card.querySelector('.coll-card-qty-val, .eoc-card-qty-val');
+    if (!qtyVal) return;
+    var current = parseInt(qtyVal.textContent, 10) || 1;
+    var next = Math.max(1, current + diff);
+    qtyVal.textContent = next;
+  };
+
   // --- Home Collection Card Add to Bag ---
   window.handleCardAdd = function (btn) {
     var card = btn.closest('.coll-card');
@@ -210,11 +221,13 @@
     var variantId = activePill.getAttribute('data-variant-id');
     var variantLabel = activePill.getAttribute('data-label');
     var prodName = btn.getAttribute('data-product-name');
+    var qtyVal = card.querySelector('.coll-card-qty-val');
+    var qty = qtyVal ? (parseInt(qtyVal.textContent, 10) || 1) : 1;
 
-    window.addToCart(variantId, 1, {
+    window.addToCart(variantId, qty, {
       title: prodName,
       size: variantLabel,
-      qty: 1
+      qty: qty
     });
   };
 
@@ -241,11 +254,13 @@
     var variantId = activePill.getAttribute('data-variant-id');
     var variantLabel = activePill.getAttribute('data-label');
     var prodName = btn.getAttribute('data-product-name');
+    var qtyVal = card.querySelector('.eoc-card-qty-val');
+    var qty = qtyVal ? (parseInt(qtyVal.textContent, 10) || 1) : 1;
 
-    window.addToCart(variantId, 1, {
+    window.addToCart(variantId, qty, {
       title: prodName,
       size: variantLabel,
-      qty: 1
+      qty: qty
     });
   };
 

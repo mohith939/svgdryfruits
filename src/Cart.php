@@ -104,7 +104,7 @@ class Cart {
         return $eligible;
     }
 
-    public static function getDetails(?string $shippingOptionId = null): array {
+    public static function getDetails(?string $shippingOptionId = null, ?string $state = null): array {
         self::init();
         $items = [];
         $subtotalPaise = 0;
@@ -166,21 +166,24 @@ class Cart {
             }
         }
 
-        // Multi-condition shipping resolution
+        // State-based & multi-condition shipping resolution
         $eligibleShipping = self::getEligibleShippingOptions($subtotalPaise);
-        $selectedId = $shippingOptionId ?? ($_SESSION['selected_shipping_id'] ?? null);
+        $targetState = $state ?? ($_SESSION['customer_state'] ?? null);
 
         $selectedOption = null;
-        if ($selectedId) {
+        if ($targetState) {
+            $selectedOption = Models::getShippingOptionForState($targetState, $subtotalPaise);
+        } elseif ($shippingOptionId) {
             foreach ($eligibleShipping as $opt) {
-                if ($opt['id'] === $selectedId) {
+                if ($opt['id'] === $shippingOptionId) {
                     $selectedOption = $opt;
                     break;
                 }
             }
         }
+
         if (!$selectedOption && !empty($eligibleShipping)) {
-            $selectedOption = $eligibleShipping[0];
+            $selectedOption = Models::getShippingOptionForState('Telangana', $subtotalPaise);
         }
 
         $shippingPaise = 0;
@@ -201,7 +204,6 @@ class Cart {
         }
 
         $totalPaise = max(0, $subtotalPaise - $discountPaise + $shippingPaise);
-
 
         return [
             'items' => $items,

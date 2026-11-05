@@ -119,6 +119,43 @@ TestSuite::assert(
     'Coupon is rejected when cart subtotal is below minimum order value'
 );
 
+// Section 7B: State-Based Shipping Rate Auto-Resolution
+TestSuite::section('7B. State-Based Shipping Rate Auto-Resolution');
+
+// Temporarily deactivate non-test shipping options to test exact rule resolution
+$pdo->exec("UPDATE shipping_options SET active = 0");
+$pdo->exec("DELETE FROM shipping_options WHERE id LIKE 'test_ship_%'");
+$pdo->prepare("
+    INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
+    VALUES 
+    ('test_ship_ts_ap', 'Telangana & AP Delivery', 'Telangana, Andhra Pradesh', 'Fast regional', '1-2 Days', 4900, 99900, 0, 1, 1),
+    ('test_ship_south', 'South India', 'Karnataka, Tamil Nadu, Kerala', 'South zonal', '2-3 Days', 6900, 149900, 0, 1, 2),
+    ('test_ship_roi', 'Rest of India', 'ALL', 'National delivery', '3-5 Days', 8900, 199900, 0, 1, 3)
+")->execute();
+
+// Test 1: Match Telangana below free threshold (₹450 order)
+$optTs = Models::getShippingOptionForState('Telangana', 45000);
+TestSuite::assert($optTs['id'] === 'test_ship_ts_ap', 'Correctly matches Telangana state rule (test_ship_ts_ap)');
+TestSuite::assert($optTs['effective_paise'] === 4900, 'Applies exact ₹49 (4900 paise) rate for Telangana when below ₹999');
+
+// Test 2: Match Telangana above free threshold (₹1200 order)
+$optTsFree = Models::getShippingOptionForState('Telangana', 120000);
+TestSuite::assert($optTsFree['effective_paise'] === 0, 'Automatically unlocks FREE delivery (0 paise) when cart >= ₹999 threshold');
+
+// Test 3: Match Karnataka (South India)
+$optKa = Models::getShippingOptionForState('Karnataka', 50000);
+TestSuite::assert($optKa['id'] === 'test_ship_south', 'Correctly matches Karnataka to South India shipping rule');
+TestSuite::assert($optKa['effective_paise'] === 6900, 'Applies ₹69 (6900 paise) rate for Karnataka');
+
+// Test 4: Match Delhi (Falls back to Rest of India 'ALL')
+$optDel = Models::getShippingOptionForState('Delhi', 50000);
+TestSuite::assert($optDel['id'] === 'test_ship_roi', 'Correctly falls back to ALL (Rest of India) for unlisted states like Delhi');
+TestSuite::assert($optDel['effective_paise'] === 8900, 'Applies ₹89 (8900 paise) rate for Rest of India');
+
+// Cleanup test shipping options & restore active status
+$pdo->exec("DELETE FROM shipping_options WHERE id LIKE 'test_ship_%'");
+$pdo->exec("UPDATE shipping_options SET active = 1");
+
 // Cleanup test records
 $pdo->prepare("DELETE FROM coupons WHERE code IN ('TEST10', 'TEST50FLAT', 'TESTFREE')")->execute();
 $pdo->prepare("DELETE FROM variants WHERE product_id = ?")->execute([$cartProdId]);

@@ -185,7 +185,9 @@ require __DIR__ . '/layouts/header.php';
       ?>
         <div class="coll-card" data-category="<?= htmlspecialchars($prod['category_slug'] ?? '') ?>" data-slug="<?= htmlspecialchars($prod['slug']) ?>">
           <div class="coll-card-media">
-            <img src="<?= $prodImg ?>" alt="<?= htmlspecialchars($prod['name']) ?>" class="coll-card-img" loading="lazy" />
+            <a href="<?= Helpers::url('products/' . $prod['slug']) ?>" class="coll-card-media-link" style="display: block; width: 100%; height: 100%; text-decoration: none;" aria-label="View <?= htmlspecialchars($prod['name']) ?>">
+              <img src="<?= $prodImg ?>" alt="<?= htmlspecialchars($prod['name']) ?>" class="coll-card-img" loading="lazy" />
+            </a>
             <button type="button" class="coll-card-fav-btn" aria-label="Save <?= htmlspecialchars($prod['name']) ?> to wishlist" onclick="this.classList.toggle('is-favorited')">
               <?= Icon::render('heart', ['size' => 16]) ?>
             </button>
@@ -213,12 +215,21 @@ require __DIR__ . '/layouts/header.php';
               <?php endforeach; ?>
             </div>
 
-            <!-- Price Row -->
-            <div class="coll-card-price-row">
-              <span class="coll-card-price"><?= $firstVar ? Helpers::formatPaise((int)$firstVar['price_paise']) : '' ?></span>
-              <?php if ($firstVar && !empty($firstVar['compare_price_paise']) && $firstVar['compare_price_paise'] > $firstVar['price_paise']): ?>
-                <s class="coll-card-compare"><?= Helpers::formatPaise((int)$firstVar['compare_price_paise']) ?></s>
-              <?php endif; ?>
+            <!-- Price & Quantity Stepper Row -->
+            <div class="coll-card-price-row" style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0;">
+              <div>
+                <span class="coll-card-price"><?= $firstVar ? Helpers::formatPaise((int)$firstVar['price_paise']) : '' ?></span>
+                <?php if ($firstVar && !empty($firstVar['compare_price_paise']) && $firstVar['compare_price_paise'] > $firstVar['price_paise']): ?>
+                  <s class="coll-card-compare"><?= Helpers::formatPaise((int)$firstVar['compare_price_paise']) ?></s>
+                <?php endif; ?>
+              </div>
+
+              <!-- Compact - / + Quantity Stepper -->
+              <div class="coll-card-qty-stepper" style="display: inline-flex; align-items: center; border: 1.5px solid #073D26; border-radius: 6px; overflow: hidden; background: #fff;">
+                <button type="button" onclick="adjustCardQty(this, -1)" style="border: none; background: #FAF8F5; color: #073D26; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; font-size: 15px; padding: 0;" aria-label="Decrease quantity">−</button>
+                <span class="coll-card-qty-val" style="min-width: 24px; text-align: center; font-size: 13px; font-weight: 700; color: #073D26; padding: 0 4px;">1</span>
+                <button type="button" onclick="adjustCardQty(this, 1)" style="border: none; background: #FAF8F5; color: #073D26; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; font-size: 15px; padding: 0;" aria-label="Increase quantity">+</button>
+              </div>
             </div>
 
             <!-- Add to Bag Button -->

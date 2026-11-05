@@ -19,6 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create' || $action === 'update') {
         $name = trim($_POST['name'] ?? '');
+        $targetStates = trim($_POST['target_states'] ?? 'ALL');
+        if ($targetStates === '') $targetStates = 'ALL';
         $description = trim($_POST['description'] ?? '');
         $estimatedDays = trim($_POST['estimated_days'] ?? '');
         $rateINR = (float)($_POST['rate_inr'] ?? 49);
@@ -34,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($name !== '') {
             $data = [
                 'name' => $name,
+                'target_states' => $targetStates,
                 'description' => $description,
                 'estimated_days' => $estimatedDays,
                 'rate_paise' => $ratePaise,
@@ -230,22 +233,44 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
       <div class="form-group-row">
         <div class="form-group" style="flex: 2;">
-          <label for="form_name">Method Name *</label>
+          <label for="form_name">Rule Name *</label>
           <input
             id="form_name"
             name="name"
             required
-            placeholder="e.g. Standard Surface Delivery"
+            placeholder="e.g. Telangana & Andhra Pradesh Direct Delivery"
           >
         </div>
 
         <div class="form-group" style="flex: 1;">
-          <label for="form_days">Estimated Delivery (SLA)</label>
+          <label for="form_days">Estimated SLA</label>
           <input
             id="form_days"
             name="estimated_days"
-            placeholder="e.g. 3 – 5 Business Days"
+            placeholder="e.g. 1 – 2 Business Days"
           >
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="form_states" style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span>Target States (comma-separated, or ALL for nationwide default) *</span>
+          <span style="font-size: 11px; color: #7C7265;">Matches customer shipping address state automatically</span>
+        </label>
+        <input
+          id="form_states"
+          name="target_states"
+          required
+          placeholder="e.g. Telangana, Andhra Pradesh or ALL"
+          value="ALL"
+          style="font-family: monospace; font-size: 13px;"
+        >
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+          <button type="button" class="btn-action" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #fff; border: 1px solid #CCC; cursor: pointer;" onclick="document.getElementById('form_states').value='Telangana, Andhra Pradesh'">+ Telangana &amp; AP</button>
+          <button type="button" class="btn-action" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #fff; border: 1px solid #CCC; cursor: pointer;" onclick="document.getElementById('form_states').value='Karnataka, Tamil Nadu, Kerala'">+ South States</button>
+          <button type="button" class="btn-action" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #fff; border: 1px solid #CCC; cursor: pointer;" onclick="document.getElementById('form_states').value='Maharashtra, Gujarat'">+ Western States</button>
+          <button type="button" class="btn-action" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #fff; border: 1px solid #CCC; cursor: pointer;" onclick="document.getElementById('form_states').value='Delhi, Haryana, Punjab, Uttar Pradesh'">+ North States</button>
+          <button type="button" class="btn-action" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #073D26; color: #fff; border: 1px solid #073D26; cursor: pointer;" onclick="document.getElementById('form_states').value='ALL'">ALL (Rest of India)</button>
         </div>
       </div>
 
@@ -370,10 +395,10 @@ require __DIR__ . '/../layouts/admin_layout.php';
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Method Name &amp; SLA</th>
-            <th>Description</th>
-            <th>Base Rate</th>
-            <th>Condition / Free Threshold</th>
+            <th>Rule Name &amp; SLA</th>
+            <th>Target States</th>
+            <th>Delivery Fee</th>
+            <th>Free Shipping Condition</th>
             <th>Min Subtotal</th>
             <th>Status</th>
             <th style="text-align: right;">Actions</th>
@@ -383,7 +408,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
           <?php if (empty($filtered)): ?>
             <tr>
               <td colspan="7" style="text-align: center; padding: 36px; color: #888;">
-                No shipping methods match the selected filter.
+                No shipping rules match the selected filter.
               </td>
             </tr>
           <?php else: ?>
@@ -391,6 +416,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
               $rateInr = round($o['rate_paise'] / 100);
               $freeInr = $o['free_above_paise'] ? round($o['free_above_paise'] / 100) : null;
               $minInr = round($o['min_subtotal_paise'] / 100);
+              $states = htmlspecialchars($o['target_states'] ?? 'ALL');
             ?>
               <tr>
                 <td>
@@ -403,8 +429,10 @@ require __DIR__ . '/../layouts/admin_layout.php';
                     </div>
                   <?php endif; ?>
                 </td>
-                <td style="max-width: 280px; font-size: 13px; color: #666; line-height: 1.4;">
-                  <?= htmlspecialchars($o['description'] ?: '—') ?>
+                <td style="max-width: 200px;">
+                  <span style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; background: <?= $states === 'ALL' ? '#EBF5EE; color: #073D26;' : '#FFF9E6; color: #8E6D38;' ?>">
+                    📍 <?= $states ?>
+                  </span>
                 </td>
                 <td>
                   <strong style="font-size: 15px;"><?= Helpers::formatPaise($o['rate_paise']) ?></strong>
@@ -478,11 +506,12 @@ require __DIR__ . '/../layouts/admin_layout.php';
     const formBox = document.getElementById('inlineShippingForm');
     formBox.style.display = 'block';
     if (mode === 'create') {
-      document.getElementById('shippingFormHeading').textContent = '+ Create New Shipping Option';
+      document.getElementById('shippingFormHeading').textContent = '+ Create State Delivery Rule';
       document.getElementById('form_action').value = 'create';
       document.getElementById('form_id').value = '';
       document.getElementById('form_name').value = '';
-      document.getElementById('form_days').value = '3 – 5 Business Days';
+      document.getElementById('form_states').value = 'ALL';
+      document.getElementById('form_days').value = '2 – 3 Business Days';
       document.getElementById('form_desc').value = '';
       document.getElementById('form_rate').value = '49';
       document.getElementById('form_free').value = '999';
@@ -500,6 +529,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
     document.getElementById('form_action').value = 'update';
     document.getElementById('form_id').value = opt.id;
     document.getElementById('form_name').value = opt.name || '';
+    document.getElementById('form_states').value = opt.target_states || 'ALL';
     document.getElementById('form_days').value = opt.estimated_days || '';
     document.getElementById('form_desc').value = opt.description || '';
     document.getElementById('form_rate').value = Math.round(opt.rate_paise / 100);

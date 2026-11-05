@@ -95,10 +95,11 @@ INSERT INTO `shipping_settings` (`id`, `flat_charge_paise`, `free_threshold_pais
 ON DUPLICATE KEY UPDATE `flat_charge_paise`=VALUES(`flat_charge_paise`), `free_threshold_paise`=VALUES(`free_threshold_paise`), `contact_phone`=VALUES(`contact_phone`), `contact_email`=VALUES(`contact_email`), `whatsapp_number`=VALUES(`whatsapp_number`);
 
 -- 6. Shipping Options (Multi-Condition Delivery Rates)
-INSERT INTO `shipping_options` (`id`, `name`, `description`, `estimated_days`, `rate_paise`, `free_above_paise`, `min_subtotal_paise`, `active`, `sort_order`) VALUES
-('ship_standard', 'Standard Delivery', 'Carefully packed & shipped via Bluedart / Delhivery / DTDC surface express.', '3 – 5 Business Days', 4900, 99900, 0, 1, 1),
-('ship_express', 'Priority Air Express', 'Faster delivery via dedicated air cargo for urgent gifting & festivities.', '1 – 2 Business Days', 12900, 199900, 0, 1, 2)
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `description`=VALUES(`description`), `rate_paise`=VALUES(`rate_paise`), `free_above_paise`=VALUES(`free_above_paise`);
+INSERT INTO `shipping_options` (`id`, `name`, `target_states`, `description`, `estimated_days`, `rate_paise`, `free_above_paise`, `min_subtotal_paise`, `active`, `sort_order`) VALUES
+('ship_ts_ap', 'Telangana & Andhra Pradesh Direct Delivery', 'Telangana, Andhra Pradesh', 'Direct surface express dispatch across Telangana & Andhra Pradesh.', '1 – 3 Business Days', 4900, 99900, 0, 1, 1),
+('ship_south', 'South India Express (KA, TN, KL)', 'Karnataka, Tamil Nadu, Kerala', 'Regional dispatch across neighboring South Indian states.', '2 – 4 Business Days', 6900, 149900, 0, 1, 2),
+('ship_roi', 'Rest of India Standard', 'ALL', 'National express courier across all other Indian states & union territories.', '3 – 5 Business Days', 8900, 199900, 0, 1, 3)
+ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `target_states`=VALUES(`target_states`), `description`=VALUES(`description`), `rate_paise`=VALUES(`rate_paise`), `free_above_paise`=VALUES(`free_above_paise`);
 
 -- 7. Initial Admin User (svgdryfruits@gmail.com / Mohith@123)
 -- Hash generated via password_hash('Mohith@123', PASSWORD_BCRYPT)

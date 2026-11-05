@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS `shipping_settings` (
 CREATE TABLE IF NOT EXISTS `shipping_options` (
   `id` VARCHAR(64) NOT NULL,
   `name` VARCHAR(128) NOT NULL,
+  `target_states` TEXT NULL,
   `description` TEXT NULL,
   `estimated_days` VARCHAR(64) NULL,
   `rate_paise` INT NOT NULL DEFAULT 4900,

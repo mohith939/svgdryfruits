@@ -38,11 +38,11 @@ class Database {
                 self::ensureSchema(self::$instance);
                 return self::$instance;
             } catch (Throwable $e) {
-                // If on production / live domain or explicit database credentials are provided, throw MySQL error
+                // If on production / live domain, throw MySQL error
                 $host = $_SERVER['HTTP_HOST'] ?? '';
                 $isLocal = strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false || php_sapi_name() === 'cli' || php_sapi_name() === 'cli-server';
                 
-                if (!$isLocal || (!empty(DB_PASS) && DB_PASS !== '')) {
+                if (!$isLocal) {
                     throw new Exception("MySQL Connection Error: " . $e->getMessage());
                 }
 

@@ -87,7 +87,7 @@ if (!defined('DB_USER')) define('DB_USER', env('DB_USER', 'balaji_svguser'));
 if (!defined('DB_PASS')) define('DB_PASS', env('DB_PASS', 'Finstics@2026'));
 
 // Cashfree PG Settings
-if (!defined('CASHFREE_CLIENT_ID')) define('CASHFREE_CLIENT_ID', env('CASHFREE_APP_ID', env('CASHFREE_CLIENT_ID', env('NEXT_PUBLIC_CASHFREE_CLIENT_ID', '1499458c9b9b6e272481a2656918549941'))));
+if (!defined('CASHFREE_CLIENT_ID')) define('CASHFREE_CLIENT_ID', env('CASHFREE_APP_ID', env('CASHFREE_CLIENT_ID', env('NEXT_PUBLIC_CASHFREE_CLIENT_ID', ''))));
 if (!defined('CASHFREE_CLIENT_SECRET')) define('CASHFREE_CLIENT_SECRET', env('CASHFREE_SECRET_KEY', env('CASHFREE_CLIENT_SECRET', '')));
 if (!defined('CASHFREE_APP_ID')) define('CASHFREE_APP_ID', CASHFREE_CLIENT_ID);
 if (!defined('CASHFREE_SECRET_KEY')) define('CASHFREE_SECRET_KEY', CASHFREE_CLIENT_SECRET);

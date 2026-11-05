@@ -168,6 +168,7 @@ class Models {
                 CREATE TABLE IF NOT EXISTS shipping_options (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
+                    target_states TEXT DEFAULT 'ALL',
                     description TEXT,
                     estimated_days TEXT,
                     rate_paise INTEGER NOT NULL DEFAULT 4900,
@@ -178,11 +179,15 @@ class Models {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ");
+            try {
+                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN target_states TEXT DEFAULT 'ALL'");
+            } catch (Throwable $e) {}
         } else {
             $pdo->exec("
                 CREATE TABLE IF NOT EXISTS `shipping_options` (
                     `id` VARCHAR(64) NOT NULL,
                     `name` VARCHAR(128) NOT NULL,
+                    `target_states` TEXT NULL,
                     `description` TEXT NULL,
                     `estimated_days` VARCHAR(64) NULL,
                     `rate_paise` INT NOT NULL DEFAULT 4900,
@@ -194,16 +199,20 @@ class Models {
                     PRIMARY KEY (`id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
+            try {
+                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN target_states TEXT NULL AFTER name");
+            } catch (Throwable $e) {}
         }
 
         // Seed default options if empty
         $count = (int)$pdo->query("SELECT COUNT(*) FROM shipping_options")->fetchColumn();
         if ($count === 0) {
             $pdo->exec("
-                INSERT INTO shipping_options (id, name, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
+                INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
                 VALUES 
-                ('ship_standard', 'Standard Delivery', 'Carefully packed & shipped via Bluedart / Delhivery / DTDC surface express.', '3 – 5 Business Days', 4900, 99900, 0, 1, 1),
-                ('ship_express', 'Priority Air Express', 'Faster delivery via dedicated air cargo for urgent gifting & festivities.', '1 – 2 Business Days', 12900, 199900, 0, 1, 2)
+                ('ship_ts_ap', 'Telangana & Andhra Pradesh', 'Telangana, Andhra Pradesh', 'Direct surface express dispatch across Telangana & Andhra Pradesh.', '1 – 3 Business Days', 4900, 99900, 0, 1, 1),
+                ('ship_south', 'South India (KA, TN, KL)', 'Karnataka, Tamil Nadu, Kerala', 'Regional dispatch across neighboring South Indian states.', '2 – 4 Business Days', 6900, 149900, 0, 1, 2),
+                ('ship_roi', 'Rest of India', 'ALL', 'National express courier across all other Indian states & union territories.', '3 – 5 Business Days', 8900, 199900, 0, 1, 3)
             ");
         }
 
@@ -347,6 +356,7 @@ class Models {
         $pdo = Database::getConnection();
         $id = $data['id'] ?? ('ship_' . bin2hex(random_bytes(6)));
         $name = trim($data['name']);
+        $targetStates = trim($data['target_states'] ?? 'ALL');
         $description = trim($data['description'] ?? '');
         $estimatedDays = trim($data['estimated_days'] ?? '');
         $ratePaise = (int)($data['rate_paise'] ?? 4900);
@@ -359,17 +369,67 @@ class Models {
         if ($exists) {
             $stmt = $pdo->prepare("
                 UPDATE shipping_options 
-                SET name = ?, description = ?, estimated_days = ?, rate_paise = ?, free_above_paise = ?, min_subtotal_paise = ?, active = ?, sort_order = ?
+                SET name = ?, target_states = ?, description = ?, estimated_days = ?, rate_paise = ?, free_above_paise = ?, min_subtotal_paise = ?, active = ?, sort_order = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$name, $description, $estimatedDays, $ratePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder, $id]);
+            $stmt->execute([$name, $targetStates, $description, $estimatedDays, $ratePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder, $id]);
         } else {
             $stmt = $pdo->prepare("
-                INSERT INTO shipping_options (id, name, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$id, $name, $description, $estimatedDays, $ratePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder]);
+            $stmt->execute([$id, $name, $targetStates, $description, $estimatedDays, $ratePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder]);
         }
+    }
+
+    /**
+     * Resolves the exact shipping option & rate based on the customer's delivery state
+     */
+    public static function getShippingOptionForState(?string $state, int $subtotalPaise = 0): array {
+        self::ensureSchema();
+        $options = self::getShippingOptions(true);
+        if (empty($options)) {
+            return [
+                'id' => 'ship_default',
+                'name' => 'Standard Express Delivery',
+                'target_states' => 'ALL',
+                'rate_paise' => 4900,
+                'free_above_paise' => 99900,
+                'effective_paise' => ($subtotalPaise >= 99900) ? 0 : 4900,
+                'is_free' => ($subtotalPaise >= 99900),
+                'estimated_days' => '2 – 4 Days'
+            ];
+        }
+
+        $cleanState = strtolower(trim((string)$state));
+        $matched = null;
+        $fallbackAll = null;
+
+        foreach ($options as $opt) {
+            $rawTargets = strtolower(trim((string)($opt['target_states'] ?? 'ALL')));
+            if ($rawTargets === 'all' || $rawTargets === '*' || $rawTargets === '') {
+                if (!$fallbackAll) {
+                    $fallbackAll = $opt;
+                }
+                continue;
+            }
+
+            if ($cleanState !== '') {
+                $statesList = array_map('trim', explode(',', $rawTargets));
+                foreach ($statesList as $s) {
+                    if ($s === $cleanState || strpos($cleanState, $s) !== false || strpos($s, $cleanState) !== false) {
+                        $matched = $opt;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        $chosen = $matched ?: ($fallbackAll ?: $options[0]);
+        $isFree = ($chosen['free_above_paise'] !== null && $subtotalPaise >= (int)$chosen['free_above_paise']);
+        $chosen['effective_paise'] = $isFree ? 0 : (int)$chosen['rate_paise'];
+        $chosen['is_free'] = $isFree;
+        return $chosen;
     }
 
     public static function deleteShippingOption(string $id): void {
