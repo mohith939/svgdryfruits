@@ -19,10 +19,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$prodId]);
         Helpers::setFlash('success', 'Product visibility toggled successfully!');
     } elseif ($action === 'delete') {
-        $prodId = $_POST['product_id'] ?? '';
-        $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
-        $stmt->execute([$prodId]);
-        Helpers::setFlash('success', 'Product removed successfully!');
+        $prodId = trim($_POST['product_id'] ?? '');
+        if ($prodId) {
+            try {
+                $pdo->prepare("DELETE ci FROM combo_items ci INNER JOIN variants v ON v.id = ci.combo_variant_id OR v.id = ci.component_variant_id WHERE v.product_id = ?")->execute([$prodId]);
+            } catch (Throwable $e) {}
+            try {
+                $pdo->prepare("UPDATE order_items SET variant_id = NULL WHERE variant_id IN (SELECT id FROM variants WHERE product_id = ?)")->execute([$prodId]);
+            } catch (Throwable $e) {}
+            $pdo->prepare("DELETE FROM variants WHERE product_id = ?")->execute([$prodId]);
+            $pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$prodId]);
+            Helpers::setFlash('success', 'Product permanently deleted successfully!');
+        }
+    } elseif ($action === 'bulk_delete') {
+        $ids = $_POST['product_ids'] ?? [];
+        if (!empty($ids) && is_array($ids)) {
+            $deletedCount = 0;
+            foreach ($ids as $prodId) {
+                $prodId = trim((string)$prodId);
+                if (!$prodId) continue;
+                try {
+                    $pdo->prepare("DELETE ci FROM combo_items ci INNER JOIN variants v ON v.id = ci.combo_variant_id OR v.id = ci.component_variant_id WHERE v.product_id = ?")->execute([$prodId]);
+                } catch (Throwable $e) {}
+                try {
+                    $pdo->prepare("UPDATE order_items SET variant_id = NULL WHERE variant_id IN (SELECT id FROM variants WHERE product_id = ?)")->execute([$prodId]);
+                } catch (Throwable $e) {}
+                $pdo->prepare("DELETE FROM variants WHERE product_id = ?")->execute([$prodId]);
+                $pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$prodId]);
+                $deletedCount++;
+            }
+            Helpers::setFlash('success', "{$deletedCount} product(s) permanently deleted successfully!");
+        }
+    } elseif ($action === 'bulk_archive') {
+        $ids = $_POST['product_ids'] ?? [];
+        if (!empty($ids) && is_array($ids)) {
+            $in = str_repeat('?,', count($ids) - 1) . '?';
+            $stmt = $pdo->prepare("UPDATE products SET active = 0 WHERE id IN ($in)");
+            $stmt->execute(array_values($ids));
+            Helpers::setFlash('success', count($ids) . ' product(s) archived successfully.');
+        }
+    } elseif ($action === 'bulk_activate') {
+        $ids = $_POST['product_ids'] ?? [];
+        if (!empty($ids) && is_array($ids)) {
+            $in = str_repeat('?,', count($ids) - 1) . '?';
+            $stmt = $pdo->prepare("UPDATE products SET active = 1 WHERE id IN ($in)");
+            $stmt->execute(array_values($ids));
+            Helpers::setFlash('success', count($ids) . ' product(s) activated successfully.');
+        }
     }
     Helpers::redirect(Helpers::url('admin/products'));
 }
@@ -246,7 +289,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
         <thead>
           <tr>
             <th style="width: 44px; text-align: center;">
-              <input type="checkbox" class="admin-v3-checkbox" aria-label="Select all products">
+              <input type="checkbox" id="selectAllProducts" class="admin-v3-checkbox" aria-label="Select all products" onchange="toggleSelectAll(this)">
             </th>
             <th style="min-width: 230px;">PRODUCT</th>
             <th>CATEGORY</th>
@@ -254,7 +297,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
             <th>PRICE RANGE</th>
             <th>STOCK UNITS</th>
             <th>STATUS</th>
-            <th style="text-align: right; min-width: 170px;">ACTIONS</th>
+            <th style="text-align: right; min-width: 220px;">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
@@ -313,7 +356,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
               <tr>
                 <!-- Checkbox -->
                 <td style="text-align: center;">
-                  <input type="checkbox" class="admin-v3-checkbox" aria-label="Select <?= htmlspecialchars($p['name']) ?>">
+                  <input type="checkbox" name="selected_products[]" value="<?= $p['id'] ?>" class="admin-v3-checkbox product-select-checkbox" data-product-name="<?= htmlspecialchars($p['name']) ?>" onchange="updateBulkBar()" aria-label="Select <?= htmlspecialchars($p['name']) ?>">
                 </td>
 
                 <!-- Product Thumbnail & Name -->
@@ -377,11 +420,11 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
                 <!-- Actions -->
                 <td style="text-align: right;">
-                  <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-                    <a href="<?= Helpers::url('admin/products/edit?id=' . $p['id']) ?>" class="button button-outline" style="font-size: 11.5px; padding: 4px 10px; background: #fff; color: #1E2520;">
+                  <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                    <a href="<?= Helpers::url('admin/products/edit?id=' . $p['id']) ?>" class="button button-outline" style="font-size: 11.5px; padding: 4px 8px; background: #fff; color: #1E2520;">
                       Edit
                     </a>
-                    <a href="<?= Helpers::url('products/' . $p['slug']) ?>" target="_blank" class="button button-outline" style="font-size: 11.5px; padding: 4px 10px; background: #fff; color: #073D26;">
+                    <a href="<?= Helpers::url('products/' . $p['slug']) ?>" target="_blank" class="button button-outline" style="font-size: 11.5px; padding: 4px 8px; background: #fff; color: #073D26;">
                       View ↗
                     </a>
                     <form method="POST" style="display: inline;" onsubmit="return confirm('Toggle status for <?= htmlspecialchars(addslashes($p['name'])) ?>?');">
@@ -389,6 +432,13 @@ require __DIR__ . '/../layouts/admin_layout.php';
                       <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
                       <button type="submit" class="button button-outline" style="font-size: 11.5px; padding: 4px 8px; background: #fff; color: #7D7567;">
                         <?= $p['active'] ? 'Archive' : 'Restore' ?>
+                      </button>
+                    </form>
+                    <form method="POST" style="display: inline;" onsubmit="return confirm('Permanently delete \'<?= htmlspecialchars(addslashes($p['name'])) ?>\'? This action cannot be undone.');">
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
+                      <button type="submit" class="button button-outline" style="font-size: 11.5px; padding: 4px 8px; background: #FFF5F5; color: #C53030; border-color: #FEB2B2;" title="Permanently delete product">
+                        Delete
                       </button>
                     </form>
                   </div>
@@ -419,6 +469,101 @@ require __DIR__ . '/../layouts/admin_layout.php';
       </div>
     </div>
   </div>
+
+  <!-- Floating Bulk Actions Bar -->
+  <div id="bulkActionBar" style="display: none; position: sticky; bottom: 20px; z-index: 1000; margin: 20px 0 0; background: #073D26; color: #fff; padding: 14px 22px; border-radius: 10px; box-shadow: 0 12px 30px rgba(0,0,0,0.3); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; border: 1px solid #1C593E;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span id="selectedCountBadge" style="background: #E2C376; color: #073D26; font-weight: 800; font-size: 14px; padding: 3px 12px; border-radius: 20px;">0</span>
+      <span style="font-size: 14px; font-weight: 600; letter-spacing: 0.2px;">Products Selected</span>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <button type="button" onclick="submitBulk('bulk_delete')" style="background: #C53030; color: #fff; border: none; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.2s;" onmouseover="this.style.background='#9B2C2C'" onmouseout="this.style.background='#C53030'">
+        🗑️ Delete Selected
+      </button>
+      <button type="button" onclick="submitBulk('bulk_archive')" style="background: #1A4D36; color: #EDE8DE; border: 1px solid #336D50; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+        📦 Archive Selected
+      </button>
+      <button type="button" onclick="submitBulk('bulk_activate')" style="background: #1A4D36; color: #EDE8DE; border: 1px solid #336D50; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+        ✓ Activate Selected
+      </button>
+      <button type="button" onclick="deselectAll()" style="background: transparent; color: #D1C8B8; border: none; padding: 9px 12px; font-size: 13px; cursor: pointer; text-decoration: underline;">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden Form for Bulk Actions -->
+  <form id="bulkActionForm" method="POST" style="display: none;">
+    <input type="hidden" name="action" id="bulkFormAction" value="">
+    <div id="bulkFormInputs"></div>
+  </form>
 </div>
+
+<script>
+  function toggleSelectAll(master) {
+    const checkboxes = document.querySelectorAll('.product-select-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+    updateBulkBar();
+  }
+
+  function updateBulkBar() {
+    const checkedBoxes = document.querySelectorAll('.product-select-checkbox:checked');
+    const allBoxes = document.querySelectorAll('.product-select-checkbox');
+    const count = checkedBoxes.length;
+    const bar = document.getElementById('bulkActionBar');
+    const badge = document.getElementById('selectedCountBadge');
+    const master = document.getElementById('selectAllProducts');
+
+    if (badge) badge.textContent = count;
+    if (bar) bar.style.display = count > 0 ? 'flex' : 'none';
+
+    if (master) {
+      master.checked = count > 0 && count === allBoxes.length;
+      master.indeterminate = count > 0 && count < allBoxes.length;
+    }
+  }
+
+  function deselectAll() {
+    const checkboxes = document.querySelectorAll('.product-select-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    const master = document.getElementById('selectAllProducts');
+    if (master) {
+      master.checked = false;
+      master.indeterminate = false;
+    }
+    updateBulkBar();
+  }
+
+  function submitBulk(action) {
+    const checkedBoxes = document.querySelectorAll('.product-select-checkbox:checked');
+    const count = checkedBoxes.length;
+    if (count === 0) return;
+
+    let msg = '';
+    if (action === 'bulk_delete') {
+      msg = `Are you sure you want to PERMANENTLY delete the ${count} selected product(s)? This will also remove their pack sizes and cannot be undone.`;
+    } else if (action === 'bulk_archive') {
+      msg = `Archive ${count} selected product(s)? They will be hidden from the storefront.`;
+    } else if (action === 'bulk_activate') {
+      msg = `Activate ${count} selected product(s)? They will become visible on the storefront.`;
+    }
+
+    if (confirm(msg)) {
+      const form = document.getElementById('bulkActionForm');
+      const actionInput = document.getElementById('bulkFormAction');
+      const container = document.getElementById('bulkFormInputs');
+      actionInput.value = action;
+      container.innerHTML = '';
+      checkedBoxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'product_ids[]';
+        input.value = cb.value;
+        container.appendChild(input);
+      });
+      form.submit();
+    }
+  }
+</script>
 
 <?php require __DIR__ . '/../layouts/admin_layout_bottom.php'; ?>

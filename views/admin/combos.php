@@ -51,23 +51,35 @@ $combos = $pdo->query("
 // 2. Fetch variants and linked combo items for each combo
 $comboData = [];
 $varStmt = $pdo->prepare("SELECT * FROM variants WHERE product_id = ? ORDER BY price_paise ASC");
-$compStmt = $pdo->prepare("
-    SELECT ci.id, ci.quantity, ci.component_variant_id, 
-           v.sku as component_sku, v.label as component_label, v.stock as component_stock,
-           p.name as component_product_name
-    FROM combo_items ci
-    INNER JOIN variants v ON v.id = ci.component_variant_id
-    INNER JOIN products p ON p.id = v.product_id
-    WHERE ci.combo_variant_id = ?
-");
+$compStmt = null;
+try {
+    $compStmt = $pdo->prepare("
+        SELECT ci.id, ci.quantity, ci.component_variant_id, 
+               v.sku as component_sku, v.label as component_label, v.stock as component_stock,
+               p.name as component_product_name
+        FROM combo_items ci
+        INNER JOIN variants v ON v.id = ci.component_variant_id
+        INNER JOIN products p ON p.id = v.product_id
+        WHERE ci.combo_variant_id = ?
+    ");
+} catch (Throwable $e) {
+    $compStmt = null;
+}
 
 foreach ($combos as $c) {
     $varStmt->execute([$c['id']]);
     $variants = $varStmt->fetchAll();
     $variantGroups = [];
     foreach ($variants as $v) {
-        $compStmt->execute([$v['id']]);
-        $components = $compStmt->fetchAll();
+        $components = [];
+        if ($compStmt) {
+            try {
+                $compStmt->execute([$v['id']]);
+                $components = $compStmt->fetchAll() ?: [];
+            } catch (Throwable $e) {
+                $components = [];
+            }
+        }
         $variantGroups[] = [
             'variant' => $v,
             'components' => $components,

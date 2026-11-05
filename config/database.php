@@ -35,6 +35,7 @@ class Database {
 
                 self::$instance = new PDO($dsn, DB_USER, DB_PASS, $options);
                 self::$driver = 'mysql';
+                self::ensureSchema(self::$instance);
                 return self::$instance;
             } catch (Throwable $e) {
                 // If on production / live domain or explicit database credentials are provided, throw MySQL error
@@ -56,10 +57,67 @@ class Database {
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 ]);
                 self::$driver = 'sqlite';
+                self::ensureSchema(self::$instance);
             }
         }
 
         return self::$instance;
+    }
+
+    private static bool $schemaChecked = false;
+
+    public static function ensureSchema(PDO $pdo): void {
+        if (self::$schemaChecked) {
+            return;
+        }
+        self::$schemaChecked = true;
+
+        try {
+            if (self::$driver === 'mysql') {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS `combo_items` (
+                      `id` VARCHAR(64) NOT NULL,
+                      `combo_variant_id` VARCHAR(64) NOT NULL,
+                      `component_variant_id` VARCHAR(64) NOT NULL,
+                      `quantity` INT NOT NULL DEFAULT 1,
+                      `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                      PRIMARY KEY (`id`),
+                      KEY `idx_combo_items_combo_variant` (`combo_variant_id`),
+                      KEY `idx_combo_items_comp_variant` (`component_variant_id`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                    CREATE TABLE IF NOT EXISTS `refunds` (
+                      `id` VARCHAR(64) NOT NULL,
+                      `order_id` VARCHAR(64) NOT NULL,
+                      `amount_paise` INT NOT NULL,
+                      `note` TEXT NULL,
+                      `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                      PRIMARY KEY (`id`),
+                      KEY `idx_refunds_order_id` (`order_id`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                ");
+            } else {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS combo_items (
+                      id TEXT PRIMARY KEY,
+                      combo_variant_id TEXT NOT NULL,
+                      component_variant_id TEXT NOT NULL,
+                      quantity INTEGER DEFAULT 1,
+                      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS refunds (
+                      id TEXT PRIMARY KEY,
+                      order_id TEXT NOT NULL,
+                      amount_paise INTEGER NOT NULL,
+                      note TEXT,
+                      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                ");
+            }
+        } catch (Throwable $e) {
+            error_log("Database schema ensure warning: " . $e->getMessage());
+        }
     }
 
     public static function isConnected(): bool {

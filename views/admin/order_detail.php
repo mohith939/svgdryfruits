@@ -74,14 +74,19 @@ $items = $itemStmt->fetchAll();
 // Shipping Address
 $addr = json_decode($order['shipping_address'] ?? '{}', true) ?: [];
 
-// Refunds
-$refStmt = $pdo->prepare("SELECT * FROM refunds WHERE order_id = ? ORDER BY created_at DESC");
-$refStmt->execute([$id]);
-$refunds = $refStmt->fetchAll();
+// Refunds (wrapped in try-catch to prevent fatal crash if table is initializing)
+$refunds = [];
+try {
+    $refStmt = $pdo->prepare("SELECT * FROM refunds WHERE order_id = ? ORDER BY created_at DESC");
+    $refStmt->execute([$id]);
+    $refunds = $refStmt->fetchAll() ?: [];
+} catch (Throwable $e) {
+    $refunds = [];
+}
 
 $isShadowfax = stripos($order['courier'] ?? '', 'shadowfax') !== false;
 
-$pageTitle = 'Order ' . $order['order_number'];
+$pageTitle = 'Order ' . ($order['order_number'] ?? '');
 $activeNav = 'orders';
 require __DIR__ . '/../layouts/admin_layout.php';
 ?>
@@ -94,10 +99,10 @@ require __DIR__ . '/../layouts/admin_layout.php';
         <span aria-hidden="true">/</span>
         <a href="<?= Helpers::url('admin/orders') ?>">Orders</a>
         <span aria-hidden="true">/</span>
-        <span><?= htmlspecialchars($order['order_number']) ?></span>
+        <span><?= htmlspecialchars((string)($order['order_number'] ?? '')) ?></span>
       </div>
-      <h1>Order <em><?= htmlspecialchars($order['order_number']) ?></em></h1>
-      <p>Placed on <?= date('d M Y, h:i A', strtotime($order['created_at'])) ?></p>
+      <h1>Order <em><?= htmlspecialchars((string)($order['order_number'] ?? '')) ?></em></h1>
+      <p>Placed on <?= !empty($order['created_at']) ? date('d M Y, h:i A', strtotime($order['created_at'])) : date('d M Y, h:i A') ?></p>
     </div>
     <div style="display: flex; gap: 10px;">
       <a

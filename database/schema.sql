@@ -133,4 +133,28 @@ CREATE TABLE IF NOT EXISTS `admins` (
   UNIQUE KEY `idx_admins_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 9. Combo Items (Hampers & Bundles)
+CREATE TABLE IF NOT EXISTS `combo_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `combo_variant_id` VARCHAR(64) NOT NULL,
+  `component_variant_id` VARCHAR(64) NOT NULL,
+  `quantity` INT NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_combo_items_combo_variant` (`combo_variant_id`),
+  KEY `idx_combo_items_comp_variant` (`component_variant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. Refunds
+CREATE TABLE IF NOT EXISTS `refunds` (
+  `id` VARCHAR(64) NOT NULL,
+  `order_id` VARCHAR(64) NOT NULL,
+  `amount_paise` INT NOT NULL,
+  `note` TEXT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_refunds_order_id` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
+

@@ -120,9 +120,20 @@ require __DIR__ . '/../layouts/admin_layout.php';
       <h1><?= $isEdit ? 'Edit' : 'Add' ?> <em>Product</em></h1>
       <p>Configure product information, pack size variants, selling prices in INR, and inventory.</p>
     </div>
-    <a href="<?= Helpers::url('admin/products') ?>" class="button button-outline" style="background:#fff;">
-      ← Back to Products
-    </a>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="<?= Helpers::url('admin/products') ?>" class="button button-outline" style="background:#fff;">
+        ← Back to Products
+      </a>
+      <?php if ($isEdit && !empty($product)): ?>
+        <form method="POST" action="<?= Helpers::url('admin/products') ?>" style="display: inline;" onsubmit="return confirm('Are you sure you want to PERMANENTLY delete \'<?= htmlspecialchars(addslashes($product['name'] ?? 'this product')) ?>\'? This action cannot be undone.');">
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
+          <button type="submit" class="button" style="background: #FFF5F5; color: #C53030; border: 1px solid #FEB2B2; padding: 8px 14px; font-weight: 600; cursor: pointer;">
+            🗑️ Delete Product
+          </button>
+        </form>
+      <?php endif; ?>
+    </div>
   </div>
 
   <form method="POST" class="admin-form">
