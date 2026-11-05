@@ -80,11 +80,11 @@ if (!defined('WHATSAPP_NUMBER')) define('WHATSAPP_NUMBER', env('NEXT_PUBLIC_WHAT
 if (!defined('CONTACT_EMAIL')) define('CONTACT_EMAIL', env('NEXT_PUBLIC_CONTACT_EMAIL', 'svgdryfruits@gmail.com'));
 
 // Database Credentials (MySQL)
-if (!defined('DB_HOST')) define('DB_HOST', env('DB_HOST', 'localhost'));
+if (!defined('DB_HOST')) define('DB_HOST', env('DB_HOST', 'sdb-81.hosting.stackcp.net'));
 if (!defined('DB_PORT')) define('DB_PORT', (int)env('DB_PORT', 3306));
-if (!defined('DB_NAME')) define('DB_NAME', env('DB_NAME', 'cpaneluser_svgdryfruits'));
-if (!defined('DB_USER')) define('DB_USER', env('DB_USER', 'cpaneluser_svguser'));
-if (!defined('DB_PASS')) define('DB_PASS', env('DB_PASS', ''));
+if (!defined('DB_NAME')) define('DB_NAME', env('DB_NAME', 'balaji_SVG-3530383727fd'));
+if (!defined('DB_USER')) define('DB_USER', env('DB_USER', 'balaji_svguser'));
+if (!defined('DB_PASS')) define('DB_PASS', env('DB_PASS', 'Finstics@2026'));
 
 // Cashfree PG Settings
 if (!defined('CASHFREE_CLIENT_ID')) define('CASHFREE_CLIENT_ID', env('CASHFREE_APP_ID', env('CASHFREE_CLIENT_ID', env('NEXT_PUBLIC_CASHFREE_CLIENT_ID', '1499458c9b9b6e272481a2656918549941'))));
