@@ -55,7 +55,7 @@ $activePage = 'track';
 require __DIR__ . '/layouts/header.php';
 ?>
 
-<div style="max-width:840px; margin:40px auto 80px; padding:0 20px;">
+<div style="max-width:840px; margin:40px auto 140px; padding:0 20px 60px;">
   <div style="text-align:center; margin-bottom:35px;">
     <p style="font-size:11px; letter-spacing:0.25em; text-transform:uppercase; color:var(--clay); font-weight:700; margin-bottom:8px;">COURIER &amp; DISPATCH STATUS</p>
     <h1 style="font-family:var(--serif, serif); font-size:38px; color:var(--pine); margin:0 0 12px 0;">Track Your Order</h1>
@@ -272,27 +272,41 @@ require __DIR__ . '/layouts/header.php';
         <?php endforeach; ?>
       </div>
 
-      <!-- Order Pricing Summary -->
-      <div style="display:flex; justify-content:flex-end; font-size:14px; line-height:1.8; margin-top:10px;">
-        <div style="width:260px; max-width:100%;">
-          <div style="display:flex; justify-content:space-between; padding:3px 0;">
-            <span style="color:var(--muted);">Subtotal:</span>
-            <span><?= Helpers::formatPaise((int)($order['subtotal_paise'] ?? 0)) ?></span>
+      <!-- Order Pricing Summary Card -->
+      <div style="background:#F8FBF9; border:1.5px solid #073D26; border-radius:10px; padding:22px 24px; margin-top:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #DFD7CA; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
+          <span style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.1em; color:var(--clay);">
+            Order Payment Summary
+          </span>
+          <span style="font-size:12px; font-weight:700; padding:4px 12px; border-radius:12px; background:#e6f4ea; color:#137333;">
+            ✓ <?= strtoupper(htmlspecialchars($order['payment_status'] ?? 'paid')) ?> VIA CASHFREE
+          </span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:14.5px; padding:5px 0;">
+          <span style="color:var(--muted);">Subtotal (<?= count($order['items']) ?> item<?= count($order['items']) > 1 ? 's' : '' ?>):</span>
+          <strong><?= Helpers::formatPaise((int)($order['subtotal_paise'] ?? 0)) ?></strong>
+        </div>
+
+        <?php if (!empty($order['discount_paise'])): ?>
+          <div style="display:flex; justify-content:space-between; font-size:14.5px; padding:5px 0; color:#137333;">
+            <span>Discount Applied:</span>
+            <strong>-<?= Helpers::formatPaise((int)$order['discount_paise']) ?></strong>
           </div>
-          <?php if (!empty($order['discount_paise'])): ?>
-            <div style="display:flex; justify-content:space-between; color:#137333; padding:3px 0;">
-              <span>Discount:</span>
-              <span>-<?= Helpers::formatPaise((int)$order['discount_paise']) ?></span>
-            </div>
-          <?php endif; ?>
-          <div style="display:flex; justify-content:space-between; padding:3px 0;">
-            <span style="color:var(--muted);">Shipping:</span>
-            <span><?= (int)($order['shipping_paise'] ?? 0) === 0 ? 'FREE' : Helpers::formatPaise((int)$order['shipping_paise']) ?></span>
-          </div>
-          <div style="display:flex; justify-content:space-between; border-top:1.5px solid var(--line); padding-top:8px; margin-top:6px; font-weight:800; font-size:17px; color:var(--pine);">
-            <span>Total:</span>
-            <span><?= Helpers::formatPaise((int)($order['total_paise'] ?? ($order['total_amount_paise'] ?? 0))) ?></span>
-          </div>
+        <?php endif; ?>
+
+        <div style="display:flex; justify-content:space-between; font-size:14.5px; padding:5px 0;">
+          <span style="color:var(--muted);">Delivery &amp; Shipping:</span>
+          <strong style="color:<?= ((int)($order['shipping_paise'] ?? 0) === 0) ? '#137333' : 'var(--ink)' ?>;">
+            <?= ((int)($order['shipping_paise'] ?? 0) === 0) ? 'FREE' : Helpers::formatPaise((int)$order['shipping_paise']) ?>
+          </strong>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:2px solid #073D26; padding-top:14px; margin-top:10px; flex-wrap:wrap; gap:8px;">
+          <span style="font-size:17px; font-weight:800; color:#073D26;">Grand Total Paid:</span>
+          <span style="font-size:24px; font-weight:900; color:#073D26; letter-spacing:-0.02em;">
+            <?= Helpers::formatPaise((int)($order['total_paise'] ?? ($order['total_amount_paise'] ?? 0))) ?>
+          </span>
         </div>
       </div>
     </div>
