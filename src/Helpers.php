@@ -26,10 +26,12 @@ class Helpers {
         // Check if we are running in a subfolder or root
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
         $baseDir = rtrim(dirname($scriptName), '/\\');
+        // If script is in /api subfolder, project root is parent
+        $baseDir = preg_replace('#/api$#', '', $baseDir);
         if ($baseDir === '/' || $baseDir === '\\') {
             $baseDir = '';
         }
-        return $baseDir . '/' . $path;
+        return ($baseDir !== '' ? $baseDir : '') . '/' . $path;
     }
 
     public static function asset(string $path): string {

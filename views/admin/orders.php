@@ -70,10 +70,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             Helpers::setFlash('error', "Customer Name and Mobile Number are required.");
         }
+    } elseif ($action === 'sync_cashfree') {
+        $pendingOrders = $pdo->query("SELECT order_number FROM orders WHERE payment_status = 'pending' ORDER BY created_at DESC LIMIT 25")->fetchAll(PDO::FETCH_COLUMN);
+        $synced = 0;
+        if (!empty($pendingOrders)) {
+            require_once ROOT_PATH . '/config/cashfree.php';
+            $cashfree = new CashfreePG();
+            foreach ($pendingOrders as $ordNum) {
+                try {
+                    $cfOrder = $cashfree->getOrder($ordNum);
+                    if (strtoupper($cfOrder['order_status'] ?? '') === 'PAID') {
+                        Models::updateOrderPayment($ordNum, 'paid', $cfOrder['cf_order_id'] ?? null);
+                        $synced++;
+                    }
+                } catch (Throwable $e) {}
+            }
+        }
+        Helpers::setFlash('success', "Cashfree sync complete! {$synced} order(s) updated to PAID.");
     }
 
     Helpers::redirect(Helpers::url('admin/orders'));
 }
+
+// Auto-sync recent pending orders with Cashfree (last 24 hours)
+try {
+    $cutoff = date('Y-m-d H:i:s', time() - 86400);
+    $pendingStmt = $pdo->prepare("SELECT order_number FROM orders WHERE payment_status = 'pending' AND created_at >= ? LIMIT 10");
+    $pendingStmt->execute([$cutoff]);
+    $recentPending = $pendingStmt->fetchAll(PDO::FETCH_COLUMN);
+    if (!empty($recentPending)) {
+        require_once ROOT_PATH . '/config/cashfree.php';
+        $cashfree = new CashfreePG();
+        foreach ($recentPending as $ordNum) {
+            try {
+                $cfOrder = $cashfree->getOrder($ordNum);
+                if (strtoupper($cfOrder['order_status'] ?? '') === 'PAID') {
+                    Models::updateOrderPayment($ordNum, 'paid', $cfOrder['cf_order_id'] ?? null);
+                }
+            } catch (Throwable $e) {}
+        }
+    }
+} catch (Throwable $e) {}
 
 $search = trim($_GET['search'] ?? '');
 $statusFilter = trim($_GET['status'] ?? 'all');
@@ -166,7 +203,13 @@ require __DIR__ . '/../layouts/admin_layout.php';
       </p>
     </div>
 
-    <div class="admin-v3-header-right">
+    <div class="admin-v3-header-right" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <form method="POST" style="display: inline;">
+        <input type="hidden" name="action" value="sync_cashfree">
+        <button type="submit" class="button button-outline" style="background: #fff; color: #073D26; border-color: #d4cabc; font-weight: 600; padding: 10px 14px; font-size: 13px;" title="Query Cashfree API and auto-update pending orders">
+          🔄 Sync Cashfree Payments
+        </button>
+      </form>
       <button
         type="button"
         onclick="document.getElementById('createOrderModal').style.display='flex'"

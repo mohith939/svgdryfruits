@@ -10,6 +10,47 @@ require_once ROOT_PATH . '/src/Models.php';
 
 $pdo = Database::getConnection();
 
+// Handle manual Cashfree sync action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'sync_cashfree') {
+    $pendingOrders = $pdo->query("SELECT order_number FROM orders WHERE payment_status = 'pending' ORDER BY created_at DESC LIMIT 25")->fetchAll(PDO::FETCH_COLUMN);
+    $synced = 0;
+    if (!empty($pendingOrders)) {
+        require_once ROOT_PATH . '/config/cashfree.php';
+        $cashfree = new CashfreePG();
+        foreach ($pendingOrders as $ordNum) {
+            try {
+                $cfOrder = $cashfree->getOrder($ordNum);
+                if (strtoupper($cfOrder['order_status'] ?? '') === 'PAID') {
+                    Models::updateOrderPayment($ordNum, 'paid', $cfOrder['cf_order_id'] ?? null);
+                    $synced++;
+                }
+            } catch (Throwable $e) {}
+        }
+    }
+    Helpers::setFlash('success', "Cashfree sync complete! {$synced} order(s) updated to PAID.");
+    Helpers::redirect(Helpers::url('admin'));
+}
+
+// Auto-sync recent pending orders with Cashfree (last 24 hours)
+try {
+    $cutoff = date('Y-m-d H:i:s', time() - 86400);
+    $pendingStmt = $pdo->prepare("SELECT order_number FROM orders WHERE payment_status = 'pending' AND created_at >= ? LIMIT 10");
+    $pendingStmt->execute([$cutoff]);
+    $recentPending = $pendingStmt->fetchAll(PDO::FETCH_COLUMN);
+    if (!empty($recentPending)) {
+        require_once ROOT_PATH . '/config/cashfree.php';
+        $cashfree = new CashfreePG();
+        foreach ($recentPending as $ordNum) {
+            try {
+                $cfOrder = $cashfree->getOrder($ordNum);
+                if (strtoupper($cfOrder['order_status'] ?? '') === 'PAID') {
+                    Models::updateOrderPayment($ordNum, 'paid', $cfOrder['cf_order_id'] ?? null);
+                }
+            } catch (Throwable $e) {}
+        }
+    }
+} catch (Throwable $e) {}
+
 // 1. Total orders count
 $totalOrdersCount = (int)$pdo->query("SELECT count(*) FROM orders")->fetchColumn();
 
@@ -46,7 +87,13 @@ require __DIR__ . '/../layouts/admin_layout.php';
       <h1>Dashboard <em>Overview</em></h1>
       <p>Real-time metrics and order activity for SVG Dry Fruits.</p>
     </div>
-    <div style="display: flex; gap: 10px; align-items: center;">
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <form method="POST" style="display: inline;">
+        <input type="hidden" name="action" value="sync_cashfree">
+        <button type="submit" class="button button-outline" style="background: #fff; color: #073D26; border-color: #d4cabc; font-weight: 600;">
+          🔄 Sync Cashfree Status
+        </button>
+      </form>
       <a href="<?= Helpers::url('admin/products') ?>" class="button button-primary">
         Products &amp; Stock →
       </a>

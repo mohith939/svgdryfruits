@@ -6,14 +6,32 @@ declare(strict_types=1);
 require_once ROOT_PATH . '/src/Helpers.php';
 require_once ROOT_PATH . '/src/Models.php';
 
-$orderNumber = $_GET['order_id'] ?? '';
-$token = $_GET['token'] ?? '';
+$orderNumber = trim($_GET['order_id'] ?? '');
+$token = trim($_GET['token'] ?? '');
 
 $order = null;
 if ($orderNumber) {
     $order = Models::getOrderByNumber($orderNumber);
 } elseif ($token) {
     $order = Models::getOrderByToken($token);
+}
+
+// Server-side instant auto-fetch from Cashfree
+if ($order && $order['payment_status'] !== 'paid') {
+    try {
+        require_once ROOT_PATH . '/config/cashfree.php';
+        $cashfree = new CashfreePG();
+        $cfOrder = $cashfree->getOrder($order['order_number']);
+        $cfStatus = strtoupper($cfOrder['order_status'] ?? '');
+        if ($cfStatus === 'PAID') {
+            Models::updateOrderPayment($order['order_number'], 'paid', $cfOrder['cf_order_id'] ?? null);
+            $order['payment_status'] = 'paid';
+            $order['fulfillment_status'] = 'processing';
+            $order['cashfree_order_id'] = $cfOrder['cf_order_id'] ?? ($order['cashfree_order_id'] ?? null);
+        }
+    } catch (Throwable $e) {
+        error_log("Order success auto-verification notice: " . $e->getMessage());
+    }
 }
 
 $pageTitle = 'Order Confirmed';

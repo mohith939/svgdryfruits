@@ -61,9 +61,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             Helpers::setFlash('error', 'Please enter a valid refund amount and reference note.');
         }
+    } elseif ($action === 'sync_cashfree') {
+        try {
+            require_once ROOT_PATH . '/config/cashfree.php';
+            $cashfree = new CashfreePG();
+            $cfOrder = $cashfree->getOrder($order['order_number']);
+            $cfStatus = strtoupper($cfOrder['order_status'] ?? '');
+            if ($cfStatus === 'PAID') {
+                Models::updateOrderPayment($order['order_number'], 'paid', $cfOrder['cf_order_id'] ?? null);
+                Helpers::setFlash('success', '✓ Payment verified from Cashfree! Marked as PAID.');
+            } else {
+                Helpers::setFlash('warning', "Cashfree gateway reports order status as: {$cfStatus}");
+            }
+        } catch (Throwable $e) {
+            Helpers::setFlash('error', 'Cashfree query error: ' . $e->getMessage());
+        }
     }
 
     Helpers::redirect(Helpers::url('admin/orders/detail?id=' . $id));
+}
+
+// Auto-check Cashfree status if payment is currently pending
+if ($order['payment_status'] !== 'paid') {
+    try {
+        require_once ROOT_PATH . '/config/cashfree.php';
+        $cashfree = new CashfreePG();
+        $cfOrder = $cashfree->getOrder($order['order_number']);
+        $cfStatus = strtoupper($cfOrder['order_status'] ?? '');
+        if ($cfStatus === 'PAID') {
+            Models::updateOrderPayment($order['order_number'], 'paid', $cfOrder['cf_order_id'] ?? null);
+            $order['payment_status'] = 'paid';
+            $order['fulfillment_status'] = 'processing';
+            $order['cashfree_order_id'] = $cfOrder['cf_order_id'] ?? ($order['cashfree_order_id'] ?? null);
+            Helpers::setFlash('success', '✓ Payment auto-verified as PAID from Cashfree!');
+        }
+    } catch (Throwable $e) {}
 }
 
 // Order Items
@@ -212,9 +244,17 @@ require __DIR__ . '/../layouts/admin_layout.php';
         <div class="admin-details-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
           <div>
             <span class="admin-detail-label" style="display:block; font-size:11px; text-transform:uppercase; color:#7C7265; font-weight:700;">Payment Status</span>
-            <span class="badge <?= $order['payment_status'] === 'paid' ? 'badge-success' : ($order['payment_status'] === 'pending' ? 'badge-warning' : 'badge-danger') ?>">
-              <?= htmlspecialchars($order['payment_status']) ?>
-            </span>
+            <div style="display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap;">
+              <span class="badge <?= $order['payment_status'] === 'paid' ? 'badge-success' : ($order['payment_status'] === 'pending' ? 'badge-warning' : 'badge-danger') ?>">
+                <?= strtoupper(htmlspecialchars((string)$order['payment_status'])) ?>
+              </span>
+              <form method="POST" style="display:inline;">
+                <input type="hidden" name="action" value="sync_cashfree">
+                <button type="submit" class="button button-outline" style="font-size:11px; padding:3px 9px; background:#fff; color:#073D26; border-color:#d4cabc;" title="Query Cashfree API for latest status">
+                  🔄 Check Cashfree
+                </button>
+              </form>
+            </div>
           </div>
           <div>
             <span class="admin-detail-label" style="display:block; font-size:11px; text-transform:uppercase; color:#7C7265; font-weight:700;">Gateway Order ID</span>
