@@ -529,6 +529,81 @@ class Models {
         return $order;
     }
 
+    /**
+     * Retrieve orders by customer phone number
+     * Matches exact phone, with country code (+91), or matching 10-digit suffix
+     *
+     * @param string $phone
+     * @return array
+     */
+    public static function getOrdersByPhone(string $phone): array {
+        $digits = preg_replace('/\D/', '', $phone);
+        if (strlen($digits) < 5) {
+            return [];
+        }
+
+        $last10 = substr($digits, -10);
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("
+            SELECT * FROM orders 
+            WHERE customer_phone = ? 
+               OR customer_phone = ? 
+               OR customer_phone = ?
+               OR customer_phone LIKE ?
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute([
+            $phone,
+            $digits,
+            '+' . $digits,
+            '%' . $last10
+        ]);
+        $orders = $stmt->fetchAll();
+
+        foreach ($orders as &$order) {
+            if (!empty($order['shipping_address']) && is_string($order['shipping_address'])) {
+                $order['shipping_address'] = json_decode($order['shipping_address'], true);
+            }
+            $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+            $itemStmt->execute([$order['id']]);
+            $order['items'] = $itemStmt->fetchAll();
+        }
+        unset($order);
+
+        return $orders;
+    }
+
+    /**
+     * Retrieve orders by customer email address
+     *
+     * @param string $email
+     * @return array
+     */
+    public static function getOrdersByEmail(string $email): array {
+        $email = trim(strtolower($email));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return [];
+        }
+
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE LOWER(customer_email) = ? ORDER BY created_at DESC");
+        $stmt->execute([$email]);
+        $orders = $stmt->fetchAll();
+
+        foreach ($orders as &$order) {
+            if (!empty($order['shipping_address']) && is_string($order['shipping_address'])) {
+                $order['shipping_address'] = json_decode($order['shipping_address'], true);
+            }
+            $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+            $itemStmt->execute([$order['id']]);
+            $order['items'] = $itemStmt->fetchAll();
+        }
+        unset($order);
+
+        return $orders;
+    }
+
     public static function updateOrderPayment(string $orderNumber, string $status, ?string $cfOrderId = null): void {
         $pdo = Database::getConnection();
         $fulfillment = ($status === 'paid') ? 'processing' : 'awaiting_payment';

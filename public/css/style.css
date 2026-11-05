@@ -8391,11 +8391,13 @@ body { font-size: 17px; line-height: 1.6; }
 .admin-v4-topbar {
   background: #11281B;
   color: #FFFFFF;
-  padding: 0 28px;
-  height: 60px;
+  padding: 0 20px;
+  min-height: 58px;
+  height: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-family: var(--font-dm-sans, -apple-system, BlinkMacSystemFont, sans-serif);
   position: sticky;
@@ -8406,7 +8408,9 @@ body { font-size: 17px; line-height: 1.6; }
 .admin-v4-topbar-left {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 20px;
+  flex: 1;
+  min-width: 0;
 }
 
 .admin-v4-brand {
@@ -8450,30 +8454,42 @@ body { font-size: 17px; line-height: 1.6; }
 .admin-v4-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 4px 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-v4-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .admin-v4-nav-item {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 6px 11px;
   border-radius: 8px;
   font-size: 12.5px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.76);
+  color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
   transition: all 0.15s ease;
   border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .admin-v4-nav-item:hover:not(.admin-v4-nav-active) {
   color: #FFFFFF;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .admin-v4-nav-active {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(212, 175, 55, 0.45);
   color: #FFFFFF;
   font-weight: 600;
@@ -8494,7 +8510,9 @@ body { font-size: 17px; line-height: 1.6; }
 .admin-v4-topbar-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .admin-v4-view-store {
@@ -8503,28 +8521,37 @@ body { font-size: 17px; line-height: 1.6; }
   gap: 6px;
   color: #FFFFFF;
   font-size: 12px;
-  font-weight: 500;
-  padding: 5px 12px;
+  font-weight: 600;
+  padding: 6px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
   text-decoration: none;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .admin-v4-view-store:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .admin-v4-divider {
   width: 1px;
   height: 20px;
   background: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
 }
 
 .admin-v4-email {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
 }
 
 .admin-v4-profile-wrap {
