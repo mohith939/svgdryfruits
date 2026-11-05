@@ -223,9 +223,10 @@ require __DIR__ . '/../layouts/admin_layout.php';
                 <button
                   type="button"
                   onclick="openComboImageModal('<?= $prod['id'] ?>', '<?= htmlspecialchars(addslashes($prod['name'])) ?>', '<?= htmlspecialchars(addslashes($prod['image_url'] ?? '/assets/mixed-fruit-reference.jpg')) ?>')"
-                  style="font-size: 11.5px; padding: 4px 9px; background: #FAF7F2; border: 1px solid #C8BCAC; border-radius: 6px; color: #073D26; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"
+                  class="button"
+                  style="font-size: 12.5px; padding: 6px 14px; background: #073D26; border: 1px solid #073D26; border-radius: 6px; color: #FFFFFF; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(7,61,38,0.25);"
                 >
-                  📷 Change Photo
+                  📷 Upload / Change Hamper Photo
                 </button>
               </div>
               <span style="font-size: 12px; color: #776F62; display: block; margin-top: 3px;">
@@ -571,8 +572,11 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
     // Instant async upload to server
     const formData = new FormData();
+    formData.append('csrf_token', '<?= Helpers::csrfToken() ?>');
     formData.append('image', file);
     formData.append('prefix', 'combo');
+
+    document.getElementById('combo_upload_status').innerHTML = '<em>Uploading image...</em>';
 
     fetch('<?= Helpers::url('api/upload.php') ?>', {
       method: 'POST',
@@ -582,10 +586,14 @@ require __DIR__ . '/../layouts/admin_layout.php';
     .then(res => {
       if (res.success && res.url) {
         document.getElementById('modal_combo_url').value = res.url;
-        document.getElementById('combo_upload_status').innerHTML = '✓ Uploaded: <strong>' + res.url + '</strong>';
+        document.getElementById('combo_upload_status').innerHTML = '<span style="color: #2E7D32; font-weight: 700;">✓ Uploaded successfully!</span> Saved to ' + res.url;
+      } else {
+        document.getElementById('combo_upload_status').innerHTML = '<span style="color: #C53030;">Upload warning: ' + (res.error || 'Server error') + '. Form submit will still save photo.</span>';
       }
     })
-    .catch(() => {});
+    .catch(() => {
+      document.getElementById('combo_upload_status').innerHTML = '<span style="color: #666;">File selected. Full upload will complete on clicking Save Photo.</span>';
+    });
   }
 </script>
 

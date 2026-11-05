@@ -127,7 +127,31 @@ require __DIR__ . '/../layouts/admin_layout.php';
 ?>
 
 <div class="admin-content" style="max-width: 1080px; margin: 0 auto;">
-  <div class="admin-page-header">
+
+  <!-- High-Visibility Unmistakable Top Navigation Bar -->
+  <div class="admin-top-action-bar" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; background: #073D26; color: #FFFFFF; padding: 14px 22px; border-radius: 10px; margin-bottom: 22px; box-shadow: 0 4px 16px rgba(7,61,38,0.25);">
+    <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+      <a href="<?= Helpers::url('admin/products') ?>" style="display: inline-flex; align-items: center; gap: 10px; background: #FFFFFF; color: #073D26; font-weight: 800; font-size: 14px; padding: 10px 20px; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: all 0.15s;">
+        <span style="font-size: 18px; line-height: 1;">&larr;</span>
+        <span>Back to Products List</span>
+      </a>
+      <span style="font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500;">
+        <?= $isEdit ? 'Editing: ' . htmlspecialchars($product['name'] ?? 'Product') : 'Creating New Product' ?>
+      </span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <?php if ($isEdit && !empty($product)): ?>
+        <a href="<?= Helpers::url('products/' . $product['slug']) ?>" target="_blank" style="color: #F8F5EE; font-size: 13px; font-weight: 600; text-decoration: underline; padding: 6px 10px;">
+          View Live on Storefront ↗
+        </a>
+      <?php endif; ?>
+      <button type="submit" form="productMainForm" class="button" style="background: #E8B647; color: #073D26; font-weight: 800; font-size: 14px; padding: 11px 24px; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
+        💾 <?= $isEdit ? 'Save Changes' : 'Publish Product' ?>
+      </button>
+    </div>
+  </div>
+
+  <div class="admin-page-header" style="flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
     <div>
       <div class="breadcrumbs" style="font-size: 13px; color: #8A7E6F; margin-bottom: 6px;">
         <a href="<?= Helpers::url('admin') ?>">Dashboard</a>
@@ -137,11 +161,11 @@ require __DIR__ . '/../layouts/admin_layout.php';
         <span><?= $isEdit ? 'Edit Product' : 'Add New' ?></span>
       </div>
       <h1><?= $isEdit ? 'Edit' : 'Add' ?> <em>Product</em></h1>
-      <p>Configure product information, pack size variants, selling prices in INR, and inventory.</p>
+      <p>Configure product information, high-resolution photos, pack size variants, selling prices, and stock.</p>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
-      <a href="<?= Helpers::url('admin/products') ?>" style="display: inline-flex; align-items: center; gap: 8px; background: #073D26; color: #FFFFFF; font-weight: 700; font-size: 14px; padding: 11px 20px; border-radius: 8px; border: 1px solid #135538; box-shadow: 0 4px 12px rgba(7, 61, 38, 0.25); text-decoration: none; transition: transform 0.15s, background 0.15s;">
-        <span style="font-size: 18px; line-height: 1;">&larr;</span>
+      <a href="<?= Helpers::url('admin/products') ?>" style="display: inline-flex; align-items: center; gap: 8px; background: #FAF7F2; color: #073D26; font-weight: 700; font-size: 13.5px; padding: 10px 18px; border-radius: 8px; border: 1.5px solid #073D26; text-decoration: none;">
+        <span>&larr;</span>
         <span>Back to Products</span>
       </a>
       <?php if ($isEdit && !empty($product)): ?>
@@ -150,14 +174,14 @@ require __DIR__ . '/../layouts/admin_layout.php';
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
           <button type="submit" class="button" style="background: #FFF5F5; color: #C53030; border: 1px solid #FEB2B2; padding: 10px 16px; font-weight: 600; cursor: pointer; border-radius: 8px;">
-            🗑️ Delete Product
+            🗑️ Delete
           </button>
         </form>
       <?php endif; ?>
     </div>
   </div>
 
-  <form method="POST" class="admin-form" enctype="multipart/form-data">
+  <form method="POST" id="productMainForm" class="admin-form" enctype="multipart/form-data">
     <?= Helpers::csrfField() ?>
     <div class="admin-two-cols">
 
@@ -190,7 +214,12 @@ require __DIR__ . '/../layouts/admin_layout.php';
           </div>
 
           <div class="form-group">
-            <label for="prod_cat">Category</label>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+              <label for="prod_cat" style="margin-bottom: 0;">Category</label>
+              <a href="<?= Helpers::url('admin/categories') ?>" target="_blank" style="font-size: 12px; color: #073D26; font-weight: 700; text-decoration: underline;">
+                🎨 Manage &amp; Add Category Images &rarr;
+              </a>
+            </div>
             <select id="prod_cat" name="category_id">
               <option value="">— Select Category —</option>
               <?php foreach ($categories as $c): ?>
@@ -207,14 +236,17 @@ require __DIR__ . '/../layouts/admin_layout.php';
           </div>
 
           <!-- Product Image & Real File Upload Card Section -->
-          <div class="form-group" style="background: #FDFBF7; border: 1px solid #E5DFD5; border-radius: 10px; padding: 18px; margin-top: 15px;">
-            <label style="font-size: 14px; font-weight: 700; color: #073D26; margin-bottom: 8px; display: block;">
-              📷 Product Image &amp; Media
-            </label>
+          <div class="form-group" style="background: #FAF8F5; border: 2px solid #D9D2C5; border-radius: 12px; padding: 20px; margin-top: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <label style="font-size: 15px; font-weight: 800; color: #073D26; margin: 0; display: flex; align-items: center; gap: 8px;">
+                <span>📷 Product Image &amp; Media</span>
+                <span style="font-size: 11px; background: #073D26; color: #fff; padding: 2px 8px; border-radius: 10px; font-weight: 600;">Main Photo</span>
+              </label>
+            </div>
 
-            <div style="display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap;">
+            <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;">
               <!-- Live Preview Box -->
-              <div style="width: 110px; height: 110px; border-radius: 10px; overflow: hidden; border: 2px solid #D9D2C5; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.06); flex-shrink: 0;">
+              <div style="width: 130px; height: 130px; border-radius: 12px; overflow: hidden; border: 2px solid #073D26; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08); flex-shrink: 0; position: relative;">
                 <img
                   id="prod_preview"
                   src="<?= Helpers::asset(ltrim($product['image_url'] ?? '/assets/mixed-nuts-reference.jpg', '/')) ?>"
@@ -225,8 +257,8 @@ require __DIR__ . '/../layouts/admin_layout.php';
               </div>
 
               <!-- Upload & Controls -->
-              <div style="flex: 1; min-width: 240px;">
-                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 250px;">
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
                   <input
                     type="file"
                     id="prod_file"
@@ -237,18 +269,20 @@ require __DIR__ . '/../layouts/admin_layout.php';
                   >
                   <button
                     type="button"
-                    class="button button-primary"
+                    class="button"
                     onclick="document.getElementById('prod_file').click()"
-                    style="padding: 9px 16px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;"
+                    style="background: #073D26; color: #FFFFFF; padding: 11px 22px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 8px; border: none; box-shadow: 0 2px 8px rgba(7,61,38,0.25);"
                   >
                     📁 Upload Image from Device
                   </button>
-                  <span id="upload_status" style="font-size: 12px; color: #666;">PNG, JPG, WEBP, or SVG up to 10MB</span>
+                  <span id="upload_status" style="font-size: 12px; color: #555; font-weight: 500;">
+                    JPG, PNG, WEBP, or SVG up to 10MB
+                  </span>
                 </div>
 
-                <div style="margin-top: 8px;">
-                  <label for="prod_img" style="font-size: 12px; color: #7C7265; font-weight: 600; display: block; margin-bottom: 4px;">
-                    Or specify image path / URL:
+                <div style="margin-top: 10px;">
+                  <label for="prod_img" style="font-size: 12px; color: #5D5447; font-weight: 700; display: block; margin-bottom: 4px;">
+                    Or specify image path / custom URL:
                   </label>
                   <input
                     id="prod_img"
@@ -256,7 +290,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                     placeholder="/assets/shop-cashews.jpg"
                     value="<?= htmlspecialchars($product['image_url'] ?? '/assets/mixed-nuts-reference.jpg') ?>"
                     oninput="updateImagePreview(this.value)"
-                    style="font-family: monospace; font-size: 13px; background: #fff;"
+                    style="font-family: monospace; font-size: 13px; background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #CCC; border-radius: 6px;"
                   >
                 </div>
               </div>
@@ -430,8 +464,11 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
     // Instant async upload to server
     const formData = new FormData();
+    formData.append('csrf_token', '<?= Helpers::csrfToken() ?>');
     formData.append('image', file);
     formData.append('prefix', 'prod');
+
+    document.getElementById('upload_status').innerHTML = '<em>Uploading image...</em>';
 
     fetch('<?= Helpers::url('api/upload.php') ?>', {
       method: 'POST',
@@ -441,11 +478,13 @@ require __DIR__ . '/../layouts/admin_layout.php';
     .then(res => {
       if (res.success && res.url) {
         document.getElementById('prod_img').value = res.url;
-        document.getElementById('upload_status').innerHTML = '✓ Uploaded &amp; Saved: <strong>' + res.url + '</strong>';
+        document.getElementById('upload_status').innerHTML = '<span style="color: #2E7D32; font-weight: 700;">✓ Uploaded successfully!</span> Saved to ' + res.url;
+      } else {
+        document.getElementById('upload_status').innerHTML = '<span style="color: #C53030;">Upload warning: ' + (res.error || 'Server error') + '. Form submit will still save file.</span>';
       }
     })
     .catch(() => {
-      // Fallback: standard multipart form POST will save it!
+      document.getElementById('upload_status').innerHTML = '<span style="color: #666;">File selected. Full upload will complete on saving product.</span>';
     });
   }
 

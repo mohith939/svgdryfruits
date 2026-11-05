@@ -69,10 +69,115 @@ require __DIR__ . '/../layouts/admin_layout.php';
     </div>
   </div>
 
+  <!-- Prominent Multi-Option Shipping Banner -->
+  <div style="background: linear-gradient(135deg, #073D26 0%, #0F5C3B 100%); color: #fff; padding: 18px 24px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; box-shadow: 0 4px 14px rgba(7,61,38,0.2);">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+        <span style="font-size: 22px;">🚚</span>
+        <strong style="font-size: 16.5px; letter-spacing: -0.2px;">Multi-Condition Shipping &amp; Delivery Rates</strong>
+        <span style="background: #E8B647; color: #073D26; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px;">NEW CRITERIA ENGINE</span>
+      </div>
+      <p style="margin: 0; font-size: 13.5px; color: rgba(255,255,255,0.85); max-width: 650px;">
+        Configure multiple courier delivery tiers (Standard, Express, Same-Day) with custom conditions: free-shipping thresholds, minimum basket subtotal, delivery days, and active status — selectable by customers at checkout just like coupons!
+      </p>
+    </div>
+    <a href="<?= Helpers::url('admin/shipping') ?>" class="button" style="background: #FFFFFF; color: #073D26; font-weight: 800; font-size: 13.5px; padding: 11px 22px; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;">
+      Configure Multi-Option Rates &rarr;
+    </a>
+  </div>
+
   <div class="admin-two-cols">
-    <!-- Shipping Rules Form -->
+    <!-- Store Contact & Support Settings Card (PRIMARY) -->
+    <div class="admin-card" id="contact" style="grid-column: 1 / -1; border-top: 4px solid #073D26;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;">
+        <h2 style="margin: 0; font-size: 20px; color: #073D26; display: flex; align-items: center; gap: 8px;">
+          <span>📞 Store Contact &amp; Support Details</span>
+        </h2>
+        <span class="badge badge-success" style="font-size: 11.5px; padding: 4px 10px;">
+          ✓ Live on /contact Page &amp; Storefront Footer
+        </span>
+      </div>
+      <p class="admin-card-subtitle" style="margin-bottom: 20px;">
+        Update your store phone number, official WhatsApp, customer support email, and warehouse dispatch address. All changes take effect immediately on <a href="<?= Helpers::url('contact') ?>" target="_blank" style="color: #073D26; font-weight: 700; text-decoration: underline;">/contact ↗</a> and throughout the site footer.
+      </p>
+
+      <form class="admin-form" method="POST">
+        <?= Helpers::csrfField() ?>
+        <input type="hidden" name="action" value="save_contact">
+
+        <div class="form-group-row">
+          <div class="form-group" style="flex: 1;">
+            <label for="contact_phone" style="font-weight: 700; color: #073D26;">Customer Care Mobile / Calling Number *</label>
+            <input
+              id="contact_phone"
+              type="text"
+              name="contact_phone"
+              value="<?= htmlspecialchars($settings['contact_phone']) ?>"
+              placeholder="e.g. 919059123456"
+              required
+              style="font-size: 14.5px; font-weight: 600;"
+            >
+            <span class="field-hint" style="display: block; font-size: 12px; color: #7C7265; margin-top: 4px;">
+              Displayed on Contact page for customer voice calls &amp; inquiries.
+            </span>
+          </div>
+
+          <div class="form-group" style="flex: 1;">
+            <label for="whatsapp_number" style="font-weight: 700; color: #073D26;">Official WhatsApp Support Number (with country code) *</label>
+            <input
+              id="whatsapp_number"
+              type="text"
+              name="whatsapp_number"
+              value="<?= htmlspecialchars($settings['whatsapp_number']) ?>"
+              placeholder="e.g. 919059123456"
+              required
+              style="font-size: 14.5px; font-weight: 600;"
+            >
+            <span class="field-hint" style="display: block; font-size: 12px; color: #7C7265; margin-top: 4px;">
+              Powers the floating WhatsApp button and order support links.
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="contact_email" style="font-weight: 700; color: #073D26;">Official Customer Inquiries &amp; Support Email *</label>
+          <input
+            id="contact_email"
+            type="email"
+            name="contact_email"
+            value="<?= htmlspecialchars($settings['contact_email']) ?>"
+            placeholder="svgdryfruits@gmail.com"
+            required
+            style="font-size: 14.5px; font-weight: 600;"
+          >
+          <span class="field-hint" style="display: block; font-size: 12px; color: #7C7265; margin-top: 4px;">
+            Customers use this email to write to customer service and order tracking inquiries.
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="store_address" style="font-weight: 700; color: #073D26;">Store Dispatch &amp; Warehouse Address</label>
+          <textarea
+            id="store_address"
+            name="store_address"
+            rows="3"
+            placeholder="Address shown on Contact page"
+            style="font-size: 14px;"
+          ><?= htmlspecialchars($settings['store_address']) ?></textarea>
+        </div>
+
+        <button type="submit" class="button" style="background: #073D26; color: #FFFFFF; font-weight: 800; font-size: 14px; padding: 12px 28px; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(7,61,38,0.25);">
+          💾 Save Store Contact Details
+        </button>
+      </form>
+    </div>
+
+    <!-- Default Fallback Shipping Rules Form -->
     <div class="admin-card">
-      <h2>Shipping Rules</h2>
+      <h2>Default Shipping Fallback</h2>
+      <p class="admin-card-subtitle">
+        Standard baseline fee used if no multi-condition options are configured.
+      </p>
       <form class="admin-form" method="POST">
         <?= Helpers::csrfField() ?>
         <div class="form-checkbox-row" style="margin-bottom: 12px;">
@@ -83,15 +188,12 @@ require __DIR__ . '/../layouts/admin_layout.php';
               value="1"
               <?= !empty($settings['shipping_active']) ? 'checked' : '' ?>
             >
-            <span><strong>Enable shipping charge calculation</strong></span>
+            <span><strong>Enable default shipping fee calculation</strong></span>
           </label>
         </div>
-        <p class="admin-card-subtitle">
-          When disabled, shipping is calculated as Free for all orders.
-        </p>
 
         <div class="form-group">
-          <label for="flat">Standard Flat Delivery Fee (₹)</label>
+          <label for="flat">Fallback Delivery Fee (₹)</label>
           <input
             id="flat"
             type="number"
@@ -109,84 +211,12 @@ require __DIR__ . '/../layouts/admin_layout.php';
             min="0"
             name="free_threshold"
             value="<?= $freeINR ?>"
-            placeholder="e.g. 999 (Orders above this qualify for free shipping)"
-          >
-          <span class="field-hint" style="display: block; font-size: 12px; color: #7C7265; margin-top: 4px;">
-            Orders with subtotal above this amount get free shipping automatically, and a progress bar appears in the customer bag.
-          </span>
-        </div>
-
-        <button type="submit" class="button button-primary">
-          Save Shipping Rules
-        </button>
-      </form>
-    </div>
-
-    <!-- Store Contact & Support Settings Card -->
-    <div class="admin-card">
-      <h2>Store Contact &amp; Support Details</h2>
-      <p class="admin-card-subtitle">
-        Manage customer support mobile, WhatsApp number, email, and dispatch address displayed on the <a href="<?= Helpers::url('contact') ?>" target="_blank" style="color: #073D26; font-weight: 600;">/contact</a> page and site footer.
-      </p>
-
-      <form class="admin-form" method="POST">
-        <?= Helpers::csrfField() ?>
-        <input type="hidden" name="action" value="save_contact">
-
-        <div class="form-group">
-          <label for="contact_phone">Customer Care Mobile / Phone</label>
-          <input
-            id="contact_phone"
-            type="text"
-            name="contact_phone"
-            value="<?= htmlspecialchars($settings['contact_phone']) ?>"
-            placeholder="e.g. 919059123456"
-            required
-          >
-          <span class="field-hint" style="display: block; font-size: 12px; color: #7C7265; margin-top: 4px;">
-            Displayed on Contact page for customer calls &amp; inquiries.
-          </span>
-        </div>
-
-        <div class="form-group">
-          <label for="whatsapp_number">Official WhatsApp Number (with country code)</label>
-          <input
-            id="whatsapp_number"
-            type="text"
-            name="whatsapp_number"
-            value="<?= htmlspecialchars($settings['whatsapp_number']) ?>"
-            placeholder="e.g. 919059123456"
-            required
-          >
-          <span class="field-hint" style="display: block; font-size: 12px; color: #7C7265; margin-top: 4px;">
-            Powers the bottom-right floating WhatsApp chat button and instant order support links.
-          </span>
-        </div>
-
-        <div class="form-group">
-          <label for="contact_email">Support &amp; Inquiries Email Address</label>
-          <input
-            id="contact_email"
-            type="email"
-            name="contact_email"
-            value="<?= htmlspecialchars($settings['contact_email']) ?>"
-            placeholder="svgdryfruits@gmail.com"
-            required
+            placeholder="e.g. 999"
           >
         </div>
 
-        <div class="form-group">
-          <label for="store_address">Warehouse / Dispatch Address &amp; Operating Hours</label>
-          <textarea
-            id="store_address"
-            name="store_address"
-            rows="3"
-            placeholder="Address shown on Contact page"
-          ><?= htmlspecialchars($settings['store_address']) ?></textarea>
-        </div>
-
-        <button type="submit" class="button button-primary">
-          Save Contact Information
+        <button type="submit" class="button button-outline" style="border-color: #073D26; color: #073D26; font-weight: 700;">
+          Save Fallback Rules
         </button>
       </form>
     </div>
