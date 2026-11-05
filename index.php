@@ -69,6 +69,11 @@ if ($scriptDir !== '' && strpos($requestUri, $scriptDir) === 0) {
 }
 $path = trim($path, '/');
 
+// Router-level authorization gate for administrative endpoints (defense-in-depth)
+if (strpos($path, 'admin') === 0 && $path !== 'admin/login') {
+    Auth::requireAuth();
+}
+
 try {
     switch (true) {
         // Storefront Pages
@@ -210,19 +215,18 @@ try {
     }
     http_response_code(500);
     $msg = $e->getMessage();
-    $isDbError = (
-        strpos($msg, 'MySQL Connection') !== false ||
-        strpos($msg, 'SQLSTATE') !== false ||
-        strpos($msg, 'database') !== false ||
-        strpos($msg, 'Access denied') !== false ||
-        strpos($msg, 'No such file') !== false
-    );
+    error_log("Unhandled Application Error [{$path}]: " . $msg . "\n" . $e->getTraceAsString());
+
+    $isLocal = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'])
+        || php_sapi_name() === 'cli-server'
+        || str_contains($_SERVER['HTTP_HOST'] ?? '', 'localhost');
+    $canSeeDiagnostics = $isLocal || Auth::check();
     ?>
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>SVG Dry Fruits — Configuration Notice</title>
+      <title>SVG Dry Fruits — Service Notice</title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fbfaf7; color: #203c32; margin: 0; padding: 40px 20px; display: flex; align-items: center; justify-content: center; min-height: 80vh; }
@@ -237,24 +241,18 @@ try {
     <body>
       <div class="box">
         <h1>SVG Dry Fruits</h1>
-        <?php if ($isDbError): ?>
-          <p>The application is loaded, but the MySQL database connection needs to be verified or initialized.</p>
+        <?php if ($canSeeDiagnostics): ?>
+          <p>An unexpected server error occurred while processing this request.</p>
           <div class="diag">
             <strong>Diagnostic Error:</strong><br><?= htmlspecialchars($msg) ?>
           </div>
-          <p style="font-size: 13px; color: #777;">
-            Click below to open the 1-Click Database Setup &amp; Seeder utility:
-          </p>
-          <a href="<?= Helpers::url('database/install.php') ?>" class="btn">
-            Open Database Setup &amp; Seeder &rarr;
+          <a href="<?= Helpers::url('admin') ?>" class="btn">
+            Admin Dashboard &rarr;
           </a>
         <?php else: ?>
-          <p>An unexpected server error occurred while processing your request.</p>
-          <div class="diag">
-            <strong>Error:</strong><br><?= htmlspecialchars($msg) ?>
-          </div>
-          <a href="<?= Helpers::url('database/install.php') ?>" class="btn">
-            Open Setup &rarr;
+          <p>We are currently experiencing a brief technical issue. Our engineering team has been notified. Please try again in a few moments.</p>
+          <a href="<?= Helpers::url('/') ?>" class="btn">
+            Return to Homepage &rarr;
           </a>
         <?php endif; ?>
       </div>

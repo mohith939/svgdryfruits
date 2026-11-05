@@ -18,10 +18,10 @@ if (!Auth::check()) {
     Helpers::json(['success' => false, 'error' => 'Unauthorized. Please login to admin.'], 401);
 }
 
-// Check CSRF token if provided
+// Compulsory CSRF token check for state-changing file upload
 $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
-if (!empty($token) && !Helpers::verifyCsrf($token)) {
-    Helpers::json(['success' => false, 'error' => 'Invalid or expired CSRF token.'], 403);
+if (!Helpers::verifyCsrf($token)) {
+    Helpers::json(['success' => false, 'error' => 'Invalid or missing CSRF token.'], 403);
 }
 
 $file = $_FILES['file'] ?? $_FILES['image'] ?? null;

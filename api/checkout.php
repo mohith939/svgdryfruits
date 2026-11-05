@@ -48,6 +48,13 @@ if (empty($cart['items'])) {
     Helpers::json(['success' => false, 'error' => 'Your bag is empty.'], 400);
 }
 
+// In-flight submission lock to prevent rapid duplicate clicks / double order creation
+$checkoutLockKey = 'checkout_lock_' . md5(session_id() . '_' . $cart['subtotal_paise']);
+if (!empty($_SESSION[$checkoutLockKey]) && (time() - (int)$_SESSION[$checkoutLockKey]) < 4) {
+    Helpers::json(['success' => false, 'error' => 'Checkout already processing. Please wait a moment.'], 429);
+}
+$_SESSION[$checkoutLockKey] = time();
+
 // Check stock for each item
 foreach ($cart['items'] as $item) {
     if ($item['stock'] < $item['quantity']) {
@@ -123,6 +130,7 @@ try {
     Models::createOrder($orderData, $cart['items']);
     $_SESSION['recent_order_id'] = $orderNumber;
     $_SESSION['recent_order_token'] = $trackingToken;
+    unset($_SESSION[$checkoutLockKey]);
     // Clear cart on successful creation
     Cart::clear();
 
@@ -136,6 +144,10 @@ try {
         'redirect_url' => Helpers::url("order-success?order_id={$orderNumber}&token={$trackingToken}")
     ]);
 } catch (Throwable $e) {
+    unset($_SESSION[$checkoutLockKey]);
     error_log("Database Order Insert Error: " . $e->getMessage());
-    Helpers::json(['success' => false, 'error' => 'Failed to save order: ' . $e->getMessage()], 500);
+    $isStockError = ($e instanceof RuntimeException && strpos($e->getMessage(), 'Insufficient stock') !== false);
+    $statusCode = $isStockError ? 400 : 500;
+    $errorMsg = $isStockError ? $e->getMessage() : 'Failed to save order: ' . $e->getMessage();
+    Helpers::json(['success' => false, 'error' => $errorMsg], $statusCode);
 }

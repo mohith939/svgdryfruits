@@ -7,6 +7,9 @@ declare(strict_types=1);
 require_once ROOT_PATH . '/src/Helpers.php';
 require_once ROOT_PATH . '/src/Icon.php';
 require_once ROOT_PATH . '/src/Models.php';
+require_once ROOT_PATH . '/src/Auth.php';
+
+Auth::requireAuth();
 
 $pdo = Database::getConnection();
 

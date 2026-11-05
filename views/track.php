@@ -8,12 +8,17 @@ require_once ROOT_PATH . '/src/Models.php';
 
 $query = trim($_GET['order_id'] ?? ($_GET['token'] ?? ''));
 $order = null;
+$rateLimited = false;
 
 if ($query) {
-    if (strpos($query, 'SVG-') === 0) {
-        $order = Models::getOrderByNumber($query);
+    if (!Helpers::checkRateLimit('track_order', 30, 60)) {
+        $rateLimited = true;
     } else {
-        $order = Models::getOrderByToken($query) ?: Models::getOrderByNumber($query);
+        if (strpos($query, 'SVG-') === 0) {
+            $order = Models::getOrderByNumber($query);
+        } else {
+            $order = Models::getOrderByToken($query) ?: Models::getOrderByNumber($query);
+        }
     }
 }
 
@@ -41,7 +46,12 @@ require __DIR__ . '/layouts/header.php';
     </button>
   </form>
 
-  <?php if ($query && !$order): ?>
+  <?php if ($rateLimited): ?>
+    <div style="text-align:center; padding:50px; background:#fff3cd; border:1px solid #ffeeba; border-radius:6px; color:#856404;">
+      <h3 style="font-family:var(--serif, serif); font-size:24px; margin-bottom:8px;">Too Many Requests</h3>
+      <p style="font-size:14px;">You have exceeded the search rate limit. Please wait a minute before searching again.</p>
+    </div>
+  <?php elseif ($query && !$order): ?>
     <div style="text-align:center; padding:50px; background:var(--white); border:1px solid var(--line); border-radius:6px;">
       <h3 style="font-family:var(--serif, serif); font-size:24px; color:var(--pine); margin-bottom:8px;">No Order Found</h3>
       <p style="color:var(--muted); font-size:14px;">We couldn't find an order with identifier "<strong><?= htmlspecialchars($query) ?></strong>". Please verify and try again.</p>

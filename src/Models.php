@@ -243,6 +243,35 @@ class Models {
         } catch (Throwable $e) {
             // Column already exists
         }
+
+        // 5. Ensure refunds table exists
+        try {
+            if ($driver === 'sqlite') {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS refunds (
+                        id TEXT PRIMARY KEY,
+                        order_id TEXT NOT NULL,
+                        amount_paise INTEGER NOT NULL,
+                        note TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+                    )
+                ");
+            } else {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS `refunds` (
+                        `id` VARCHAR(64) NOT NULL,
+                        `order_id` VARCHAR(64) NOT NULL,
+                        `amount_paise` INT NOT NULL,
+                        `note` TEXT NULL,
+                        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (`id`),
+                        KEY `idx_refunds_order_id` (`order_id`),
+                        CONSTRAINT `fk_refunds_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                ");
+            }
+        } catch (Throwable $e) {}
     }
 
     // --- Store & Contact Settings ---
@@ -365,6 +394,8 @@ class Models {
 
         try {
             $data['id'] = $data['id'] ?? ('ord_' . bin2hex(random_bytes(10)));
+            $data['order_number'] = $data['order_number'] ?? ('SVG-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3))));
+            $data['tracking_token'] = $data['tracking_token'] ?? bin2hex(random_bytes(16));
             $stmt = $pdo->prepare("
                 INSERT INTO orders (
                     id, order_number, tracking_token, payment_status, fulfillment_status,
@@ -408,14 +439,25 @@ class Models {
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
 
-            $isSqlite = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite';
-            $stockSql = $isSqlite 
-                ? "UPDATE variants SET stock = MAX(0, stock - ?) WHERE id = ?"
-                : "UPDATE variants SET stock = GREATEST(0, stock - ?) WHERE id = ?";
-            $stockStmt = $pdo->prepare($stockSql);
+            // Atomic conditional stock reduction to prevent concurrency race conditions & overselling
+            $stockStmt = $pdo->prepare("
+                UPDATE variants 
+                SET stock = stock - ? 
+                WHERE id = ? AND stock >= ?
+            ");
 
             foreach ($items as $item) {
                 $unitPrice = (int)($item['unit_price_paise'] ?? $item['price_paise'] ?? 0);
+                $qty = (int)$item['quantity'];
+
+                // Enforce atomic stock decrement
+                if (!empty($item['variant_id'])) {
+                    $stockStmt->execute([$qty, (string)$item['variant_id'], $qty]);
+                    if ($stockStmt->rowCount() === 0) {
+                        throw new RuntimeException("Insufficient stock for item: {$item['product_name']} ({$item['variant_label']}). Please review your bag.");
+                    }
+                }
+
                 $itemStmt->execute([
                     'item_' . bin2hex(random_bytes(10)),
                     $data['id'],
@@ -423,13 +465,8 @@ class Models {
                     $item['product_name'],
                     $item['variant_label'],
                     $unitPrice,
-                    $item['quantity'],
+                    $qty,
                 ]);
-
-                // Reduce inventory stock
-                if (!empty($item['variant_id'])) {
-                    $stockStmt->execute([(int)$item['quantity'], (string)$item['variant_id']]);
-                }
             }
 
             if (!empty($data['coupon_code'])) {
@@ -442,6 +479,22 @@ class Models {
             $pdo->rollBack();
             throw $e;
         }
+    }
+
+    public static function getOrderById(string $id): ?array {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");
+        $stmt->execute([$id]);
+        $order = $stmt->fetch();
+        if (!$order) return null;
+
+        $order['shipping_address'] = json_decode($order['shipping_address'], true);
+
+        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        $itemStmt->execute([$order['id']]);
+        $order['items'] = $itemStmt->fetchAll();
+
+        return $order;
     }
 
     public static function getOrderByNumber(string $orderNumber): ?array {

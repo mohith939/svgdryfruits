@@ -57,6 +57,16 @@ if ($orderNumber) {
     }
 
     if (in_array($type, ['PAYMENT_SUCCESS_WEBHOOK', 'ORDER_PAID_WEBHOOK', 'ORDER_SUCCESS'], true)) {
+        if ($existing) {
+            $paidAmount = (float)($orderData['order_amount'] ?? 0);
+            $expectedAmount = Helpers::paiseToRupees((int)$existing['total_paise']);
+            if (abs($paidAmount - $expectedAmount) > 0.01) {
+                error_log("CRITICAL PAYMENT TAMPERING in webhook for order {$orderNumber}: expected ₹{$expectedAmount}, got ₹{$paidAmount}");
+                http_response_code(400);
+                echo json_encode(['error' => 'Payment amount mismatch']);
+                exit;
+            }
+        }
         Models::updateOrderPayment($orderNumber, 'paid', $orderData['cf_order_id'] ?? null);
     } elseif (in_array($type, ['PAYMENT_FAILED_WEBHOOK', 'ORDER_FAILED'], true)) {
         Models::updateOrderPayment($orderNumber, 'failed', $orderData['cf_order_id'] ?? null);

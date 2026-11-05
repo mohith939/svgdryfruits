@@ -35,11 +35,15 @@ if ($order && $order['payment_status'] !== 'paid') {
         $cashfree = new CashfreePG();
         $cfOrder = $cashfree->getOrder($order['order_number']);
         $cfStatus = strtoupper($cfOrder['order_status'] ?? '');
-        if ($cfStatus === 'PAID') {
+        $cfAmount = (float)($cfOrder['order_amount'] ?? 0);
+        $expectedAmount = Helpers::paiseToRupees((int)$order['total_paise']);
+        if ($cfStatus === 'PAID' && abs($cfAmount - $expectedAmount) <= 0.01) {
             Models::updateOrderPayment($order['order_number'], 'paid', $cfOrder['cf_order_id'] ?? null);
             $order['payment_status'] = 'paid';
             $order['fulfillment_status'] = 'processing';
             $order['cashfree_order_id'] = $cfOrder['cf_order_id'] ?? ($order['cashfree_order_id'] ?? null);
+        } elseif ($cfStatus === 'PAID') {
+            error_log("CRITICAL PAYMENT TAMPERING in order_success for order {$order['order_number']}: expected ₹{$expectedAmount}, got ₹{$cfAmount}");
         }
     } catch (Throwable $e) {
         error_log("Order success auto-verification notice: " . $e->getMessage());

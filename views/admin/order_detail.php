@@ -6,6 +6,9 @@
 declare(strict_types=1);
 require_once ROOT_PATH . '/src/Helpers.php';
 require_once ROOT_PATH . '/src/Models.php';
+require_once ROOT_PATH . '/src/Auth.php';
+
+Auth::requireAuth();
 
 $pdo = Database::getConnection();
 
@@ -56,15 +59,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $note = trim($_POST['refund_note'] ?? '');
         if ($refundRupees > 0 && $note) {
             $amountPaise = (int)round($refundRupees * 100);
-            $refId = 'ref_' . bin2hex(random_bytes(8));
-            $pdo->prepare("INSERT INTO refunds (id, order_id, amount_paise, note) VALUES (?, ?, ?, ?)")
-                ->execute([$refId, $id, $amountPaise, $note]);
 
-            if (isset($_POST['mark_refunded'])) {
-                $pdo->prepare("UPDATE orders SET payment_status = 'refunded', fulfillment_status = 'cancelled' WHERE id = ?")->execute([$id]);
-                Models::restoreOrderStock($id);
+            // Cumulative prior refund verification
+            $priorStmt = $pdo->prepare("SELECT COALESCE(SUM(amount_paise), 0) FROM refunds WHERE order_id = ?");
+            $priorStmt->execute([$id]);
+            $priorRefundedPaise = (int)$priorStmt->fetchColumn();
+
+            if (($priorRefundedPaise + $amountPaise) > (int)$order['total_paise']) {
+                $maxEligibleRupees = max(0, ((int)$order['total_paise'] - $priorRefundedPaise) / 100);
+                Helpers::setFlash('error', "Refund rejected! Maximum remaining refundable amount is ₹{$maxEligibleRupees}.");
+            } else {
+                $refId = 'ref_' . bin2hex(random_bytes(8));
+                $pdo->prepare("INSERT INTO refunds (id, order_id, amount_paise, note) VALUES (?, ?, ?, ?)")
+                    ->execute([$refId, $id, $amountPaise, $note]);
+
+                if (isset($_POST['mark_refunded']) || ($priorRefundedPaise + $amountPaise) === (int)$order['total_paise']) {
+                    $pdo->prepare("UPDATE orders SET payment_status = 'refunded', fulfillment_status = 'cancelled' WHERE id = ?")->execute([$id]);
+                    Models::restoreOrderStock($id);
+                }
+                Helpers::setFlash('success', 'Manual refund recorded and saved.');
             }
-            Helpers::setFlash('success', 'Manual refund recorded and saved.');
         } else {
             Helpers::setFlash('error', 'Please enter a valid refund amount and reference note.');
         }
@@ -74,9 +88,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $cashfree = new CashfreePG();
             $cfOrder = $cashfree->getOrder($order['order_number']);
             $cfStatus = strtoupper($cfOrder['order_status'] ?? '');
+            $cfAmount = (float)($cfOrder['order_amount'] ?? 0);
+            $expectedAmount = Helpers::paiseToRupees((int)$order['total_paise']);
+
             if ($cfStatus === 'PAID') {
-                Models::updateOrderPayment($order['order_number'], 'paid', $cfOrder['cf_order_id'] ?? null);
-                Helpers::setFlash('success', '✓ Payment verified from Cashfree! Marked as PAID.');
+                if (abs($cfAmount - $expectedAmount) > 0.01) {
+                    Helpers::setFlash('error', "CRITICAL: Amount mismatch! Order total is ₹{$expectedAmount}, but Cashfree paid amount is ₹{$cfAmount}.");
+                } else {
+                    Models::updateOrderPayment($order['order_number'], 'paid', $cfOrder['cf_order_id'] ?? null);
+                    Helpers::setFlash('success', '✓ Payment verified from Cashfree! Marked as PAID.');
+                }
             } else {
                 Helpers::setFlash('warning', "Cashfree gateway reports order status as: {$cfStatus}");
             }

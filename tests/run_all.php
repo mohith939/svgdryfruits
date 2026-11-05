@@ -65,5 +65,6 @@ echo "\033[1;33m============================================================\033
 require_once __DIR__ . '/SecurityTest.php';
 require_once __DIR__ . '/CartAndPricingTest.php';
 require_once __DIR__ . '/OrderAndInventoryTest.php';
+require_once __DIR__ . '/AdvancedSecurityAndStressTest.php';
 
 exit(TestSuite::report());

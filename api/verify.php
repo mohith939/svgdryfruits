@@ -43,6 +43,16 @@ try {
     $cfOrder = $cashfree->getOrder($orderNumber);
     $status = strtoupper($cfOrder['order_status'] ?? '');
     if ($status === 'PAID') {
+        $cfAmount = (float)($cfOrder['order_amount'] ?? 0);
+        $expectedAmount = Helpers::paiseToRupees((int)$order['total_paise']);
+        if (abs($cfAmount - $expectedAmount) > 0.01) {
+            error_log("CRITICAL PAYMENT TAMPERING DETECTED for order {$orderNumber}: Expected ₹{$expectedAmount}, Gateway paid ₹{$cfAmount}");
+            Helpers::json([
+                'success' => false,
+                'error' => 'Payment amount mismatch detected. Order cannot be verified automatically.'
+            ], 400);
+        }
+
         Models::updateOrderPayment($orderNumber, 'paid', $cfOrder['cf_order_id'] ?? null);
         Helpers::json([
             'success' => true,
