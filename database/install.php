@@ -149,6 +149,7 @@ function runSqlScript(PDO $pdo, string $filePath): void {
 
     // Split statements by semicolon outside single quotes
     $statements = preg_split('/;(?=(?:[^\']*\'[^\']*\')*[^\']*$)/', $cleaned);
+    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
     foreach ($statements as $stmt) {
         $stmt = trim($stmt);
         if ($stmt !== '') {
@@ -163,21 +164,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
         $error = "Cannot install: MySQL connection failed. " . $mysqlError;
     } else {
         try {
+            // Disable foreign key checks for the entire install session
             $pdo->exec("SET NAMES utf8mb4;");
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
 
-            $resetTables = !empty($_POST['reset_tables']);
-            if ($resetTables) {
-                $tablesToDrop = [
-                    'refunds', 'combo_items', 'order_items', 'orders',
-                    'variants', 'products', 'categories', 'coupons',
-                    'shipping_options', 'shipping_settings', 'admins'
-                ];
-                foreach ($tablesToDrop as $t) {
-                    try {
-                        $pdo->exec("DROP TABLE IF EXISTS `{$t}`");
-                    } catch (Throwable $ignore) {}
-                }
+            // Drop all tables cleanly in safe order to eliminate FK 1452 conflicts
+            $tablesToDrop = [
+                'refunds', 'combo_items', 'order_items', 'orders',
+                'variants', 'products', 'categories', 'coupons',
+                'shipping_options', 'shipping_settings', 'admins'
+            ];
+            foreach ($tablesToDrop as $t) {
+                try {
+                    $pdo->exec("DROP TABLE IF EXISTS `{$t}`");
+                } catch (Throwable $ignore) {}
             }
 
             // Run Schema statement-by-statement with foreign keys disabled
