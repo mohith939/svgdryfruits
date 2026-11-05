@@ -124,6 +124,39 @@ try {
     $mysqlError = $e->getMessage();
 }
 
+/**
+ * Executes a .sql file statement-by-statement cleanly
+ */
+function runSqlScript(PDO $pdo, string $filePath): void {
+    if (!file_exists($filePath)) {
+        throw new RuntimeException("SQL file not found: " . basename($filePath));
+    }
+    $raw = file_get_contents($filePath);
+    if ($raw === false) {
+        throw new RuntimeException("Could not read SQL file: " . basename($filePath));
+    }
+
+    // Strip comments (-- ... and # ...)
+    $lines = explode("\n", $raw);
+    $cleaned = '';
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+        if (str_starts_with($trimmed, '--') || str_starts_with($trimmed, '#')) {
+            continue;
+        }
+        $cleaned .= $line . "\n";
+    }
+
+    // Split statements by semicolon outside single quotes
+    $statements = preg_split('/;(?=(?:[^\']*\'[^\']*\')*[^\']*$)/', $cleaned);
+    foreach ($statements as $stmt) {
+        $stmt = trim($stmt);
+        if ($stmt !== '') {
+            $pdo->exec($stmt);
+        }
+    }
+}
+
 // 3. Handle 1-Click Installation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST['action'] === 'install')) {
     if (!$mysqlConnected || !$pdo) {
@@ -147,15 +180,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
                 }
             }
 
-            // Run Schema
-            $schemaSql = file_get_contents(__DIR__ . '/schema.sql');
-            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
-            $pdo->exec($schemaSql);
+            // Run Schema statement-by-statement with foreign keys disabled
+            runSqlScript($pdo, __DIR__ . '/schema.sql');
 
-            // Run Seed
-            $seedSql = file_get_contents(__DIR__ . '/seed.sql');
-            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
-            $pdo->exec($seedSql);
+            // Run Seed statement-by-statement with foreign keys disabled
+            runSqlScript($pdo, __DIR__ . '/seed.sql');
 
             // Ensure Admin Account
             $adminEmail = strtolower(trim(ADMIN_EMAIL));
@@ -169,6 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
             ");
             $stmt->execute([$adminEmail, $passHash]);
 
+            // Re-enable foreign key checks only after entire schema and seed are committed
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
 
             $installed = true;
