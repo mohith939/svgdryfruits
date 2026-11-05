@@ -1,0 +1,9 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/sites/29a/a/a6fe9510b6/balaji/SVG/
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -rf * $DEPLOYPATH
+    - /bin/cp -rf .htaccess $DEPLOYPATH || true
+    - /bin/mkdir -p $DEPLOYPATH/uploads
+    - /bin/chmod -R 755 $DEPLOYPATH/uploads
