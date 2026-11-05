@@ -127,7 +127,7 @@ require __DIR__ . '/layouts/header.php';
                 </span>
               </div>
               <p style="margin:0; font-size:13px; color:var(--muted);">
-                <?= $itemsCount ?> items &bull; Total: <strong style="color:var(--pine);"><?= Helpers::formatPaise((int)$o['total_amount_paise']) ?></strong>
+                <?= $itemsCount ?> items &bull; Total: <strong style="color:var(--pine);"><?= Helpers::formatPaise((int)($o['total_paise'] ?? ($o['total_amount_paise'] ?? 0))) ?></strong>
               </p>
               <?php if (!empty($o['courier'])): ?>
                 <p style="margin:4px 0 0; font-size:12.5px; color:#073D26;">
@@ -220,17 +220,43 @@ require __DIR__ . '/layouts/header.php';
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:20px; background:#FBF9F5; border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:30px;">
         <div>
           <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; display:block; margin-bottom:6px;">Delivery To</span>
-          <strong style="color:var(--pine); font-size:14px;"><?= htmlspecialchars($order['customer_name'] ?? 'Customer') ?></strong>
-          <span style="display:block; font-size:13px; color:var(--muted); margin-top:2px;">Phone: +<?= htmlspecialchars($order['customer_phone'] ?? '') ?></span>
+          <strong style="color:var(--pine); font-size:15px;"><?= htmlspecialchars($order['customer_name'] ?? 'Customer') ?></strong>
+          <?php 
+            $rawPhone = (string)($order['customer_phone'] ?? '');
+            $cleanDigits = preg_replace('/\D/', '', $rawPhone);
+            if (strlen($cleanDigits) === 10) {
+              $formattedPhone = '+91 ' . $cleanDigits;
+            } elseif (str_starts_with($rawPhone, '+')) {
+              $formattedPhone = $rawPhone;
+            } elseif (strlen($cleanDigits) > 10) {
+              $formattedPhone = '+' . $cleanDigits;
+            } else {
+              $formattedPhone = '+91 ' . $cleanDigits;
+            }
+          ?>
+          <span style="display:block; font-size:13px; color:var(--muted); margin-top:2px;">Phone: <?= htmlspecialchars($formattedPhone) ?></span>
           <?php if (!empty($order['customer_email'])): ?>
             <span style="display:block; font-size:13px; color:var(--muted);"><?= htmlspecialchars($order['customer_email']) ?></span>
           <?php endif; ?>
         </div>
         <div>
           <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; display:block; margin-bottom:6px;">Shipping Address</span>
-          <span style="font-size:13px; color:var(--ink); line-height:1.5;">
-            <?= htmlspecialchars($addr['address'] ?? ($addr['line1'] ?? '')) ?><br>
-            <?= htmlspecialchars($addr['city'] ?? '') ?>, <?= htmlspecialchars($addr['state'] ?? '') ?> - <?= htmlspecialchars($addr['pincode'] ?? ($addr['postal_code'] ?? '')) ?>
+          <span style="font-size:13.5px; color:var(--ink); line-height:1.5;">
+            <?php 
+              $street = $addr['street'] ?? ($addr['line1'] ?? ($addr['address'] ?? ''));
+              $landmark = $addr['landmark'] ?? '';
+              $city = $addr['city'] ?? '';
+              $state = $addr['state'] ?? '';
+              $pincode = $addr['pincode'] ?? ($addr['postal_code'] ?? '');
+              $cityState = trim(($city ? $city : '') . ($state ? ', ' . $state : ''), ', ');
+            ?>
+            <?php if (!empty($street)): ?>
+              <?= htmlspecialchars($street) ?><br>
+            <?php endif; ?>
+            <?php if (!empty($landmark)): ?>
+              Landmark: <?= htmlspecialchars($landmark) ?><br>
+            <?php endif; ?>
+            <?= htmlspecialchars($cityState) ?><?= !empty($pincode) ? ' – ' . htmlspecialchars((string)$pincode) : '' ?>
           </span>
         </div>
       </div>
@@ -247,25 +273,25 @@ require __DIR__ . '/layouts/header.php';
       </div>
 
       <!-- Order Pricing Summary -->
-      <div style="display:flex; justify-content:flex-end; font-size:14px; line-height:1.8;">
-        <div style="width:240px;">
-          <div style="display:flex; justify-content:space-between;">
+      <div style="display:flex; justify-content:flex-end; font-size:14px; line-height:1.8; margin-top:10px;">
+        <div style="width:260px; max-width:100%;">
+          <div style="display:flex; justify-content:space-between; padding:3px 0;">
             <span style="color:var(--muted);">Subtotal:</span>
             <span><?= Helpers::formatPaise((int)($order['subtotal_paise'] ?? 0)) ?></span>
           </div>
           <?php if (!empty($order['discount_paise'])): ?>
-            <div style="display:flex; justify-content:space-between; color:#137333;">
+            <div style="display:flex; justify-content:space-between; color:#137333; padding:3px 0;">
               <span>Discount:</span>
               <span>-<?= Helpers::formatPaise((int)$order['discount_paise']) ?></span>
             </div>
           <?php endif; ?>
-          <div style="display:flex; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; padding:3px 0;">
             <span style="color:var(--muted);">Shipping:</span>
             <span><?= (int)($order['shipping_paise'] ?? 0) === 0 ? 'FREE' : Helpers::formatPaise((int)$order['shipping_paise']) ?></span>
           </div>
-          <div style="display:flex; justify-content:space-between; border-top:1.5px solid var(--line); padding-top:6px; margin-top:6px; font-weight:800; font-size:16px; color:var(--pine);">
+          <div style="display:flex; justify-content:space-between; border-top:1.5px solid var(--line); padding-top:8px; margin-top:6px; font-weight:800; font-size:17px; color:var(--pine);">
             <span>Total:</span>
-            <span><?= Helpers::formatPaise((int)($order['total_amount_paise'] ?? 0)) ?></span>
+            <span><?= Helpers::formatPaise((int)($order['total_paise'] ?? ($order['total_amount_paise'] ?? 0))) ?></span>
           </div>
         </div>
       </div>
