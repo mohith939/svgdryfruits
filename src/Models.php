@@ -287,7 +287,7 @@ class Models {
                 'contact_phone' => WHATSAPP_NUMBER,
                 'contact_email' => CONTACT_EMAIL,
                 'whatsapp_number' => WHATSAPP_NUMBER,
-                'store_address' => 'SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India',
+                'store_address' => "SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India\nSVG Dry Fruits, Specialist in Premium Dry Fruits, Kakinada, Telangana, India",
             ];
         }
 
@@ -298,7 +298,7 @@ class Models {
             'contact_phone' => !empty($row['contact_phone']) ? $row['contact_phone'] : WHATSAPP_NUMBER,
             'contact_email' => !empty($row['contact_email']) ? $row['contact_email'] : CONTACT_EMAIL,
             'whatsapp_number' => !empty($row['whatsapp_number']) ? $row['whatsapp_number'] : WHATSAPP_NUMBER,
-            'store_address' => !empty($row['store_address']) ? $row['store_address'] : 'SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India',
+            'store_address' => !empty($row['store_address']) ? $row['store_address'] : "SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India\nSVG Dry Fruits, Specialist in Premium Dry Fruits, Kakinada, Telangana, India",
         ];
     }
 

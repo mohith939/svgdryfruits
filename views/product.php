@@ -26,18 +26,38 @@ $firstVar = !empty($variants) ? $variants[0] : null;
 $pageTitle = $product['name'] . ' (Premium Grade) — SVG Dry Fruits';
 $activePage = 'shop';
 
-// Image galleries
-$defaultImg = !empty($product['image_url']) ? Helpers::asset($product['image_url']) : Helpers::asset('pdp-hero-almonds.jpg');
-$galleryImages = [
-    $defaultImg,
-    Helpers::asset('pdp-thumb-1.jpg'),
-    Helpers::asset('pdp-thumb-2.jpg'),
-    Helpers::asset('pdp-thumb-3.jpg'),
-];
+// Image galleries: Only display real images that were added for this product (up to 4)
+$galleryImages = [];
+if (!empty($product['image_url'])) {
+    $galleryImages[] = Helpers::asset($product['image_url']);
+}
+
+if (!empty($product['images'])) {
+    $rawImages = $product['images'];
+    $extraImages = is_array($rawImages) ? $rawImages : json_decode((string)$rawImages, true);
+    if (is_array($extraImages)) {
+        foreach ($extraImages as $img) {
+            $cleaned = trim((string)$img);
+            if ($cleaned !== '') {
+                $assetImg = Helpers::asset($cleaned);
+                if (!in_array($assetImg, $galleryImages, true)) {
+                    $galleryImages[] = $assetImg;
+                }
+            }
+        }
+    }
+}
+
+// Fallback only if product has NO image at all
+if (empty($galleryImages)) {
+    $galleryImages[] = Helpers::asset('pdp-hero-almonds.jpg');
+}
+$galleryImages = array_slice($galleryImages, 0, 4);
+$defaultImg = $galleryImages[0];
 
 $pricePaise = $firstVar ? (int)$firstVar['price_paise'] : 129000;
-$comparePaise = ($firstVar && !empty($firstVar['compare_price_paise'])) ? (int)$firstVar['compare_price_paise'] : (int)round($pricePaise * 1.15);
-$discountPercent = $comparePaise > $pricePaise ? (int)round((($comparePaise - $pricePaise) / $comparePaise) * 100) : 13;
+$comparePaise = ($firstVar && !empty($firstVar['compare_price_paise'])) ? (int)$firstVar['compare_price_paise'] : 0;
+$discountPercent = ($comparePaise > $pricePaise) ? (int)round((($comparePaise - $pricePaise) / $comparePaise) * 100) : 0;
 
 $badgeText = ["PREMIUM", "SELECTED", strtoupper(explode(' ', $product['name'])[0] ?? 'GRADE')];
 
@@ -68,7 +88,8 @@ require __DIR__ . '/layouts/header.php';
   <section class="pdp-v2-hero">
     <div class="pdp-v2-container pdp-v2-hero-grid">
       <!-- Left Column: Vertical Thumbnails + Main Image -->
-      <div class="pdp-v2-gallery">
+      <div class="pdp-v2-gallery" style="<?= count($galleryImages) <= 1 ? 'grid-template-columns: 1fr;' : '' ?>">
+        <?php if (count($galleryImages) > 1): ?>
         <div class="pdp-v2-thumbs-col">
           <button type="button" class="pdp-v2-thumb-arrow" aria-label="Previous thumbnail" onclick="cyclePdpThumb(-1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -93,6 +114,7 @@ require __DIR__ . '/layouts/header.php';
             </svg>
           </button>
         </div>
+        <?php endif; ?>
 
         <!-- Main Hero Photo with circular badge overlay -->
         <div class="pdp-v2-main-image-wrap">
@@ -448,6 +470,20 @@ function selectPdpVariant(btn) {
   pdpCurrentQty = 1;
   var qtyDisplay = document.getElementById('pdp-qty-display');
   if (qtyDisplay) qtyDisplay.textContent = '1';
+
+  // Live recalculation of discount percentage
+  var curPrice = parseInt(btn.getAttribute('data-price-paise') || '0', 10);
+  var cmpPrice = parseInt(btn.getAttribute('data-compare-paise') || '0', 10);
+  var savePill = document.getElementById('pdp-save-pill');
+  if (savePill) {
+    if (cmpPrice > curPrice && curPrice > 0) {
+      var pct = Math.round(((cmpPrice - curPrice) / cmpPrice) * 100);
+      savePill.textContent = 'Save ' + pct + '%';
+      savePill.style.display = 'inline-block';
+    } else {
+      savePill.style.display = 'none';
+    }
+  }
 }
 
 function adjustPdpQty(diff) {
