@@ -171,7 +171,9 @@ class Models {
                     target_states TEXT DEFAULT 'ALL',
                     description TEXT,
                     estimated_days TEXT,
-                    rate_paise INTEGER NOT NULL DEFAULT 4900,
+                    rate_paise INTEGER NOT NULL DEFAULT 9000,
+                    rate_1_2kg_paise INTEGER NOT NULL DEFAULT 13000,
+                    rate_2kg_above_paise INTEGER NOT NULL DEFAULT 15000,
                     free_above_paise INTEGER,
                     min_subtotal_paise INTEGER NOT NULL DEFAULT 0,
                     active INTEGER NOT NULL DEFAULT 1,
@@ -182,6 +184,12 @@ class Models {
             try {
                 $pdo->exec("ALTER TABLE shipping_options ADD COLUMN target_states TEXT DEFAULT 'ALL'");
             } catch (Throwable $e) {}
+            try {
+                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN rate_1_2kg_paise INTEGER NOT NULL DEFAULT 13000");
+            } catch (Throwable $e) {}
+            try {
+                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN rate_2kg_above_paise INTEGER NOT NULL DEFAULT 15000");
+            } catch (Throwable $e) {}
         } else {
             $pdo->exec("
                 CREATE TABLE IF NOT EXISTS `shipping_options` (
@@ -190,7 +198,9 @@ class Models {
                     `target_states` TEXT NULL,
                     `description` TEXT NULL,
                     `estimated_days` VARCHAR(64) NULL,
-                    `rate_paise` INT NOT NULL DEFAULT 4900,
+                    `rate_paise` INT NOT NULL DEFAULT 9000,
+                    `rate_1_2kg_paise` INT NOT NULL DEFAULT 13000,
+                    `rate_2kg_above_paise` INT NOT NULL DEFAULT 15000,
                     `free_above_paise` INT NULL DEFAULT 99900,
                     `min_subtotal_paise` INT NOT NULL DEFAULT 0,
                     `active` TINYINT(1) NOT NULL DEFAULT 1,
@@ -202,17 +212,23 @@ class Models {
             try {
                 $pdo->exec("ALTER TABLE shipping_options ADD COLUMN target_states TEXT NULL AFTER name");
             } catch (Throwable $e) {}
+            try {
+                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN rate_1_2kg_paise INT NOT NULL DEFAULT 13000 AFTER rate_paise");
+            } catch (Throwable $e) {}
+            try {
+                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN rate_2kg_above_paise INT NOT NULL DEFAULT 15000 AFTER rate_1_2kg_paise");
+            } catch (Throwable $e) {}
         }
 
         // Seed default options if empty
         $count = (int)$pdo->query("SELECT COUNT(*) FROM shipping_options")->fetchColumn();
         if ($count === 0) {
             $pdo->exec("
-                INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
+                INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, rate_1_2kg_paise, rate_2kg_above_paise, free_above_paise, min_subtotal_paise, active, sort_order)
                 VALUES 
-                ('ship_ts_ap', 'Telangana & Andhra Pradesh', 'Telangana, Andhra Pradesh', 'Direct surface express dispatch across Telangana & Andhra Pradesh.', '1 – 3 Business Days', 4900, 99900, 0, 1, 1),
-                ('ship_south', 'South India (KA, TN, KL)', 'Karnataka, Tamil Nadu, Kerala', 'Regional dispatch across neighboring South Indian states.', '2 – 4 Business Days', 6900, 149900, 0, 1, 2),
-                ('ship_roi', 'Rest of India', 'ALL', 'National express courier across all other Indian states & union territories.', '3 – 5 Business Days', 8900, 199900, 0, 1, 3)
+                ('ship_ts_ap', 'Telangana & Andhra Pradesh', 'Telangana, Andhra Pradesh', 'Direct surface express dispatch across Telangana & Andhra Pradesh.', '1 – 3 Business Days', 9000, 13000, 15000, 99900, 0, 1, 1),
+                ('ship_south', 'South India (KA, TN, KL)', 'Karnataka, Tamil Nadu, Kerala', 'Regional dispatch across neighboring South Indian states.', '2 – 4 Business Days', 10000, 15000, 21000, 149900, 0, 1, 2),
+                ('ship_roi', 'Rest of India', 'ALL', 'National express courier across all other Indian states & union territories.', '3 – 5 Business Days', 10000, 15000, 21000, 199900, 0, 1, 3)
             ");
         }
 
@@ -359,7 +375,9 @@ class Models {
         $targetStates = trim($data['target_states'] ?? 'ALL');
         $description = trim($data['description'] ?? '');
         $estimatedDays = trim($data['estimated_days'] ?? '');
-        $ratePaise = (int)($data['rate_paise'] ?? 4900);
+        $ratePaise = (int)($data['rate_paise'] ?? 9000);
+        $rate12Paise = isset($data['rate_1_2kg_paise']) ? (int)$data['rate_1_2kg_paise'] : (int)round($ratePaise * 1.4);
+        $rate2kgAbovePaise = isset($data['rate_2kg_above_paise']) ? (int)$data['rate_2kg_above_paise'] : (int)round($ratePaise * 1.65);
         $freeAbovePaise = isset($data['free_above_paise']) && $data['free_above_paise'] !== '' ? (int)$data['free_above_paise'] : null;
         $minSubtotalPaise = (int)($data['min_subtotal_paise'] ?? 0);
         $active = !empty($data['active']) ? 1 : 0;
@@ -369,35 +387,57 @@ class Models {
         if ($exists) {
             $stmt = $pdo->prepare("
                 UPDATE shipping_options 
-                SET name = ?, target_states = ?, description = ?, estimated_days = ?, rate_paise = ?, free_above_paise = ?, min_subtotal_paise = ?, active = ?, sort_order = ?
+                SET name = ?, target_states = ?, description = ?, estimated_days = ?, rate_paise = ?, rate_1_2kg_paise = ?, rate_2kg_above_paise = ?, free_above_paise = ?, min_subtotal_paise = ?, active = ?, sort_order = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$name, $targetStates, $description, $estimatedDays, $ratePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder, $id]);
+            $stmt->execute([$name, $targetStates, $description, $estimatedDays, $ratePaise, $rate12Paise, $rate2kgAbovePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder, $id]);
         } else {
             $stmt = $pdo->prepare("
-                INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, rate_1_2kg_paise, rate_2kg_above_paise, free_above_paise, min_subtotal_paise, active, sort_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$id, $name, $targetStates, $description, $estimatedDays, $ratePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder]);
+            $stmt->execute([$id, $name, $targetStates, $description, $estimatedDays, $ratePaise, $rate12Paise, $rate2kgAbovePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder]);
         }
     }
 
     /**
-     * Resolves the exact shipping option & rate based on the customer's delivery state
+     * Resolves the exact shipping option & tiered rate based on customer's delivery state & cart weight
      */
-    public static function getShippingOptionForState(?string $state, int $subtotalPaise = 0): array {
+    public static function getShippingOptionForState(?string $state, int $subtotalPaise = 0, int $weightGrams = 0): array {
         self::ensureSchema();
         $options = self::getShippingOptions(true);
         if (empty($options)) {
+            $cleanState = strtolower(trim((string)$state));
+            $isHome = ($cleanState === 'telangana' || $cleanState === 'andhra pradesh');
+            $baseRate = $isHome ? 9000 : 10000;
+            $rate12 = $isHome ? 13000 : 15000;
+            $rate2p = $isHome ? 15000 : 21000;
+            $eff = $baseRate;
+            $tier = 'below_1kg';
+            $tierLabel = 'Below 1 kg';
+            if ($weightGrams >= 2000) {
+                $eff = $rate2p;
+                $tier = '2kg_above';
+                $tierLabel = '2 kg & Above';
+            } elseif ($weightGrams >= 1000) {
+                $eff = $rate12;
+                $tier = '1_2kg';
+                $tierLabel = '1 kg – 2 kg';
+            }
             return [
                 'id' => 'ship_default',
-                'name' => 'Standard Express Delivery',
-                'target_states' => 'ALL',
-                'rate_paise' => 4900,
-                'free_above_paise' => 99900,
-                'effective_paise' => ($subtotalPaise >= 99900) ? 0 : 4900,
-                'is_free' => ($subtotalPaise >= 99900),
-                'estimated_days' => '2 – 4 Days'
+                'name' => $isHome ? 'Telangana & Andhra Pradesh Direct Delivery' : 'Standard Express Delivery',
+                'target_states' => $isHome ? 'Telangana, Andhra Pradesh' : 'ALL',
+                'rate_paise' => $baseRate,
+                'rate_1_2kg_paise' => $rate12,
+                'rate_2kg_above_paise' => $rate2p,
+                'free_above_paise' => null,
+                'effective_paise' => $eff,
+                'is_free' => false,
+                'weight_grams' => $weightGrams,
+                'active_tier' => $tier,
+                'active_tier_label' => $tierLabel,
+                'estimated_days' => $isHome ? '1 – 3 Days' : '3 – 5 Days'
             ];
         }
 
@@ -426,9 +466,31 @@ class Models {
         }
 
         $chosen = $matched ?: ($fallbackAll ?: $options[0]);
+
+        // Weight-based rate resolution:
+        // Tier 1: Below 1kg (< 1000g) => rate_paise
+        // Tier 2: 1kg - 2kg (1000g - 1999g) => rate_1_2kg_paise
+        // Tier 3: 2kg & Above (>= 2000g) => rate_2kg_above_paise
+        $tier = 'below_1kg';
+        $tierLabel = 'Below 1 kg';
+        $tierRate = (int)($chosen['rate_paise'] ?? 9000);
+
+        if ($weightGrams >= 2000) {
+            $tier = '2kg_above';
+            $tierLabel = '2 kg & Above';
+            $tierRate = !empty($chosen['rate_2kg_above_paise']) ? (int)$chosen['rate_2kg_above_paise'] : $tierRate;
+        } elseif ($weightGrams >= 1000) {
+            $tier = '1_2kg';
+            $tierLabel = '1 kg – 2 kg';
+            $tierRate = !empty($chosen['rate_1_2kg_paise']) ? (int)$chosen['rate_1_2kg_paise'] : $tierRate;
+        }
+
         $isFree = ($chosen['free_above_paise'] !== null && $subtotalPaise >= (int)$chosen['free_above_paise']);
-        $chosen['effective_paise'] = $isFree ? 0 : (int)$chosen['rate_paise'];
+        $chosen['effective_paise'] = $isFree ? 0 : $tierRate;
         $chosen['is_free'] = $isFree;
+        $chosen['weight_grams'] = $weightGrams;
+        $chosen['active_tier'] = $tier;
+        $chosen['active_tier_label'] = $tierLabel;
         return $chosen;
     }
 

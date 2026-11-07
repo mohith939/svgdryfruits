@@ -66,7 +66,7 @@ foreach ($cart['items'] as $item) {
 }
 
 // Resolve state-based shipping pricing dynamically from database rules
-$shippingOpt = Models::getShippingOptionForState($state, $cart['subtotal_paise']);
+$shippingOpt = Models::getShippingOptionForState($state, $cart['subtotal_paise'], (int)($cart['total_weight_grams'] ?? 0));
 $shippingPaise = (int)$shippingOpt['effective_paise'];
 if (!empty($cart['applied_coupon']) && $cart['applied_coupon']['type'] === 'free_shipping') {
     $shippingPaise = 0;

@@ -23,13 +23,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($targetStates === '') $targetStates = 'ALL';
         $description = trim($_POST['description'] ?? '');
         $estimatedDays = trim($_POST['estimated_days'] ?? '');
-        $rateINR = (float)($_POST['rate_inr'] ?? 49);
+        $rateINR = (float)($_POST['rate_inr'] ?? 90);
+        $rate12INR = (float)($_POST['rate_1_2kg_inr'] ?? 130);
+        $rate2kgAboveINR = (float)($_POST['rate_2kg_above_inr'] ?? 150);
         $freeINR = trim($_POST['free_above_inr'] ?? '');
         $minINR = (float)($_POST['min_subtotal_inr'] ?? 0);
         $sortOrder = (int)($_POST['sort_order'] ?? 0);
         $active = isset($_POST['active']) ? 1 : 0;
 
         $ratePaise = (int)round($rateINR * 100);
+        $rate12Paise = (int)round($rate12INR * 100);
+        $rate2kgAbovePaise = (int)round($rate2kgAboveINR * 100);
         $freePaise = ($freeINR !== '') ? (int)round((float)$freeINR * 100) : null;
         $minPaise = (int)round($minINR * 100);
 
@@ -40,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'description' => $description,
                 'estimated_days' => $estimatedDays,
                 'rate_paise' => $ratePaise,
+                'rate_1_2kg_paise' => $rate12Paise,
+                'rate_2kg_above_paise' => $rate2kgAbovePaise,
                 'free_above_paise' => $freePaise,
                 'min_subtotal_paise' => $minPaise,
                 'sort_order' => $sortOrder,
@@ -284,20 +290,57 @@ require __DIR__ . '/../layouts/admin_layout.php';
         ></textarea>
       </div>
 
-      <div class="form-group-row three-col" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
-        <div class="form-group">
-          <label for="form_rate">Base Shipping Fee (₹) *</label>
-          <input
-            id="form_rate"
-            type="number"
-            min="0"
-            step="1"
-            name="rate_inr"
-            required
-            placeholder="49"
-          >
-        </div>
+      <!-- Weight-Based Delivery Tiers Section -->
+      <div style="background: #F8FBF9; border: 1.5px solid #073D26; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <h4 style="margin: 0 0 10px 0; color: #073D26; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+          ⚖️ Weight-Based Pricing Tiers (Per Order)
+        </h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
+          <div class="form-group">
+            <label for="form_rate" style="font-weight: 600;">Below 1 kg Fee (₹) *</label>
+            <input
+              id="form_rate"
+              type="number"
+              min="0"
+              step="1"
+              name="rate_inr"
+              required
+              placeholder="90"
+            >
+            <span style="font-size: 11px; color: #666;">Cart weight &lt; 1000g</span>
+          </div>
 
+          <div class="form-group">
+            <label for="form_rate_1_2kg" style="font-weight: 600;">1 kg – 2 kg Fee (₹) *</label>
+            <input
+              id="form_rate_1_2kg"
+              type="number"
+              min="0"
+              step="1"
+              name="rate_1_2kg_inr"
+              required
+              placeholder="130"
+            >
+            <span style="font-size: 11px; color: #666;">Cart weight 1000g – 1999g</span>
+          </div>
+
+          <div class="form-group">
+            <label for="form_rate_2kg_above" style="font-weight: 600;">2 kg &amp; Above Fee (₹) *</label>
+            <input
+              id="form_rate_2kg_above"
+              type="number"
+              min="0"
+              step="1"
+              name="rate_2kg_above_inr"
+              required
+              placeholder="150"
+            >
+            <span style="font-size: 11px; color: #666;">Cart weight &ge; 2000g</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group-row three-col" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
         <div class="form-group">
           <label for="form_free">Free Above Cart Value (₹, optional)</label>
           <input
@@ -435,7 +478,11 @@ require __DIR__ . '/../layouts/admin_layout.php';
                   </span>
                 </td>
                 <td>
-                  <strong style="font-size: 15px;"><?= Helpers::formatPaise($o['rate_paise']) ?></strong>
+                  <div style="font-size: 13px; line-height: 1.45;">
+                    <div><span style="color:#777; font-size: 11.5px;">&lt; 1 kg:</span> <strong style="color: #073D26;"><?= Helpers::formatPaise($o['rate_paise']) ?></strong></div>
+                    <div><span style="color:#777; font-size: 11.5px;">1 – 2 kg:</span> <strong style="color: #073D26;"><?= Helpers::formatPaise((int)($o['rate_1_2kg_paise'] ?? round($o['rate_paise'] * 1.4))) ?></strong></div>
+                    <div><span style="color:#777; font-size: 11.5px;">&ge; 2 kg:</span> <strong style="color: #073D26;"><?= Helpers::formatPaise((int)($o['rate_2kg_above_paise'] ?? round($o['rate_paise'] * 1.65))) ?></strong></div>
+                  </div>
                 </td>
                 <td>
                   <?php if ($freeInr !== null): ?>
@@ -513,7 +560,9 @@ require __DIR__ . '/../layouts/admin_layout.php';
       document.getElementById('form_states').value = 'ALL';
       document.getElementById('form_days').value = '2 – 3 Business Days';
       document.getElementById('form_desc').value = '';
-      document.getElementById('form_rate').value = '49';
+      document.getElementById('form_rate').value = '90';
+      document.getElementById('form_rate_1_2kg').value = '130';
+      document.getElementById('form_rate_2kg_above').value = '150';
       document.getElementById('form_free').value = '999';
       document.getElementById('form_min').value = '0';
       document.getElementById('form_sort').value = '1';
@@ -533,6 +582,8 @@ require __DIR__ . '/../layouts/admin_layout.php';
     document.getElementById('form_days').value = opt.estimated_days || '';
     document.getElementById('form_desc').value = opt.description || '';
     document.getElementById('form_rate').value = Math.round(opt.rate_paise / 100);
+    document.getElementById('form_rate_1_2kg').value = opt.rate_1_2kg_paise ? Math.round(opt.rate_1_2kg_paise / 100) : Math.round(opt.rate_paise * 1.4 / 100);
+    document.getElementById('form_rate_2kg_above').value = opt.rate_2kg_above_paise ? Math.round(opt.rate_2kg_above_paise / 100) : Math.round(opt.rate_paise * 1.65 / 100);
     document.getElementById('form_free').value = opt.free_above_paise ? Math.round(opt.free_above_paise / 100) : '';
     document.getElementById('form_min').value = opt.min_subtotal_paise ? Math.round(opt.min_subtotal_paise / 100) : '0';
     document.getElementById('form_sort').value = opt.sort_order || 1;

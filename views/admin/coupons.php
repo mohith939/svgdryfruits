@@ -17,7 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Helpers::requireCsrf();
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'create') {
+    if ($action === 'create' || $action === 'update') {
+        $id = trim($_POST['id'] ?? '');
         $code = strtoupper(trim($_POST['code'] ?? ''));
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
@@ -35,13 +36,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($code) {
-            $id = 'cpn_' . bin2hex(random_bytes(8));
-            $stmt = $pdo->prepare("
-                INSERT INTO coupons (id, code, name, description, type, value, min_subtotal_paise, active, times_used)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-            ");
-            $stmt->execute([$id, $code, $name ?: null, $description ?: null, $type, $numVal, $minPaise, $active]);
-            Helpers::setFlash('success', "Coupon {$code} created successfully!");
+            if ($action === 'update' && $id) {
+                $stmt = $pdo->prepare("
+                    UPDATE coupons 
+                    SET code = ?, name = ?, description = ?, type = ?, value = ?, min_subtotal_paise = ?, active = ?
+                    WHERE id = ?
+                ");
+                $stmt->execute([$code, $name ?: null, $description ?: null, $type, $numVal, $minPaise, $active, $id]);
+                Helpers::setFlash('success', "Coupon {$code} updated successfully!");
+            } else {
+                $newId = 'cpn_' . bin2hex(random_bytes(8));
+                $stmt = $pdo->prepare("
+                    INSERT INTO coupons (id, code, name, description, type, value, min_subtotal_paise, active, times_used)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+                ");
+                $stmt->execute([$newId, $code, $name ?: null, $description ?: null, $type, $numVal, $minPaise, $active]);
+                Helpers::setFlash('success', "Coupon {$code} created successfully!");
+            }
         } else {
             Helpers::setFlash('error', "Coupon code is required.");
         }
@@ -109,7 +120,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
     <div class="admin-v3-header-right">
       <button
         type="button"
-        onclick="document.getElementById('inlineCouponForm').style.display='block'"
+        onclick="openCouponModal('create')"
         class="admin-v3-btn-create-order"
       >
         <span aria-hidden="true" style="font-size: 16px; font-weight: 700;">+</span> Create Coupon
@@ -238,10 +249,10 @@ require __DIR__ . '/../layouts/admin_layout.php';
   <div id="inlineCouponForm" class="coupon-v3-inline-create-box" style="display: none; background: #fff; border: 1px solid #D6C8B5; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #ECE7DE; padding-bottom: 14px;">
       <div>
-        <h2 style="font-family: 'Playfair Display', serif; font-size: 20px; color: #143D24; margin: 0; font-weight: 600;">
+        <h2 id="couponFormHeading" style="font-family: 'Playfair Display', serif; font-size: 20px; color: #143D24; margin: 0; font-weight: 600;">
           Create New Discount Coupon
         </h2>
-        <p style="font-size: 13px; color: #6B6255; margin: 4px 0 0;">
+        <p id="couponFormSubtitle" style="font-size: 13px; color: #6B6255; margin: 4px 0 0;">
           Fill in the coupon details below to make it available for customer redemptions immediately.
         </p>
       </div>
@@ -254,15 +265,17 @@ require __DIR__ . '/../layouts/admin_layout.php';
       </button>
     </div>
 
-    <form method="POST" class="coupon-v3-modal-form">
+    <form method="POST" class="coupon-v3-modal-form" id="couponActualForm">
       <?= Helpers::csrfField() ?>
-      <input type="hidden" name="action" value="create">
+      <input type="hidden" name="action" id="coupon_form_action" value="create">
+      <input type="hidden" name="id" id="coupon_form_id" value="">
 
       <div class="coupon-v3-modal-grid">
         <div class="coupon-v3-field">
-          <label class="coupon-v3-label">Coupon Code *</label>
+          <label class="coupon-v3-label" for="coupon_code">Coupon Code *</label>
           <input
             type="text"
+            id="coupon_code"
             name="code"
             required
             placeholder="e.g. SVGDIWALI"
@@ -272,9 +285,10 @@ require __DIR__ . '/../layouts/admin_layout.php';
         </div>
 
         <div class="coupon-v3-field">
-          <label class="coupon-v3-label">Coupon Name / Campaign</label>
+          <label class="coupon-v3-label" for="coupon_name">Coupon Name / Campaign</label>
           <input
             type="text"
+            id="coupon_name"
             name="name"
             placeholder="e.g. Diwali Festive Offer"
             class="coupon-v3-input"
@@ -283,9 +297,10 @@ require __DIR__ . '/../layouts/admin_layout.php';
       </div>
 
       <div class="coupon-v3-field" style="margin-top: 12px;">
-        <label class="coupon-v3-label">Description (Shown to shoppers in cart)</label>
+        <label class="coupon-v3-label" for="coupon_description">Description (Shown to shoppers in cart)</label>
         <input
           type="text"
+          id="coupon_description"
           name="description"
           placeholder="e.g. Flat 15% discount on all orders above ₹500"
           class="coupon-v3-input"
@@ -294,32 +309,42 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
       <div class="coupon-v3-modal-grid" style="margin-top: 12px;">
         <div class="coupon-v3-field">
-          <label class="coupon-v3-label">Discount Type *</label>
-          <select name="type" class="coupon-v3-input">
+          <label class="coupon-v3-label" for="coupon_type">Discount Type *</label>
+          <select id="coupon_type" name="type" class="coupon-v3-input" onchange="handleCouponTypeChange()">
             <option value="percentage">Percentage (%)</option>
             <option value="fixed">Fixed Amount (₹)</option>
             <option value="free_shipping">Free Shipping</option>
           </select>
         </div>
 
-        <div class="coupon-v3-field">
-          <label class="coupon-v3-label">Discount Value *</label>
+        <div class="coupon-v3-field" id="coupon_value_wrap">
+          <label class="coupon-v3-label" id="coupon_value_label" for="coupon_value">Discount Percentage (%) *</label>
           <input
             type="number"
+            id="coupon_value"
             name="value"
-            min="0"
+            min="1"
+            max="100"
             value="10"
             required
             class="coupon-v3-input"
           >
+          <span id="coupon_value_hint" style="font-size: 11px; color: #7D7567; margin-top: 4px; display: block;">
+            Enter whole percentage between 1% and 100%
+          </span>
         </div>
+      </div>
+
+      <div id="coupon_free_shipping_notice" style="display: none; margin-top: 12px; padding: 12px 16px; border-radius: 6px; background: #EAF5EC; border: 1px solid #C7E5CF; color: #137333; font-size: 13px; font-weight: 600;">
+        🚚 <strong>Free Delivery Offer:</strong> This coupon will grant 100% Free Shipping to qualifying orders at checkout. No discount amount input is needed!
       </div>
 
       <div class="coupon-v3-modal-grid" style="margin-top: 12px;">
         <div class="coupon-v3-field">
-          <label class="coupon-v3-label">Minimum Order Value (₹) *</label>
+          <label class="coupon-v3-label" for="coupon_min_subtotal">Minimum Order Value (₹) *</label>
           <input
             type="number"
+            id="coupon_min_subtotal"
             name="min_subtotal_inr"
             min="0"
             value="500"
@@ -330,7 +355,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
         <div class="coupon-v3-field" style="display: flex; align-items: center; margin-top: 24px;">
           <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-            <input type="checkbox" name="active" value="1" checked class="admin-v3-checkbox">
+            <input type="checkbox" id="coupon_active" name="active" value="1" checked class="admin-v3-checkbox">
             <span style="font-size: 13.5px; font-weight: 500; color: #1E2520;">
               Active and available for checkout
             </span>
@@ -346,8 +371,8 @@ require __DIR__ . '/../layouts/admin_layout.php';
         >
           Cancel
         </button>
-        <button type="submit" class="coupon-v3-modal-submit">
-          Create Coupon
+        <button type="submit" id="coupon_form_submit" class="coupon-v3-modal-submit">
+          Save Coupon
         </button>
       </div>
     </form>
@@ -449,14 +474,24 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
                 <!-- Actions -->
                 <td style="text-align: right; padding-right: 24px;">
-                  <form method="POST" style="display:inline;" onsubmit="return confirm('Delete coupon <?= htmlspecialchars(addslashes($c['code'])) ?>?');">
-                    <?= Helpers::csrfField() ?>
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                    <button type="submit" class="admin-remove-btn">
-                      Delete
+                  <div style="display: inline-flex; gap: 8px; align-items: center;">
+                    <button
+                      type="button"
+                      class="btn-action"
+                      onclick='editCoupon(<?= json_encode($c) ?>)'
+                      style="padding: 5px 10px; font-size: 12px; background: #FAF7F2; border: 1px solid #DFD7CA; border-radius: 4px; cursor: pointer;"
+                    >
+                      ✏️ Edit
                     </button>
-                  </form>
+                    <form method="POST" style="display:inline;" onsubmit="return confirm('Delete coupon <?= htmlspecialchars(addslashes($c['code'])) ?>?');">
+                      <?= Helpers::csrfField() ?>
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="id" value="<?= $c['id'] ?>">
+                      <button type="submit" class="admin-remove-btn" style="padding: 5px 10px; font-size: 12px;">
+                        Delete
+                      </button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -466,5 +501,96 @@ require __DIR__ . '/../layouts/admin_layout.php';
     </div>
   </div>
 </div>
+
+<script>
+  function handleCouponTypeChange() {
+    var type = document.getElementById('coupon_type').value;
+    var wrap = document.getElementById('coupon_value_wrap');
+    var label = document.getElementById('coupon_value_label');
+    var input = document.getElementById('coupon_value');
+    var hint = document.getElementById('coupon_value_hint');
+    var notice = document.getElementById('coupon_free_shipping_notice');
+
+    if (type === 'percentage') {
+      wrap.style.display = 'block';
+      notice.style.display = 'none';
+      label.textContent = 'Discount Percentage (%) *';
+      input.min = '1';
+      input.max = '100';
+      input.step = '1';
+      input.required = true;
+      hint.textContent = 'Enter whole percentage discount between 1% and 100%';
+    } else if (type === 'fixed') {
+      wrap.style.display = 'block';
+      notice.style.display = 'none';
+      label.textContent = 'Discount Amount (₹) *';
+      input.min = '1';
+      input.removeAttribute('max');
+      input.step = '1';
+      input.required = true;
+      hint.textContent = 'Enter flat discount in Rupees (e.g. 50 for ₹50 off)';
+    } else if (type === 'free_shipping') {
+      wrap.style.display = 'none';
+      notice.style.display = 'block';
+      input.required = false;
+      input.value = '0';
+    }
+  }
+
+  function openCouponModal(mode) {
+    var box = document.getElementById('inlineCouponForm');
+    box.style.display = 'block';
+    if (mode === 'create') {
+      document.getElementById('couponFormHeading').textContent = '+ Create New Discount Coupon';
+      document.getElementById('couponFormSubtitle').textContent = 'Fill in the coupon details below to make it available for customer redemptions immediately.';
+      document.getElementById('coupon_form_action').value = 'create';
+      document.getElementById('coupon_form_id').value = '';
+      document.getElementById('coupon_code').value = '';
+      document.getElementById('coupon_name').value = '';
+      document.getElementById('coupon_description').value = '';
+      document.getElementById('coupon_type').value = 'percentage';
+      document.getElementById('coupon_value').value = '10';
+      document.getElementById('coupon_min_subtotal').value = '500';
+      document.getElementById('coupon_active').checked = true;
+      document.getElementById('coupon_form_submit').textContent = 'Create Coupon';
+      handleCouponTypeChange();
+      box.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  function editCoupon(c) {
+    var box = document.getElementById('inlineCouponForm');
+    box.style.display = 'block';
+    document.getElementById('couponFormHeading').textContent = '✏️ Edit Coupon: ' + c.code;
+    document.getElementById('couponFormSubtitle').textContent = 'Update coupon rules, discount amount, or activation status.';
+    document.getElementById('coupon_form_action').value = 'update';
+    document.getElementById('coupon_form_id').value = c.id;
+    document.getElementById('coupon_code').value = c.code || '';
+    document.getElementById('coupon_name').value = c.name || '';
+    document.getElementById('coupon_description').value = c.description || '';
+    
+    var type = (c.type === 'flat') ? 'fixed' : (c.type || 'percentage');
+    document.getElementById('coupon_type').value = type;
+
+    var numVal = 0;
+    if (type === 'percentage') {
+      numVal = c.value || 0;
+    } else if (type === 'fixed') {
+      numVal = Math.round((c.value || 0) / 100);
+    }
+    document.getElementById('coupon_value').value = numVal;
+    document.getElementById('coupon_min_subtotal').value = Math.round((c.min_subtotal_paise || 0) / 100);
+    document.getElementById('coupon_active').checked = (c.active == 1);
+    document.getElementById('coupon_form_submit').textContent = 'Save Changes';
+
+    handleCouponTypeChange();
+    box.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Initialize form state
+  document.addEventListener('DOMContentLoaded', function() {
+    handleCouponTypeChange();
+  });
+</script>
 
 <?php require __DIR__ . '/../layouts/admin_layout_bottom.php'; ?>

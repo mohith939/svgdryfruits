@@ -168,17 +168,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
             $pdo->exec("SET NAMES utf8mb4;");
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
 
-            // Drop all tables cleanly in safe order to eliminate FK 1452 conflicts
-            $tablesToDrop = [
-                'refunds', 'combo_items', 'order_items', 'orders',
-                'variants', 'products', 'categories', 'coupons',
-                'shipping_options', 'shipping_settings', 'admins'
-            ];
-            foreach ($tablesToDrop as $t) {
-                try {
-                    $pdo->exec("DROP TABLE IF EXISTS `{$t}`");
-                } catch (Throwable $ignore) {}
-            }
+            // Non-destructive initialization: tables are created IF NOT EXISTS, preserving all existing orders, products, and customer data
+            $existingOrders = 0;
+            try {
+                $existingOrders = (int)$pdo->query("SELECT COUNT(*) FROM `orders`")->fetchColumn();
+            } catch (Throwable $ignore) {}
 
             // Run Schema statement-by-statement with foreign keys disabled
             runSqlScript($pdo, __DIR__ . '/schema.sql');

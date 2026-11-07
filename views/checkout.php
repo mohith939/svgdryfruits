@@ -69,7 +69,20 @@ require __DIR__ . '/layouts/header.php';
       </div>
 
       <div class="checkout-section-box">
-        <h2>2. Delivery address</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+          <h2 style="margin: 0;">2. Delivery address</h2>
+          <button
+            type="button"
+            id="btn-use-location"
+            onclick="autoFetchCurrentLocation()"
+            style="display: inline-flex; align-items: center; gap: 6px; background: #EAF5EC; color: #073D26; border: 1.5px solid #073D26; padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;"
+            title="Automatically detect address & state via GPS / Google Maps"
+          >
+            <span>📍</span> <span id="btn-use-location-text">Use Current Location</span>
+          </button>
+        </div>
+        <div id="location-fetch-status" style="display: none; margin-bottom: 14px; font-size: 12.5px; padding: 8px 14px; border-radius: 6px;"></div>
+
         <div class="form-group">
           <label for="street">Street address / Flat / House no <span class="req">*</span></label>
           <input id="street" name="street" required placeholder="Flat 402, Lotus Residency, MG Road" autocomplete="street-address" />
@@ -123,7 +136,7 @@ require __DIR__ . '/layouts/header.php';
         </div>
       </div>
 
-      <!-- Step 3: Automated State-Based Delivery Rate -->
+      <!-- Step 3: Automated Weight & State-Based Delivery Rate -->
       <div class="checkout-section-box shipping-method-section-box" style="margin-bottom: 24px;">
         <h2>3. Delivery &amp; Shipping</h2>
 
@@ -138,8 +151,16 @@ require __DIR__ . '/layouts/header.php';
                 <?= $shipping === 0 ? 'FREE DELIVERY' : Helpers::formatPaise($shipping) ?>
               </span>
             </div>
+            <div style="margin: 4px 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span id="shipping-weight-badge" style="font-size: 12px; background: #FAF7F2; border: 1px solid #DFD7CA; color: #5D4F3C; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                ⚖️ Bag Weight: <?= $cart['total_weight_kg'] ?? 0.5 ?> kg (<?= $cart['total_weight_grams'] ?? 500 ?>g)
+              </span>
+              <span id="shipping-tier-badge" style="font-size: 12px; background: #FAF7F2; border: 1px solid #DFD7CA; color: #073D26; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+                Tier: Below 1 kg
+              </span>
+            </div>
             <p id="shipping-rule-desc" style="margin: 4px 0 6px; font-size: 13.5px; color: #444; line-height: 1.45;">
-              Dispatched from our Hyderabad &amp; Kakinada packing facilities. Shipping is calculated automatically based on your destination state.
+              Dispatched from our Hyderabad &amp; Kakinada packing facilities. Shipping is calculated automatically based on destination state &amp; bag weight.
             </p>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
               <span id="shipping-rule-sla" style="display: inline-block; font-size: 11.5px; padding: 2px 8px; border-radius: 4px; background: #F4EFE6; color: #5D4F3C; font-weight: 600;">
@@ -222,11 +243,18 @@ require __DIR__ . '/layouts/header.php';
   </div>
 </section>
 
+<?php $googleMapsKey = config('google_maps_api_key', env('GOOGLE_MAPS_API_KEY', '')); ?>
+<?php if (!empty($googleMapsKey)): ?>
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars($googleMapsKey) ?>&libraries=places&callback=initGooglePlacesAutocomplete" async defer></script>
+<?php endif; ?>
+
 <script>
 var baseSubtotalPaise = <?= (int)$subtotal ?>;
 var discountPaise = <?= (int)$discount ?>;
 var currentShippingPaise = <?= (int)$shipping ?>;
 var shippingRules = <?= json_encode(Models::getShippingOptions(true)) ?>;
+var cartTotalWeightGrams = <?= (int)($cart['total_weight_grams'] ?? 500) ?>;
+var cartTotalWeightKg = <?= (float)($cart['total_weight_kg'] ?? 0.5) ?>;
 var currentShippingRule = null;
 
 function formatINR(paise) {
@@ -266,9 +294,14 @@ function handleStateChange(stateName) {
   var rule = resolveShippingRule(stateName);
   currentShippingRule = rule;
 
-  var ratePaise = 4900;
-  var sla = '1 – 3 Business Days';
-  var desc = 'Dispatched from our Hyderabad & Kakinada packing facilities. Shipping is calculated automatically based on your destination state.';
+  var clean = (stateName || '').toLowerCase().trim();
+  var isHome = (clean === 'telangana' || clean === 'andhra pradesh');
+
+  var baseRatePaise = isHome ? 9000 : 10000;
+  var rate12Paise = isHome ? 13000 : 15000;
+  var rate2kgAbovePaise = isHome ? 15000 : 21000;
+  var sla = isHome ? '1 – 3 Business Days' : '3 – 5 Business Days';
+  var desc = 'Dispatched from our Hyderabad & Kakinada packing facilities. Shipping is calculated automatically based on destination state & order weight.';
   var ruleName = 'Direct Delivery to ' + (stateName || 'Your State');
   var freeAbove = null;
 
@@ -277,14 +310,27 @@ function handleStateChange(stateName) {
     desc = rule.description || desc;
     ruleName = rule.name || ruleName;
     freeAbove = rule.free_above_paise ? parseInt(rule.free_above_paise, 10) : null;
-    if (freeAbove !== null && baseSubtotalPaise >= freeAbove) {
-      ratePaise = 0;
-    } else {
-      ratePaise = parseInt(rule.rate_paise, 10) || 0;
-    }
+    baseRatePaise = parseInt(rule.rate_paise, 10) || baseRatePaise;
+    rate12Paise = rule.rate_1_2kg_paise ? parseInt(rule.rate_1_2kg_paise, 10) : (isHome ? 13000 : 15000);
+    rate2kgAbovePaise = rule.rate_2kg_above_paise ? parseInt(rule.rate_2kg_above_paise, 10) : (isHome ? 15000 : 21000);
   }
 
-  currentShippingPaise = ratePaise;
+  // Weight-based Tier Calculation
+  var selectedRatePaise = baseRatePaise;
+  var tierName = 'Below 1 kg';
+  if (cartTotalWeightGrams >= 2000) {
+    selectedRatePaise = rate2kgAbovePaise;
+    tierName = '2 kg & Above';
+  } else if (cartTotalWeightGrams >= 1000) {
+    selectedRatePaise = rate12Paise;
+    tierName = '1 – 2 kg';
+  }
+
+  if (freeAbove !== null && baseSubtotalPaise >= freeAbove) {
+    selectedRatePaise = 0;
+  }
+
+  currentShippingPaise = selectedRatePaise;
 
   var stateEl = document.getElementById('shipping-rule-state');
   if (stateEl) stateEl.textContent = stateName;
@@ -298,14 +344,17 @@ function handleStateChange(stateName) {
   var slaEl = document.getElementById('shipping-rule-sla');
   if (slaEl) slaEl.textContent = '⏱ Estimated: ' + sla;
 
+  var tierBadge = document.getElementById('shipping-tier-badge');
+  if (tierBadge) tierBadge.textContent = 'Tier: ' + tierName;
+
   var badgeEl = document.getElementById('shipping-rate-badge');
   if (badgeEl) {
-    if (ratePaise === 0) {
+    if (selectedRatePaise === 0) {
       badgeEl.textContent = 'FREE DELIVERY';
       badgeEl.style.color = '#2E7D32';
       badgeEl.style.background = '#EAF5EC';
     } else {
-      badgeEl.textContent = formatINR(ratePaise);
+      badgeEl.textContent = formatINR(selectedRatePaise);
       badgeEl.style.color = '#073D26';
       badgeEl.style.background = '#F4EFE6';
     }
@@ -327,10 +376,10 @@ function handleStateChange(stateName) {
 
   var summaryShipping = document.getElementById('summary-shipping-val');
   if (summaryShipping) {
-    summaryShipping.textContent = (ratePaise === 0) ? 'Free' : formatINR(ratePaise);
+    summaryShipping.textContent = (selectedRatePaise === 0) ? 'Free' : formatINR(selectedRatePaise);
   }
 
-  var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise + ratePaise);
+  var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise + selectedRatePaise);
   var summaryTotal = document.getElementById('summary-total-val');
   if (summaryTotal) {
     summaryTotal.textContent = formatINR(newTotalPaise);
@@ -340,6 +389,165 @@ function handleStateChange(stateName) {
   if (submitBtn) {
     submitBtn.textContent = 'Pay ' + formatINR(newTotalPaise) + ' with Cashfree';
   }
+}
+
+// 1-Click Current Location Auto-Fetch
+function autoFetchCurrentLocation() {
+  var btn = document.getElementById('btn-use-location');
+  var btnText = document.getElementById('btn-use-location-text');
+
+  if (!navigator.geolocation) {
+    showLocationStatus('Geolocation is not supported by your browser. Please enter your address manually.', '#fff3cd', '#856404');
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  if (btnText) btnText.textContent = 'Detecting Location…';
+  showLocationStatus('Accessing your GPS location… please allow location permission if prompted.', '#eaf4ee', '#073D26');
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      var lat = position.coords.latitude;
+      var lon = position.coords.longitude;
+      if (btnText) btnText.textContent = 'Fetching Address…';
+
+      // Reverse geocode via OpenStreetMap Nominatim with BigDataCloud fallback
+      fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lon)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          applyLocationData(data.address || {});
+          showLocationStatus('✓ Address & State detected and filled successfully!', '#e6f4ea', '#137333');
+          if (btn) btn.disabled = false;
+          if (btnText) btnText.textContent = '✓ Location Applied';
+        })
+        .catch(function() {
+          // Fallback to client-side reverse geocode endpoint
+          fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=en')
+            .then(function(r) { return r.json(); })
+            .then(function(bdc) {
+              applyLocationData({
+                road: bdc.locality || bdc.city || '',
+                city: bdc.city || bdc.principalSubdivision || '',
+                state: bdc.principalSubdivision || '',
+                postcode: bdc.postcode || ''
+              });
+              showLocationStatus('✓ Location detected and filled successfully!', '#e6f4ea', '#137333');
+              if (btn) btn.disabled = false;
+              if (btnText) btnText.textContent = '✓ Location Applied';
+            })
+            .catch(function() {
+              showLocationStatus('Could not resolve street address from GPS. Please enter your street and city manually.', '#fff3cd', '#856404');
+              if (btn) btn.disabled = false;
+              if (btnText) btnText.textContent = 'Use Current Location';
+            });
+        });
+    },
+    function(err) {
+      var msg = 'Location request was declined or timed out. Please enter your address manually.';
+      if (err.code === 1) {
+        msg = 'Location permission was denied. Please allow location access in your browser or enter address manually.';
+      }
+      showLocationStatus(msg, '#f8d7da', '#721c24');
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = 'Use Current Location';
+    },
+    { timeout: 12000, enableHighAccuracy: true }
+  );
+}
+
+function showLocationStatus(text, bg, color) {
+  var statusEl = document.getElementById('location-fetch-status');
+  if (statusEl) {
+    statusEl.textContent = text;
+    statusEl.style.background = bg;
+    statusEl.style.color = color;
+    statusEl.style.display = 'block';
+  }
+}
+
+function applyLocationData(addr) {
+  var road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || '';
+  var house = addr.house_number || addr.building || '';
+  var streetParts = [];
+  if (house) streetParts.push(house);
+  if (road) streetParts.push(road);
+  if (addr.suburb && addr.suburb !== road) streetParts.push(addr.suburb);
+
+  var streetInput = document.getElementById('street');
+  if (streetInput && streetParts.length > 0 && !streetInput.value.trim()) {
+    streetInput.value = streetParts.join(', ');
+  }
+
+  var city = addr.city || addr.town || addr.village || addr.county || addr.state_district || '';
+  var cityInput = document.getElementById('city');
+  if (cityInput && city) {
+    cityInput.value = city;
+  }
+
+  var pincode = (addr.postcode || '').replace(/\D/g, '').slice(0, 6);
+  var pinInput = document.getElementById('pincode');
+  if (pinInput && pincode.length === 6) {
+    pinInput.value = pincode;
+  }
+
+  var state = addr.state || '';
+  if (state) {
+    matchAndSelectState(state);
+  }
+}
+
+function matchAndSelectState(stateStr) {
+  var stateSelect = document.getElementById('state');
+  if (!stateSelect) return;
+  var target = stateStr.toLowerCase().trim();
+  for (var i = 0; i < stateSelect.options.length; i++) {
+    var optVal = stateSelect.options[i].value.toLowerCase().trim();
+    if (optVal === target || target.indexOf(optVal) !== -1 || optVal.indexOf(target) !== -1) {
+      stateSelect.selectedIndex = i;
+      handleStateChange(stateSelect.options[i].value);
+      return;
+    }
+  }
+}
+
+function initGooglePlacesAutocomplete() {
+  var input = document.getElementById('street');
+  if (!input || !window.google || !google.maps || !google.maps.places) return;
+  var autocomplete = new google.maps.places.Autocomplete(input, {
+    types: ['geocode', 'establishment'],
+    componentRestrictions: { country: 'in' }
+  });
+  autocomplete.addListener('place_changed', function() {
+    var place = autocomplete.getPlace();
+    if (!place || !place.address_components) return;
+    var streetParts = [];
+    var city = '';
+    var state = '';
+    var postalCode = '';
+    for (var i = 0; i < place.address_components.length; i++) {
+      var c = place.address_components[i];
+      var types = c.types;
+      if (types.indexOf('street_number') !== -1 || types.indexOf('premise') !== -1) {
+        streetParts.push(c.long_name);
+      }
+      if (types.indexOf('route') !== -1 || types.indexOf('sublocality') !== -1 || types.indexOf('sublocality_level_1') !== -1) {
+        streetParts.push(c.long_name);
+      }
+      if (types.indexOf('locality') !== -1) {
+        city = c.long_name;
+      }
+      if (types.indexOf('administrative_area_level_1') !== -1) {
+        state = c.long_name;
+      }
+      if (types.indexOf('postal_code') !== -1) {
+        postalCode = c.long_name.replace(/\D/g, '').slice(0, 6);
+      }
+    }
+    if (streetParts.length > 0) input.value = streetParts.join(', ');
+    if (city && document.getElementById('city')) document.getElementById('city').value = city;
+    if (postalCode && document.getElementById('pincode')) document.getElementById('pincode').value = postalCode;
+    if (state) matchAndSelectState(state);
+  });
 }
 
 // Initialize state-based rate on page load

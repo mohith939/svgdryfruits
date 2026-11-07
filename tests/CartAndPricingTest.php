@@ -152,6 +152,86 @@ $optDel = Models::getShippingOptionForState('Delhi', 50000);
 TestSuite::assert($optDel['id'] === 'test_ship_roi', 'Correctly falls back to ALL (Rest of India) for unlisted states like Delhi');
 TestSuite::assert($optDel['effective_paise'] === 8900, 'Applies ₹89 (8900 paise) rate for Rest of India');
 
+// Section 7C: Weight Calculation & Tiered State Shipping Verification
+TestSuite::section('7C. Weight-Based Tiered Shipping & Coupon Updates');
+
+// 1. Weight extraction from variant label strings
+TestSuite::assert(Cart::parseWeightGrams('250 g') === 250, 'parseWeightGrams extracts 250g from "250 g"');
+TestSuite::assert(Cart::parseWeightGrams('500g') === 500, 'parseWeightGrams extracts 500g from "500g"');
+TestSuite::assert(Cart::parseWeightGrams('1 kg') === 1000, 'parseWeightGrams extracts 1000g from "1 kg"');
+TestSuite::assert(Cart::parseWeightGrams('1.5 kg') === 1500, 'parseWeightGrams extracts 1500g from "1.5 kg"');
+TestSuite::assert(Cart::parseWeightGrams('2 kg') === 2000, 'parseWeightGrams extracts 2000g from "2 kg"');
+TestSuite::assert(Cart::parseWeightGrams('1 kg Deluxe Hamper') === 1000, 'parseWeightGrams extracts 1000g from "1 kg Deluxe Hamper"');
+
+// 2. Setup user's requested rates for Telangana & Rest of India
+$pdo->exec("DELETE FROM shipping_options WHERE id LIKE 'test_%'");
+$pdo->prepare("
+    INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, rate_1_2kg_paise, rate_2kg_above_paise, free_above_paise, min_subtotal_paise, active, sort_order)
+    VALUES 
+    ('test_tiered_ts', 'Telangana & AP Tiered', 'Telangana, Andhra Pradesh', 'Express TS/AP', '1-2 Days', 9000, 13000, 15000, NULL, 0, 1, 1),
+    ('test_tiered_roi', 'Rest of India Tiered', 'ALL', 'National Express', '3-5 Days', 10000, 15000, 21000, NULL, 0, 1, 2)
+")->execute();
+
+// Telangana Tier 1: Below 1kg (< 1000g) => ₹90 (9000 paise)
+$tsTier1 = Models::getShippingOptionForState('Telangana', 40000, 500);
+TestSuite::assert($tsTier1['effective_paise'] === 9000, 'Telangana < 1kg resolves to ₹90 (9000 paise)');
+TestSuite::assert($tsTier1['active_tier'] === 'below_1kg', 'Telangana < 1kg sets active_tier to below_1kg');
+
+// Telangana Tier 2: 1kg - 2kg (1500g) => ₹130 (13000 paise)
+$tsTier2 = Models::getShippingOptionForState('Telangana', 40000, 1500);
+TestSuite::assert($tsTier2['effective_paise'] === 13000, 'Telangana 1-2kg resolves to ₹130 (13000 paise)');
+TestSuite::assert($tsTier2['active_tier'] === '1_2kg', 'Telangana 1-2kg sets active_tier to 1_2kg');
+
+// Telangana Tier 3: 2kg & Above (2500g) => ₹150 (15000 paise)
+$tsTier3 = Models::getShippingOptionForState('Telangana', 40000, 2500);
+TestSuite::assert($tsTier3['effective_paise'] === 15000, 'Telangana >= 2kg resolves to ₹150 (15000 paise)');
+TestSuite::assert($tsTier3['active_tier'] === '2kg_above', 'Telangana >= 2kg sets active_tier to 2kg_above');
+
+// Rest of India Tier 1: Below 1kg (< 1000g) => ₹100 (10000 paise)
+$roiTier1 = Models::getShippingOptionForState('Delhi', 40000, 750);
+TestSuite::assert($roiTier1['effective_paise'] === 10000, 'Rest of India < 1kg resolves to ₹100 (10000 paise)');
+
+// Rest of India Tier 2: 1kg - 2kg (1800g) => ₹150 (15000 paise)
+$roiTier2 = Models::getShippingOptionForState('Maharashtra', 40000, 1800);
+TestSuite::assert($roiTier2['effective_paise'] === 15000, 'Rest of India 1-2kg resolves to ₹150 (15000 paise)');
+
+// Rest of India Tier 3: 2kg & Above (3000g) => ₹210 (21000 paise)
+$roiTier3 = Models::getShippingOptionForState('Punjab', 40000, 3000);
+TestSuite::assert($roiTier3['effective_paise'] === 21000, 'Rest of India >= 2kg resolves to ₹210 (21000 paise)');
+
+// 3. Test Coupon Update and Type Mutation
+$testCpnId = 'cpn_test_edit_' . bin2hex(random_bytes(4));
+$pdo->prepare("
+    INSERT INTO coupons (id, code, name, description, type, value, min_subtotal_paise, active, times_used)
+    VALUES (?, 'TESTEDIT', 'Initial Percentage', '10% off', 'percentage', 10, 49900, 1, 0)
+")->execute([$testCpnId]);
+
+$cpn1 = Models::getCouponByCode('TESTEDIT');
+TestSuite::assert($cpn1['type'] === 'percentage' && (int)$cpn1['value'] === 10, 'Coupon created with initial percentage type');
+
+// Update coupon to Fixed Amount ₹150
+$pdo->prepare("
+    UPDATE coupons 
+    SET name = 'Updated Flat ₹150', type = 'fixed', value = 15000, min_subtotal_paise = 99900
+    WHERE id = ?
+")->execute([$testCpnId]);
+
+$cpn2 = Models::getCouponByCode('TESTEDIT');
+TestSuite::assert($cpn2['type'] === 'fixed' && (int)$cpn2['value'] === 15000, 'Coupon successfully updated to fixed amount (₹150)');
+
+// Update coupon to Free Shipping
+$pdo->prepare("
+    UPDATE coupons 
+    SET name = 'Updated Free Shipping', type = 'free_shipping', value = 0
+    WHERE id = ?
+")->execute([$testCpnId]);
+
+$cpn3 = Models::getCouponByCode('TESTEDIT');
+TestSuite::assert($cpn3['type'] === 'free_shipping' && (int)$cpn3['value'] === 0, 'Coupon successfully updated to free shipping');
+
+$pdo->prepare("DELETE FROM coupons WHERE id = ?")->execute([$testCpnId]);
+$pdo->exec("DELETE FROM shipping_options WHERE id IN ('test_tiered_ts', 'test_tiered_roi')");
+
 // Cleanup test shipping options & restore active status
 $pdo->exec("DELETE FROM shipping_options WHERE id LIKE 'test_ship_%'");
 $pdo->exec("UPDATE shipping_options SET active = 1");

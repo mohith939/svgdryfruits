@@ -90,6 +90,25 @@ class Cart {
         $_SESSION['selected_shipping_id'] = $id;
     }
 
+    public static function parseWeightGrams(string $label, ?int $explicitGrams = null): int {
+        if ($explicitGrams !== null && $explicitGrams > 0) {
+            return $explicitGrams;
+        }
+        $label = strtolower(trim($label));
+        if (preg_match('/(\d+(?:\.\d+)?)\s*(kg|kilo|kilogram)s?/i', $label, $m)) {
+            return (int)round(((float)$m[1]) * 1000);
+        }
+        if (preg_match('/(\d+(?:\.\d+)?)\s*(g|gm|gms|gram)s?/i', $label, $m)) {
+            return (int)round((float)$m[1]);
+        }
+        return 500;
+    }
+
+    public static function getCartWeightGrams(): int {
+        $details = self::getDetails();
+        return (int)($details['total_weight_grams'] ?? 0);
+    }
+
     public static function getEligibleShippingOptions(int $subtotalPaise): array {
         $all = Models::getShippingOptions(true);
         $eligible = [];
@@ -108,6 +127,7 @@ class Cart {
         self::init();
         $items = [];
         $subtotalPaise = 0;
+        $totalWeightGrams = 0;
 
         foreach ($_SESSION['cart'] as $variantId => $qty) {
             $quantity = (int)(is_array($qty) ? ($qty['quantity'] ?? 1) : $qty);
@@ -123,6 +143,10 @@ class Cart {
             $lineTotalPaise = $variant['price_paise'] * $quantity;
             $subtotalPaise += $lineTotalPaise;
 
+            $weightGrams = self::parseWeightGrams((string)($variant['label'] ?? ''));
+            $lineWeightGrams = $weightGrams * $quantity;
+            $totalWeightGrams += $lineWeightGrams;
+
             $items[] = [
                 'variant_id' => $variant['id'],
                 'product_name' => $variant['product_name'],
@@ -135,6 +159,8 @@ class Cart {
                 'quantity' => $quantity,
                 'stock' => $variant['stock'],
                 'line_total_paise' => $lineTotalPaise,
+                'weight_grams' => $weightGrams,
+                'line_weight_grams' => $lineWeightGrams,
             ];
         }
 
@@ -172,7 +198,7 @@ class Cart {
 
         $selectedOption = null;
         if ($targetState) {
-            $selectedOption = Models::getShippingOptionForState($targetState, $subtotalPaise);
+            $selectedOption = Models::getShippingOptionForState($targetState, $subtotalPaise, $totalWeightGrams);
         } elseif ($shippingOptionId) {
             foreach ($eligibleShipping as $opt) {
                 if ($opt['id'] === $shippingOptionId) {
@@ -183,7 +209,7 @@ class Cart {
         }
 
         if (!$selectedOption && !empty($eligibleShipping)) {
-            $selectedOption = Models::getShippingOptionForState('Telangana', $subtotalPaise);
+            $selectedOption = Models::getShippingOptionForState('Telangana', $subtotalPaise, $totalWeightGrams);
         }
 
         $shippingPaise = 0;
@@ -209,6 +235,8 @@ class Cart {
             'items' => $items,
             'item_count' => self::count(),
             'subtotal_paise' => $subtotalPaise,
+            'total_weight_grams' => $totalWeightGrams,
+            'total_weight_kg' => round($totalWeightGrams / 1000, 2),
             'discount_paise' => $discountPaise,
             'shipping_paise' => $shippingPaise,
             'total_paise' => $totalPaise,
