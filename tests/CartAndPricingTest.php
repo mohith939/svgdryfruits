@@ -16,7 +16,7 @@ $cartVarId2 = 'var_cart_2_' . bin2hex(random_bytes(4));
 $cartProdSlug = 'test-cart-product-' . bin2hex(random_bytes(4));
 $pdo->prepare("
     INSERT INTO products (id, slug, name, description, category_id, active)
-    VALUES (?, ?, 'Test Cart Product', 'Desc', NULL, 1)
+    VALUES (?, ?, 'Test Cart Product', 'Desc', NULL, 0)
 ")->execute([$cartProdId, $cartProdSlug]);
 
 $pdo->prepare("

@@ -13,7 +13,7 @@ $testProdId = 'prod_test_inv_' . bin2hex(random_bytes(4));
 $testProdSlug = 'test-inventory-product-' . bin2hex(random_bytes(4));
 $pdo->prepare("
     INSERT INTO products (id, slug, name, description, category_id, active)
-    VALUES (?, ?, 'Test Inventory Product', 'Testing preservation', NULL, 1)
+    VALUES (?, ?, 'Test Inventory Product', 'Testing preservation', NULL, 0)
 ")->execute([$testProdId, $testProdSlug]);
 
 // Seed initial variants

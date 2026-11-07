@@ -74,13 +74,13 @@ $tamperProdId = 'prod_tamper_' . bin2hex(random_bytes(4));
 $tamperSlug = 'test-tamper-' . bin2hex(random_bytes(4));
 $pdo->prepare("
     INSERT INTO products (id, slug, name, description, category_id, active)
-    VALUES (?, ?, 'Tamper Test Product', 'Tamper test', NULL, 1)
+    VALUES (?, ?, 'Tamper Test Product', 'Tamper test', NULL, 0)
 ")->execute([$tamperProdId, $tamperSlug]);
 
 $tamperVarId = 'var_tamper_' . bin2hex(random_bytes(4));
 $pdo->prepare("
     INSERT INTO variants (id, product_id, sku, label, price_paise, compare_price_paise, stock, low_stock_threshold, active)
-    VALUES (?, ?, ?, 'Standard', 125000, 150000, 100, 5, 1)
+    VALUES (?, ?, ?, '500g', 125000, 150000, 100, 5, 1)
 ")->execute([$tamperVarId, $tamperProdId, 'SKU-TAMPER-' . bin2hex(random_bytes(4))]);
 
 $orderData = [
@@ -197,13 +197,13 @@ $raceProdId = 'prod_race_' . bin2hex(random_bytes(4));
 $raceSlug = 'test-race-' . bin2hex(random_bytes(4));
 $pdo->prepare("
     INSERT INTO products (id, slug, name, description, category_id, active)
-    VALUES (?, ?, 'Race Condition Test Product', 'Stock = 1', NULL, 1)
+    VALUES (?, ?, 'Race Condition Test Product', 'Stock = 1', NULL, 0)
 ")->execute([$raceProdId, $raceSlug]);
 
 $raceVarId = 'var_race_' . bin2hex(random_bytes(4));
 $pdo->prepare("
     INSERT INTO variants (id, product_id, sku, label, price_paise, compare_price_paise, stock, low_stock_threshold, active)
-    VALUES (?, ?, ?, 'Only One Left', 50000, 60000, 1, 0, 1)
+    VALUES (?, ?, ?, '250g', 50000, 60000, 1, 0, 1)
 ")->execute([$raceVarId, $raceProdId, 'SKU-RACE-' . bin2hex(random_bytes(4))]);
 
 // Customer A order payload for 1 item
@@ -346,3 +346,11 @@ for ($i = 1; $i <= 5; $i++) {
 
 $blockedAttempt = Helpers::checkRateLimit($trackKey, $trackLimit, $trackWindow);
 TestSuite::assert($blockedAttempt === false, 'Order tracking lookup attempt 6 is blocked by rate limiter');
+
+// Cleanup all test records created in this test suite run
+$pdo->prepare("DELETE FROM order_items WHERE order_id IN (?, ?, ?)")->execute([$orderId, $orderIdA, $refundOrderId]);
+$pdo->prepare("DELETE FROM refunds WHERE order_id = ?")->execute([$refundOrderId]);
+$pdo->prepare("DELETE FROM orders WHERE id IN (?, ?, ?)")->execute([$orderId, $orderIdA, $refundOrderId]);
+$pdo->prepare("DELETE FROM variants WHERE product_id IN (?, ?)")->execute([$tamperProdId, $raceProdId]);
+$pdo->prepare("DELETE FROM products WHERE id IN (?, ?)")->execute([$tamperProdId, $raceProdId]);
+
