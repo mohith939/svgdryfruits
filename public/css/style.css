@@ -9731,6 +9731,422 @@ body { font-size: 17px; line-height: 1.6; }
   animation: waFloat 3s ease-in-out infinite !important;
 }
 
+/* ==========================================================================
+   ENHANCED CHECKOUT UI & AVAILABLE CART COUPONS
+   ========================================================================== */
+
+/* Cart Available Coupons & Offers */
+.cart-coupons-section {
+  margin: 24px 0 0;
+  background: #FCFAF6;
+  border: 1.5px solid #EAE3D5;
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.cart-coupons-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #EAE3D5;
+}
+.cart-coupons-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #073D26;
+  letter-spacing: 0.2px;
+}
+.cart-coupons-count-badge {
+  background: #EAF5EC;
+  color: #073D26;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid #C3E2CB;
+}
+.cart-coupons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cart-coupon-card {
+  background: #FFFFFF;
+  border: 1.5px dashed #D6CBBC;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.cart-coupon-card:hover {
+  border-color: #073D26;
+  box-shadow: 0 4px 12px rgba(7, 61, 38, 0.05);
+}
+.cart-coupon-card.applied {
+  background: #F4FAF5;
+  border: 1.5px solid #2E7D32;
+}
+.cart-coupon-card.locked {
+  background: #FAF9F6;
+  opacity: 0.88;
+}
+.cart-coupon-card-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+.cart-coupon-code-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FAF7F2;
+  border: 1px dashed #073D26;
+  color: #073D26;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.cart-coupon-discount-tag {
+  background: #EAF5EC;
+  color: #073D26;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.cart-coupon-meta {
+  flex: 1;
+}
+.cart-coupon-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #212B23;
+  margin: 0 0 2px;
+  line-height: 1.3;
+}
+.cart-coupon-desc {
+  font-size: 11.5px;
+  color: #6B6255;
+  margin: 0 0 3px;
+  line-height: 1.35;
+}
+.cart-coupon-terms {
+  font-size: 11px;
+  color: #8E6D38;
+  font-weight: 600;
+}
+.cart-coupon-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.cart-coupon-apply-btn {
+  background: #073D26;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.cart-coupon-apply-btn:hover {
+  background: #8E6D38;
+}
+.cart-coupon-applied-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #2E7D32;
+  background: #EAF5EC;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.cart-coupon-unlock-hint {
+  font-size: 11px;
+  color: #A35A00;
+  font-weight: 600;
+  background: #FFF8E6;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #FFE299;
+  white-space: nowrap;
+}
+
+/* Modern Luxury Checkout Styles */
+.checkout-page-modern {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 36px 20px 90px;
+}
+.checkout-header-modern {
+  margin-bottom: 28px;
+}
+.checkout-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #7B7265;
+  margin-bottom: 12px;
+}
+.checkout-breadcrumbs a {
+  color: #7B7265;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.checkout-breadcrumbs a:hover {
+  color: #073D26;
+}
+.checkout-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.checkout-title-main {
+  font-family: var(--serif, 'Playfair Display', serif);
+  font-size: clamp(32px, 4vw, 42px);
+  color: #073D26;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+.checkout-title-kicker {
+  font-size: 14.5px;
+  color: #6E6454;
+  margin: 0;
+}
+.checkout-step-pill-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.checkout-step-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5A5145;
+  background: #FAF7F2;
+  border: 1px solid #E4DDD1;
+  padding: 4px 11px;
+  border-radius: 20px;
+}
+.checkout-step-pill.active {
+  background: #073D26;
+  color: #FFFFFF;
+  border-color: #073D26;
+}
+.checkout-card-box {
+  background: #FFFFFF;
+  border: 1.5px solid #EDE6DC;
+  border-radius: 14px;
+  padding: 26px 28px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 20px -2px rgba(7, 61, 38, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.checkout-card-box:focus-within {
+  border-color: #C2B6A3;
+  box-shadow: 0 6px 24px -2px rgba(7, 61, 38, 0.08);
+}
+.checkout-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #F0EAE1;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.checkout-card-heading-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.checkout-card-number-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #073D26;
+  color: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(7, 61, 38, 0.2);
+}
+.checkout-card-title {
+  font-family: var(--serif, 'Playfair Display', serif);
+  font-size: 20px;
+  color: #073D26;
+  margin: 0;
+  font-weight: 700;
+}
+.checkout-input-modern {
+  width: 100%;
+  height: 48px;
+  border-radius: 9px;
+  border: 1.5px solid #DCD5C9;
+  padding: 0 16px;
+  font-size: 14.5px;
+  color: #1E2520;
+  background: #FCFBF9;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+.checkout-input-modern:focus {
+  border-color: #073D26;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(7, 61, 38, 0.09);
+  outline: none;
+}
+.phone-input-wrap-modern {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  border-radius: 9px;
+  border: 1.5px solid #DCD5C9;
+  background: #FCFBF9;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.phone-input-wrap-modern:focus-within {
+  border-color: #073D26;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(7, 61, 38, 0.09);
+}
+.phone-prefix-modern {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  height: 100%;
+  background: #F4EFE6;
+  border-right: 1.5px solid #DCD5C9;
+  font-weight: 700;
+  font-size: 14px;
+  color: #073D26;
+}
+.phone-input-modern {
+  flex: 1;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0 14px;
+  font-size: 14.5px;
+  color: #1E2520;
+  outline: none;
+}
+.btn-detect-location-modern {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #EAF5EC;
+  color: #073D26;
+  border: 1.5px solid #073D26;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(7, 61, 38, 0.06);
+}
+.btn-detect-location-modern:hover {
+  background: #073D26;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(7, 61, 38, 0.18);
+  transform: translateY(-1px);
+}
+.btn-detect-location-modern:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+.location-radar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2E7D32;
+  display: inline-block;
+  animation: radarPulse 1.5s infinite;
+}
+@keyframes radarPulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+.location-status-bar {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  margin-bottom: 16px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+.pin-status-pill {
+  font-size: 12px;
+  color: #2E7D32;
+  font-weight: 600;
+  margin-top: 4px;
+  display: none;
+}
+.checkout-summary-modern {
+  background: #FFFFFF;
+  border: 1.5px solid #EDE6DC;
+  border-radius: 14px;
+  padding: 26px;
+  box-shadow: 0 6px 24px -2px rgba(7, 61, 38, 0.05);
+  position: sticky;
+  top: 24px;
+}
+.checkout-summary-heading {
+  font-family: var(--serif, 'Playfair Display', serif);
+  font-size: 20px;
+  color: #073D26;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid #F0EAE1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.checkout-summary-trust-badge {
+  background: #FAF7F2;
+  border: 1px solid #EAE3D5;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 22px;
+}
+
+
 
 
 

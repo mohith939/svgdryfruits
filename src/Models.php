@@ -148,6 +148,16 @@ class Models {
         return $stmt->fetch() ?: null;
     }
 
+    public static function getCoupons(bool $activeOnly = true): array {
+        $pdo = Database::getConnection();
+        $sql = "SELECT * FROM coupons";
+        if ($activeOnly) {
+            $sql .= " WHERE active = 1";
+        }
+        $sql .= " ORDER BY min_subtotal_paise ASC, value DESC";
+        return $pdo->query($sql)->fetchAll() ?: [];
+    }
+
     public static function incrementCouponUsage(string $code): void {
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("UPDATE coupons SET times_used = times_used + 1 WHERE UPPER(code) = UPPER(?)");

@@ -6,6 +6,7 @@
 declare(strict_types=1);
 require_once ROOT_PATH . '/src/Helpers.php';
 require_once ROOT_PATH . '/src/Cart.php';
+require_once ROOT_PATH . '/src/Models.php';
 
 $cart = Cart::getDetails();
 $pageTitle = 'Your Shopping Bag';
@@ -16,6 +17,7 @@ $subtotal = $cart['subtotal_paise'];
 $shipping = $cart['shipping_paise'];
 $discount = $cart['discount_paise'];
 $total = $cart['total_paise'];
+$availableCoupons = Models::getCoupons(true);
 
 require __DIR__ . '/layouts/header.php';
 ?>
@@ -147,6 +149,85 @@ require __DIR__ . '/layouts/header.php';
               <span class="cart-v3-summary-val">₹0</span>
             </div>
 
+            <!-- Available Offers & Coupons -->
+            <?php if (!empty($availableCoupons)): ?>
+              <div class="cart-coupons-section" style="margin: 12px 0; padding: 14px; background: #FAF8F4; border: 1.5px solid #EAE3D5; border-radius: 10px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                  <span style="font-size: 13px; font-weight: 700; color: #073D26; display: flex; align-items: center; gap: 6px;">
+                    🏷️ Available Coupons
+                  </span>
+                  <span style="font-size: 11px; background: #EAF5EC; color: #073D26; padding: 2px 7px; border-radius: 10px; font-weight: 700;">
+                    <?= count($availableCoupons) ?> <?= count($availableCoupons) === 1 ? 'Offer' : 'Offers' ?>
+                  </span>
+                </div>
+
+                <div class="cart-coupons-list" style="display: flex; flex-direction: column; gap: 8px;">
+                  <?php foreach ($availableCoupons as $cpn): 
+                    $cpnCode = strtoupper($cpn['code']);
+                    $isApplied = (!empty($cart['applied_coupon']) && strtoupper($cart['applied_coupon']['code']) === $cpnCode);
+                    $minPaise = (int)$cpn['min_subtotal_paise'];
+                    $isApplicable = ($subtotal >= $minPaise);
+                    $diffPaise = max(0, $minPaise - $subtotal);
+
+                    $discountLabel = '';
+                    if ($cpn['type'] === 'percentage') {
+                        $discountLabel = $cpn['value'] . '% OFF';
+                    } elseif ($cpn['type'] === 'free_shipping') {
+                        $discountLabel = 'FREE SHIPPING';
+                    } else {
+                        $discountLabel = Helpers::formatPaise((int)$cpn['value']) . ' OFF';
+                    }
+                  ?>
+                    <div class="cart-coupon-card <?= $isApplied ? 'applied' : ($isApplicable ? '' : 'locked') ?>" 
+                         style="background: #fff; border: 1.5px dashed <?= $isApplied ? '#2E7D32' : ($isApplicable ? '#073D26' : '#C7BFB1') ?>; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                      <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap;">
+                          <span style="font-family: monospace; font-size: 12.5px; font-weight: 700; color: #073D26; background: #F4EFE6; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px;">
+                            <?= htmlspecialchars($cpnCode) ?>
+                          </span>
+                          <span style="font-size: 11px; font-weight: 700; color: #2E7D32; background: #EAF5EC; padding: 2px 6px; border-radius: 4px;">
+                            <?= $discountLabel ?>
+                          </span>
+                        </div>
+                        <div style="font-size: 12px; font-weight: 600; color: #2A362D; line-height: 1.3;">
+                          <?= htmlspecialchars($cpn['name'] ?? $cpnCode) ?>
+                        </div>
+                        <?php if (!empty($cpn['description'])): ?>
+                          <div style="font-size: 11px; color: #6E6454; line-height: 1.3; margin-top: 2px;">
+                            <?= htmlspecialchars($cpn['description']) ?>
+                          </div>
+                        <?php endif; ?>
+                        <div style="font-size: 10.5px; color: #8E6D38; font-weight: 600; margin-top: 3px;">
+                          <?= $minPaise > 0 ? 'Min order: ' . Helpers::formatPaise($minPaise) : 'No minimum order required' ?>
+                        </div>
+                      </div>
+
+                      <div style="flex-shrink: 0; text-align: right;">
+                        <?php if ($isApplied): ?>
+                          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                            <span style="font-size: 11px; font-weight: 700; color: #2E7D32; background: #EAF5EC; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;">
+                              ✓ Applied
+                            </span>
+                            <button type="button" onclick="removeCouponCode()" style="background: none; border: none; color: #9B1C1C; font-size: 11px; text-decoration: underline; cursor: pointer; padding: 2px 0;">
+                              Remove
+                            </button>
+                          </div>
+                        <?php elseif ($isApplicable): ?>
+                          <button type="button" onclick="applyDirectCoupon('<?= htmlspecialchars($cpnCode, ENT_QUOTES) ?>')" class="cart-coupon-apply-btn" style="background: #073D26; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                            Apply
+                          </button>
+                        <?php else: ?>
+                          <span style="display: inline-block; font-size: 10.5px; color: #A35A00; background: #FFF8E6; border: 1px solid #FFE299; padding: 3px 7px; border-radius: 5px; font-weight: 600; text-align: right; line-height: 1.2;">
+                            Add <?= Helpers::formatPaise($diffPaise) ?><br />to unlock
+                          </span>
+                        <?php endif; ?>
+                      </div>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            <?php endif; ?>
+
             <!-- Promo Box -->
             <div class="cart-v3-summary-promo-box">
               <?php if (!empty($cart['applied_coupon'])): ?>
@@ -159,7 +240,7 @@ require __DIR__ . '/layouts/header.php';
                 </div>
               <?php else: ?>
                 <form id="cart-promo-form" onsubmit="applyCouponCode(event)" class="cart-v3-summary-promo-form">
-                  <input type="text" id="cart-promo-input" placeholder="Enter promo code" class="cart-v3-summary-promo-input" />
+                  <input type="text" id="cart-promo-input" placeholder="Or enter coupon code" class="cart-v3-summary-promo-input" />
                   <button type="submit" class="cart-v3-summary-promo-btn">Apply</button>
                 </form>
                 <div id="cart-promo-err" style="color: #9B1C1C; font-size: 11.5px; margin-top: 4px; display: none;"></div>
@@ -256,6 +337,30 @@ function modifyCart(variantId, qty) {
       if (res.success) {
         window.location.reload();
       }
+    });
+}
+
+function applyDirectCoupon(code) {
+  if (!code) return;
+  var errEl = document.getElementById('cart-promo-err');
+  if (errEl) errEl.style.display = 'none';
+
+  fetch(window.SVG_APP.apiUrl + '/cart.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'apply_coupon', code: code })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.success) {
+        window.location.reload();
+      } else {
+        alert(res.error || 'Failed to apply coupon.');
+      }
+    })
+    .catch(function(err) {
+      console.error(err);
+      alert('Unable to connect to server. Please try again.');
     });
 }
 
