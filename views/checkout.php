@@ -1,7 +1,7 @@
 <?php
 /**
  * SVG Dry Fruits - Guest Checkout Page
- * Modern, luxury dry-fruits e-commerce checkout with multi-tier location auto-fetch
+ * Clean, fast, distraction-free checkout with background state & weight shipping calculation
  */
 declare(strict_types=1);
 require_once ROOT_PATH . '/src/Helpers.php';
@@ -13,7 +13,7 @@ if (empty($cart['items'])) {
     Helpers::redirect(Helpers::url('cart'));
 }
 
-$pageTitle = 'Secure Checkout';
+$pageTitle = 'Guest Checkout';
 $activePage = 'checkout';
 
 $subtotal = $cart['subtotal_paise'];
@@ -25,197 +25,78 @@ $coupon = $cart['applied_coupon']['code'] ?? '';
 require __DIR__ . '/layouts/header.php';
 ?>
 
-<div class="checkout-page-modern">
-  <!-- Header & Breadcrumbs -->
-  <div class="checkout-header-modern">
-    <div class="checkout-breadcrumbs">
+<section class="checkout-page">
+  <div class="checkout-head">
+    <div class="breadcrumbs">
       <a href="<?= Helpers::url('/') ?>">Home</a>
-      <span aria-hidden="true">›</span>
-      <a href="<?= Helpers::url('cart') ?>">Shopping Bag</a>
-      <span aria-hidden="true">›</span>
-      <span style="color: #073D26; font-weight: 600;">Checkout</span>
+      <span aria-hidden="true">/</span>
+      <a href="<?= Helpers::url('cart') ?>">Bag</a>
+      <span aria-hidden="true">/</span>
+      <span>Checkout</span>
     </div>
-
-    <div class="checkout-title-wrap">
-      <h1 class="checkout-title-main">Complete Your Order</h1>
-      <p class="checkout-title-kicker">
-        Direct dispatch from Hyderabad &amp; Kakinada • Freshness Sealed • Pan-India Delivery
-      </p>
-    </div>
-
-    <!-- Stepper indicator -->
-    <div class="checkout-step-pill-bar">
-      <span class="checkout-step-pill active">
-        <span style="width:6px;height:6px;border-radius:50%;background:#4ADE80;"></span>
-        01. Contact
-      </span>
-      <span class="checkout-step-pill active">
-        <span style="width:6px;height:6px;border-radius:50%;background:#4ADE80;"></span>
-        02. Delivery Address
-      </span>
-      <span class="checkout-step-pill active">
-        <span style="width:6px;height:6px;border-radius:50%;background:#4ADE80;"></span>
-        03. Cashfree Payment
-      </span>
-    </div>
+    <h1>Guest <em>checkout.</em></h1>
+    <p class="checkout-kicker">No account needed. Enter your delivery address to proceed with secure payment.</p>
   </div>
 
-  <!-- Global Error Banner -->
-  <div id="checkout-err-banner" class="checkout-error-banner" role="alert" style="display:none; border-radius: 10px; margin-bottom: 24px; padding: 14px 18px;">
+  <div id="checkout-err-banner" class="checkout-error-banner" role="alert" style="display:none;">
     <?= Icon::render('shield', ['size' => 20]) ?>
-    <p id="checkout-err-msg" style="margin: 0; font-weight: 500;"></p>
+    <p id="checkout-err-msg"></p>
   </div>
 
-  <div class="checkout-grid" style="align-items: start;">
-    <!-- Left Column: Checkout Multi-Step Form -->
+  <div class="checkout-grid">
+    <!-- Left column: Guest customer and shipping form -->
     <form class="checkout-form" id="checkout-form" onsubmit="handleCheckoutSubmit(event)">
       
-      <!-- STEP 1: CONTACT DETAILS -->
-      <div class="checkout-card-box">
-        <div class="checkout-card-header">
-          <div class="checkout-card-heading-group">
-            <span class="checkout-card-number-badge">01</span>
-            <h2 class="checkout-card-title">Contact Information</h2>
-          </div>
-          <span style="font-size: 12px; color: #7B7265; background: #FAF7F2; padding: 3px 8px; border-radius: 6px;">
-            Guest Checkout
-          </span>
-        </div>
-
+      <!-- 1. Contact Details -->
+      <div class="checkout-section-box" style="border-radius: 12px; box-shadow: 0 2px 12px rgba(7, 61, 38, 0.04);">
+        <h2>1. Contact details</h2>
         <div class="form-group-row">
           <div class="form-group">
-            <label for="name" style="font-weight: 600; color: #2A362D;">
-              Full Name <span class="req" style="color: #9B1C1C;">*</span>
-            </label>
-            <input 
-              id="name" 
-              name="name" 
-              class="checkout-input-modern" 
-              required 
-              placeholder="e.g. Ramesh Kumar" 
-              autocomplete="name" 
-            />
+            <label for="name">Full name <span class="req">*</span></label>
+            <input id="name" name="name" required placeholder="e.g. Ramesh Kumar" autocomplete="name" style="border-radius: 6px;" />
           </div>
-
           <div class="form-group">
-            <label for="phone" style="font-weight: 600; color: #2A362D;">
-              Mobile Number (for delivery SMS) <span class="req" style="color: #9B1C1C;">*</span>
-            </label>
-            <div class="phone-input-wrap-modern">
-              <span class="phone-prefix-modern">🇮🇳 +91</span>
-              <input 
-                id="phone" 
-                name="phone" 
-                class="phone-input-modern" 
-                type="tel" 
-                required 
-                placeholder="9876543210" 
-                maxlength="10" 
-                pattern="[6-9][0-9]{9}" 
-                autocomplete="tel" 
-              />
+            <label for="phone">Mobile number <span class="req">*</span></label>
+            <div class="phone-input-wrap" style="border-radius: 6px; overflow: hidden;">
+              <span class="phone-prefix" style="font-weight: 600; color: #073D26; background: #FAF7F2;">+91</span>
+              <input id="phone" name="phone" type="tel" required placeholder="9876543210" maxlength="10" pattern="[6-9][0-9]{9}" autocomplete="tel" />
             </div>
           </div>
         </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label for="email" style="font-weight: 600; color: #2A362D;">
-            Email Address <span class="opt" style="font-size: 11.5px; color: #7B7265; font-weight: normal;">(optional)</span>
-          </label>
-          <input 
-            id="email" 
-            name="email" 
-            type="email" 
-            class="checkout-input-modern" 
-            placeholder="ramesh@example.com" 
-            autocomplete="email" 
-          />
-          <span class="field-hint" style="font-size: 12px; color: #7B7265; margin-top: 5px;">
-            We will email order confirmation and Cashfree payment receipt.
-          </span>
+        <div class="form-group">
+          <label for="email">Email address <span class="opt">(optional)</span></label>
+          <input id="email" name="email" type="email" placeholder="ramesh@example.com" autocomplete="email" style="border-radius: 6px;" />
+          <span class="field-hint">We'll send order tracking updates and Cashfree receipt if provided.</span>
         </div>
       </div>
 
-      <!-- STEP 2: DELIVERY ADDRESS -->
-      <div class="checkout-card-box">
-        <div class="checkout-card-header">
-          <div class="checkout-card-heading-group">
-            <span class="checkout-card-number-badge">02</span>
-            <h2 class="checkout-card-title">Delivery Address</h2>
-          </div>
+      <!-- 2. Delivery Address -->
+      <div class="checkout-section-box" style="border-radius: 12px; box-shadow: 0 2px 12px rgba(7, 61, 38, 0.04);">
+        <h2>2. Delivery address</h2>
+
+        <div class="form-group">
+          <label for="street">Street address / Flat / House no <span class="req">*</span></label>
+          <input id="street" name="street" required placeholder="Flat 402, Lotus Residency, MG Road" autocomplete="street-address" style="border-radius: 6px;" />
         </div>
 
         <div class="form-group">
-          <label for="street" style="font-weight: 600; color: #2A362D;">
-            Flat / House No / Building / Street <span class="req" style="color: #9B1C1C;">*</span>
-          </label>
-          <input 
-            id="street" 
-            name="street" 
-            class="checkout-input-modern" 
-            required 
-            placeholder="e.g. Flat 402, Lotus Residency, Road No. 12" 
-            autocomplete="street-address" 
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="landmark" style="font-weight: 600; color: #2A362D;">
-            Landmark <span class="opt" style="font-size: 11.5px; color: #7B7265; font-weight: normal;">(optional)</span>
-          </label>
-          <input 
-            id="landmark" 
-            name="landmark" 
-            class="checkout-input-modern" 
-            placeholder="e.g. Near City Center Mall / Apollo Pharmacy" 
-          />
+          <label for="landmark">Landmark <span class="opt">(optional)</span></label>
+          <input id="landmark" name="landmark" placeholder="Near City Hospital" style="border-radius: 6px;" />
         </div>
 
         <div class="form-group-row three-col">
           <div class="form-group">
-            <label for="pincode" style="font-weight: 600; color: #2A362D;">
-              PIN Code <span class="req" style="color: #9B1C1C;">*</span>
-            </label>
-            <input 
-              id="pincode" 
-              name="pincode" 
-              class="checkout-input-modern" 
-              required 
-              maxlength="6" 
-              pattern="[0-9]{6}" 
-              placeholder="500001" 
-              autocomplete="postal-code" 
-              oninput="handlePincodeInput(this.value)"
-            />
-            <div id="pin-status-pill" class="pin-status-pill"></div>
+            <label for="pincode">PIN code <span class="req">*</span></label>
+            <input id="pincode" name="pincode" required maxlength="6" pattern="[0-9]{6}" placeholder="500001" autocomplete="postal-code" oninput="handlePincodeInput(this.value)" style="border-radius: 6px;" />
+            <div id="pin-status-pill" style="font-size: 11.5px; color: #2E7D32; font-weight: 600; margin-top: 4px; display: none;"></div>
           </div>
-
           <div class="form-group">
-            <label for="city" style="font-weight: 600; color: #2A362D;">
-              City / District <span class="req" style="color: #9B1C1C;">*</span>
-            </label>
-            <input 
-              id="city" 
-              name="city" 
-              class="checkout-input-modern" 
-              required 
-              placeholder="Hyderabad" 
-              autocomplete="address-level2" 
-            />
+            <label for="city">City / Town <span class="req">*</span></label>
+            <input id="city" name="city" required placeholder="Hyderabad" autocomplete="address-level2" style="border-radius: 6px;" />
           </div>
-
           <div class="form-group">
-            <label for="state" style="font-weight: 600; color: #2A362D;">
-              State <span class="req" style="color: #9B1C1C;">*</span>
-            </label>
-            <select 
-              id="state" 
-              name="state" 
-              class="checkout-input-modern" 
-              required 
-              onchange="handleStateChange(this.value)" 
-              style="padding: 0 12px; cursor: pointer;"
-            >
+            <label for="state">State <span class="req">*</span></label>
+            <select id="state" name="state" required onchange="handleStateChange(this.value)" style="height: 48px; padding: 0 12px; border: 1px solid #d3cfc3; border-radius: 6px; font-size: 14px; background: #fff; width: 100%; cursor: pointer;">
               <option value="Telangana" selected>Telangana</option>
               <option value="Andhra Pradesh">Andhra Pradesh</option>
               <option value="Karnataka">Karnataka</option>
@@ -247,142 +128,81 @@ require __DIR__ . '/layouts/header.php';
         </div>
       </div>
 
-      <!-- STEP 3: CASHFREE PAYMENT METHOD -->
-      <div class="checkout-card-box">
-        <div class="checkout-card-header">
-          <div class="checkout-card-heading-group">
-            <span class="checkout-card-number-badge">03</span>
-            <h2 class="checkout-card-title">Payment Method</h2>
+      <!-- 3. Payment Method -->
+      <div class="checkout-section-box payment-section-box" style="border-radius: 12px; box-shadow: 0 2px 12px rgba(7, 61, 38, 0.04);">
+        <h2>3. Payment method</h2>
+        <div class="payment-method-card" style="border-radius: 8px;">
+          <div class="payment-method-header">
+            <?= Icon::render('card', ['size' => 24]) ?>
+            <strong>Cashfree Secure Online Payment</strong>
           </div>
-          <span style="font-size: 12px; color: #2E7D32; background: #EAF5EC; padding: 3px 8px; border-radius: 6px; font-weight: 700;">
-            100% Encrypted
-          </span>
+          <p>Pay securely using UPI (Google Pay, PhonePe, Paytm), NetBanking, Credit or Debit Cards. Cash on delivery is not offered.</p>
         </div>
 
-        <div style="padding: 18px 20px; border: 1.5px solid #073D26; border-radius: 12px; background: #F7FAF8; margin-bottom: 22px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <?= Icon::render('card', ['size' => 24]) ?>
-              <strong style="color: #073D26; font-size: 15.5px;">Cashfree Online Gateway</strong>
-            </div>
-            <span style="font-size: 11.5px; background: #E6F4EA; color: #137333; font-weight: 700; padding: 3px 8px; border-radius: 4px;">
-              Zero Extra Gateway Fee
-            </span>
-          </div>
-
-          <p style="margin: 0 0 12px; font-size: 13.5px; color: #4B4336; line-height: 1.5;">
-            Supports all Indian payment options: <strong>UPI</strong> (Google Pay, PhonePe, Paytm, BHIM), <strong>Credit &amp; Debit Cards</strong> (Visa, Mastercard, RuPay), and <strong>NetBanking</strong> across 50+ banks.
-          </p>
-
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 12px; color: #6E6454;">
-            <span style="background: #fff; border: 1px solid #DCD5C9; padding: 4px 8px; border-radius: 4px; font-weight: 600;">⚡ Instant UPI</span>
-            <span style="background: #fff; border: 1px solid #DCD5C9; padding: 4px 8px; border-radius: 4px; font-weight: 600;">💳 Cards</span>
-            <span style="background: #fff; border: 1px solid #DCD5C9; padding: 4px 8px; border-radius: 4px; font-weight: 600;">🏦 NetBanking</span>
-          </div>
-        </div>
-
-        <!-- High-converting Cashfree CTA Button -->
-        <button 
-          type="submit" 
-          id="checkout-submit-btn" 
-          class="button button-primary"
-          style="width: 100%; min-height: 56px; border-radius: 10px; font-size: 16.5px; font-weight: 700; letter-spacing: 0.3px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 16px rgba(7, 61, 38, 0.25); cursor: pointer;"
-        >
-          <span>Pay <?= Helpers::formatPaise($total) ?> with Cashfree</span>
-          <span aria-hidden="true">→</span>
+        <button type="submit" id="checkout-submit-btn" class="button button-primary checkout-submit-btn" style="border-radius: 8px; font-weight: 700; font-size: 16px;">
+          Pay <?= Helpers::formatPaise($total) ?> with Cashfree
         </button>
 
-        <p class="checkout-guarantee" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 14px 0 0; color: #6E6454; font-size: 12px;">
-          <?= Icon::render('shield', ['size' => 16]) ?> 256-bit encrypted gateway. Your banking credentials are never stored.
+        <p class="checkout-guarantee">
+          <?= Icon::render('shield', ['size' => 16]) ?> 256-bit encrypted gateway. Your card details are never stored on our server.
         </p>
       </div>
     </form>
 
-    <!-- Right Column: Modern Order Summary -->
-    <aside class="checkout-summary-modern" aria-label="Items in this order">
-      <div class="checkout-summary-heading">
-        <span>Order Summary</span>
-        <span style="font-size: 12.5px; font-family: var(--sans); font-weight: 600; color: #7B7265;">
-          <?= count($cart['items']) ?> <?= count($cart['items']) === 1 ? 'item' : 'items' ?>
-        </span>
-      </div>
-
-      <ul class="checkout-item-list" style="margin: 0; padding: 0; list-style: none;">
+    <!-- Right column: Order Summary -->
+    <aside class="checkout-summary" aria-label="Items in this order" style="border-radius: 12px; box-shadow: 0 2px 12px rgba(7, 61, 38, 0.04);">
+      <h2>Order summary</h2>
+      <ul class="checkout-item-list">
         <?php foreach ($cart['items'] as $item): 
           $img = !empty($item['image_url']) ? Helpers::asset($item['image_url']) : Helpers::asset('mixed-nuts-reference.jpg');
         ?>
-          <li class="checkout-item-row" style="display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px dashed #EDE6DC;">
-            <div class="checkout-item-thumb" style="width: 52px; height: 52px; border-radius: 8px; overflow: hidden; position: relative; border: 1px solid #EAE3D5; flex-shrink: 0;">
-              <img src="<?= $img ?>" alt="" style="width: 100%; height: 100%; object-fit: cover;" />
-              <span class="checkout-item-badge" style="position: absolute; top: -4px; right: -4px; background: #073D26; color: #fff; font-size: 11px; font-weight: 700; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <?= $item['quantity'] ?>
-              </span>
+          <li class="checkout-item-row">
+            <div class="checkout-item-thumb" style="border-radius: 8px; overflow: hidden;">
+              <img src="<?= $img ?>" alt="" />
+              <span class="checkout-item-badge"><?= $item['quantity'] ?></span>
             </div>
-            <div class="checkout-item-meta" style="flex: 1; min-width: 0;">
-              <strong style="display: block; font-size: 13.5px; color: #2A362D; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                <?= htmlspecialchars($item['product_name']) ?>
-              </strong>
-              <span style="font-size: 12px; color: #7B7265;">
-                <?= htmlspecialchars($item['variant_label']) ?>
-              </span>
+            <div class="checkout-item-meta">
+              <strong><?= htmlspecialchars($item['product_name']) ?></strong>
+              <span><?= htmlspecialchars($item['variant_label']) ?></span>
             </div>
-            <div class="checkout-item-price" style="font-weight: 700; font-size: 14px; color: #073D26;">
+            <div class="checkout-item-price">
               <?= Helpers::formatPaise((int)$item['line_total_paise']) ?>
             </div>
           </li>
         <?php endforeach; ?>
       </ul>
 
-      <dl class="checkout-totals" style="margin: 18px 0 0; padding: 14px 0 0; border-top: 1.5px solid #EDE6DC;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
-          <dt style="color: #6E6454;">Subtotal</dt>
-          <dd style="font-weight: 600; color: #2A362D; margin: 0;"><?= Helpers::formatPaise($subtotal) ?></dd>
+      <dl class="checkout-totals">
+        <div>
+          <dt>Subtotal</dt>
+          <dd><?= Helpers::formatPaise($subtotal) ?></dd>
         </div>
-
         <?php if ($discount > 0): ?>
-          <div class="discount-row" style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #2E7D32;">
+          <div class="discount-row">
             <dt>Discount (<?= htmlspecialchars($coupon) ?>)</dt>
-            <dd style="font-weight: 700; margin: 0;">−<?= Helpers::formatPaise($discount) ?></dd>
+            <dd>−<?= Helpers::formatPaise($discount) ?></dd>
           </div>
         <?php endif; ?>
-
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px;">
-          <dt style="color: #6E6454;">Shipping</dt>
-          <dd id="summary-shipping-val" style="font-weight: 700; color: <?= $shipping === 0 ? '#2E7D32' : '#073D26' ?>; margin: 0;">
+        <div>
+          <dt>Shipping</dt>
+          <dd id="summary-shipping-val" style="color: <?= $shipping === 0 ? '#2E7D32' : 'inherit' ?>; font-weight: 700;">
             <?= $shipping === 0 ? 'Free' : Helpers::formatPaise($shipping) ?>
           </dd>
         </div>
-
-        <div class="checkout-grand-total" style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 14px; border-top: 2px solid #073D26;">
-          <dt style="font-family: var(--serif); font-size: 19px; color: #073D26; font-weight: 700;">Total Payable</dt>
-          <dd id="summary-total-val" style="font-family: var(--serif); font-size: 24px; color: #073D26; font-weight: 700; margin: 0;">
-            <?= Helpers::formatPaise($total) ?>
-          </dd>
+        <div class="checkout-grand-total">
+          <dt>Total payable</dt>
+          <dd id="summary-total-val"><?= Helpers::formatPaise($total) ?></dd>
         </div>
       </dl>
 
-      <div style="text-align: center; margin-top: 18px;">
-        <a href="<?= Helpers::url('cart') ?>" style="font-size: 13px; color: #073D26; font-weight: 600; text-decoration: underline;">
-          ← Edit bag or offers
-        </a>
-      </div>
-
-      <!-- Trust Assurance Box -->
-      <div class="checkout-summary-trust-badge">
-        <div style="font-size: 13px; font-weight: 700; color: #073D26; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-          <span>🌿</span> SVG Dry Fruits Promise
-        </div>
-        <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #5D4F3C; line-height: 1.6;">
-          <li>100% natural, handpicked harvest</li>
-          <li>Airtight seal packaging for crunch &amp; freshness</li>
-          <li>Fast dispatch with live tracking updates</li>
-        </ul>
+      <div class="checkout-back-link">
+        <a href="<?= Helpers::url('cart') ?>">← Edit bag or coupon</a>
       </div>
     </aside>
   </div>
-</div>
+</section>
 
-<?php $googleMapsKey = config('google_maps_api_key', env('GOOGLE_MAPS_API_KEY', '')); ?>
+<?php $googleMapsKey = env('GOOGLE_MAPS_API_KEY', ''); ?>
 <?php if (!empty($googleMapsKey)): ?>
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars($googleMapsKey) ?>&libraries=places&callback=initGooglePlacesAutocomplete" async defer></script>
 <?php endif; ?>
@@ -439,15 +259,9 @@ function handleStateChange(stateName) {
   var baseRatePaise = isHome ? 9000 : 10000;
   var rate12Paise = isHome ? 13000 : 15000;
   var rate2kgAbovePaise = isHome ? 15000 : 21000;
-  var sla = isHome ? '1 – 3 Business Days' : '3 – 5 Business Days';
-  var desc = 'Dispatched from our Hyderabad & Kakinada packing facilities. Shipping is calculated automatically based on destination state & order weight.';
-  var ruleName = 'Direct Delivery to ' + (stateName || 'Your State');
   var freeAbove = null;
 
   if (rule) {
-    sla = rule.estimated_days || sla;
-    desc = rule.description || desc;
-    ruleName = rule.name || ruleName;
     freeAbove = rule.free_above_paise ? parseInt(rule.free_above_paise, 10) : null;
     baseRatePaise = parseInt(rule.rate_paise, 10) || baseRatePaise;
     rate12Paise = rule.rate_1_2kg_paise ? parseInt(rule.rate_1_2kg_paise, 10) : (isHome ? 13000 : 15000);
@@ -456,13 +270,10 @@ function handleStateChange(stateName) {
 
   // Weight-based Tier Calculation
   var selectedRatePaise = baseRatePaise;
-  var tierName = 'Below 1 kg';
   if (cartTotalWeightGrams >= 2000) {
     selectedRatePaise = rate2kgAbovePaise;
-    tierName = '2 kg & Above';
   } else if (cartTotalWeightGrams >= 1000) {
     selectedRatePaise = rate12Paise;
-    tierName = '1 – 2 kg';
   }
 
   if (freeAbove !== null && baseSubtotalPaise >= freeAbove) {
@@ -474,7 +285,7 @@ function handleStateChange(stateName) {
   var summaryShipping = document.getElementById('summary-shipping-val');
   if (summaryShipping) {
     summaryShipping.textContent = (selectedRatePaise === 0) ? 'Free' : formatINR(selectedRatePaise);
-    summaryShipping.style.color = (selectedRatePaise === 0) ? '#2E7D32' : '#073D26';
+    summaryShipping.style.color = (selectedRatePaise === 0) ? '#2E7D32' : 'inherit';
   }
 
   var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise + selectedRatePaise);
@@ -485,29 +296,7 @@ function handleStateChange(stateName) {
 
   var submitBtn = document.getElementById('checkout-submit-btn');
   if (submitBtn) {
-    submitBtn.innerHTML = '<span>Pay ' + formatINR(newTotalPaise) + ' with Cashfree</span> <span aria-hidden="true">→</span>';
-  }
-}
-
-
-
-function matchAndSelectState(stateStr) {
-  var stateSelect = document.getElementById('state');
-  if (!stateSelect) return;
-  var target = stateStr.toLowerCase().trim();
-
-  // Normalize common aliases
-  if (target === 'ts' || target.indexOf('telangana') !== -1) target = 'telangana';
-  if (target === 'ap' || target.indexOf('andhra') !== -1) target = 'andhra pradesh';
-  if (target.indexOf('delhi') !== -1) target = 'delhi';
-
-  for (var i = 0; i < stateSelect.options.length; i++) {
-    var optVal = stateSelect.options[i].value.toLowerCase().trim();
-    if (optVal === target || target.indexOf(optVal) !== -1 || optVal.indexOf(target) !== -1) {
-      stateSelect.selectedIndex = i;
-      handleStateChange(stateSelect.options[i].value);
-      return;
-    }
+    submitBtn.textContent = 'Pay ' + formatINR(newTotalPaise) + ' with Cashfree';
   }
 }
 
@@ -520,12 +309,6 @@ function handlePincodeInput(val) {
   if (pin.length !== 6) {
     if (pinStatus) pinStatus.style.display = 'none';
     return;
-  }
-
-  if (pinStatus) {
-    pinStatus.textContent = 'Verifying PIN code…';
-    pinStatus.style.color = '#7B7265';
-    pinStatus.style.display = 'block';
   }
 
   clearTimeout(pinTimer);
@@ -550,13 +333,7 @@ function handlePincodeInput(val) {
 
           if (pinStatus) {
             pinStatus.innerHTML = '✓ ' + (officeName ? officeName + ', ' : '') + district + ' (' + state + ')';
-            pinStatus.style.color = '#2E7D32';
             pinStatus.style.display = 'block';
-          }
-        } else {
-          if (pinStatus) {
-            pinStatus.textContent = 'PIN code entered';
-            pinStatus.style.color = '#7B7265';
           }
         }
       })
@@ -564,6 +341,25 @@ function handlePincodeInput(val) {
         if (pinStatus) pinStatus.style.display = 'none';
       });
   }, 250);
+}
+
+function matchAndSelectState(stateStr) {
+  var stateSelect = document.getElementById('state');
+  if (!stateSelect) return;
+  var target = stateStr.toLowerCase().trim();
+
+  if (target === 'ts' || target.indexOf('telangana') !== -1) target = 'telangana';
+  if (target === 'ap' || target.indexOf('andhra') !== -1) target = 'andhra pradesh';
+  if (target.indexOf('delhi') !== -1) target = 'delhi';
+
+  for (var i = 0; i < stateSelect.options.length; i++) {
+    var optVal = stateSelect.options[i].value.toLowerCase().trim();
+    if (optVal === target || target.indexOf(optVal) !== -1 || optVal.indexOf(target) !== -1) {
+      stateSelect.selectedIndex = i;
+      handleStateChange(stateSelect.options[i].value);
+      return;
+    }
+  }
 }
 
 function initGooglePlacesAutocomplete() {
@@ -630,7 +426,7 @@ function handleCheckoutSubmit(e) {
   if (errBanner) errBanner.style.display = 'none';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span>Connecting to Cashfree…</span>';
+    btn.textContent = 'Redirecting to Cashfree…';
   }
 
   var stateValue = document.getElementById('state').value.trim();
@@ -730,4 +526,5 @@ function handleCheckoutSubmit(e) {
 </script>
 
 <?php require __DIR__ . '/layouts/footer.php'; ?>
+
 
