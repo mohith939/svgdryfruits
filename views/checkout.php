@@ -55,11 +55,7 @@ require __DIR__ . '/layouts/header.php';
       </span>
       <span class="checkout-step-pill active">
         <span style="width:6px;height:6px;border-radius:50%;background:#4ADE80;"></span>
-        03. Shipping Rate
-      </span>
-      <span class="checkout-step-pill active">
-        <span style="width:6px;height:6px;border-radius:50%;background:#4ADE80;"></span>
-        04. Cashfree Payment
+        03. Cashfree Payment
       </span>
     </div>
   </div>
@@ -147,22 +143,7 @@ require __DIR__ . '/layouts/header.php';
             <span class="checkout-card-number-badge">02</span>
             <h2 class="checkout-card-title">Delivery Address</h2>
           </div>
-
-          <!-- Bulletproof Location Auto-Detect Button -->
-          <button
-            type="button"
-            id="btn-use-location"
-            class="btn-detect-location-modern"
-            onclick="autoFetchCurrentLocation()"
-            title="Automatically detect address, PIN code & state"
-          >
-            <span class="location-radar-dot"></span>
-            <span id="btn-use-location-text">Auto-Detect My Location</span>
-          </button>
         </div>
-
-        <!-- Location Status Alert -->
-        <div id="location-fetch-status" class="location-status-bar"></div>
 
         <div class="form-group">
           <label for="street" style="font-weight: 600; color: #2A362D;">
@@ -266,58 +247,11 @@ require __DIR__ . '/layouts/header.php';
         </div>
       </div>
 
-      <!-- STEP 3: AUTOMATED WEIGHT & STATE-BASED SHIPPING RATE -->
+      <!-- STEP 3: CASHFREE PAYMENT METHOD -->
       <div class="checkout-card-box">
         <div class="checkout-card-header">
           <div class="checkout-card-heading-group">
             <span class="checkout-card-number-badge">03</span>
-            <h2 class="checkout-card-title">Shipping &amp; Delivery Option</h2>
-          </div>
-          <span style="font-size: 12px; color: #073D26; background: #EAF5EC; padding: 3px 8px; border-radius: 6px; font-weight: 700;">
-            Auto-Calculated
-          </span>
-        </div>
-
-        <div id="shipping-rate-card" style="padding: 18px 20px; border: 2px solid #073D26; border-radius: 12px; background: #F8FBF9; display: flex; align-items: flex-start; gap: 14px;">
-          <div style="font-size: 28px; line-height: 1; padding-top: 2px;">🚚</div>
-          <div style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
-              <strong id="shipping-rule-name" style="color: #073D26; font-size: 16px;">
-                Direct Delivery to <span id="shipping-rule-state">Telangana</span>
-              </strong>
-              <span id="shipping-rate-badge" style="font-weight: 700; font-size: 15px; color: #073D26; background: #EAF5EC; padding: 5px 12px; border-radius: 6px;">
-                <?= $shipping === 0 ? 'FREE DELIVERY' : Helpers::formatPaise($shipping) ?>
-              </span>
-            </div>
-
-            <div style="margin: 6px 0 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span id="shipping-weight-badge" style="font-size: 12px; background: #FAF7F2; border: 1px solid #DFD7CA; color: #5D4F3C; padding: 3px 9px; border-radius: 5px; font-weight: 600;">
-                ⚖️ Bag Weight: <?= $cart['total_weight_kg'] ?? 0.5 ?> kg (<?= $cart['total_weight_grams'] ?? 500 ?>g)
-              </span>
-              <span id="shipping-tier-badge" style="font-size: 12px; background: #FAF7F2; border: 1px solid #DFD7CA; color: #073D26; padding: 3px 9px; border-radius: 5px; font-weight: 700;">
-                Tier: Below 1 kg
-              </span>
-            </div>
-
-            <p id="shipping-rule-desc" style="margin: 4px 0 8px; font-size: 13.5px; color: #4B4336; line-height: 1.5;">
-              Dispatched with food-grade protective packing from our Hyderabad &amp; Kakinada facilities. Shipping dynamically calculates based on destination &amp; parcel weight.
-            </p>
-
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-              <span id="shipping-rule-sla" style="display: inline-block; font-size: 12px; padding: 3px 9px; border-radius: 5px; background: #F4EFE6; color: #5D4F3C; font-weight: 600;">
-                ⏱ Estimated: 1 – 3 Business Days
-              </span>
-              <span id="shipping-free-hint" style="font-size: 12px; color: #8E6D38; font-weight: 600;"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP 4: CASHFREE PAYMENT METHOD -->
-      <div class="checkout-card-box">
-        <div class="checkout-card-header">
-          <div class="checkout-card-heading-group">
-            <span class="checkout-card-number-badge">04</span>
             <h2 class="checkout-card-title">Payment Method</h2>
           </div>
           <span style="font-size: 12px; color: #2E7D32; background: #EAF5EC; padding: 3px 8px; border-radius: 6px; font-weight: 700;">
@@ -537,48 +471,6 @@ function handleStateChange(stateName) {
 
   currentShippingPaise = selectedRatePaise;
 
-  var stateEl = document.getElementById('shipping-rule-state');
-  if (stateEl) stateEl.textContent = stateName;
-
-  var nameEl = document.getElementById('shipping-rule-name');
-  if (nameEl) nameEl.textContent = ruleName;
-
-  var descEl = document.getElementById('shipping-rule-desc');
-  if (descEl) descEl.textContent = desc;
-
-  var slaEl = document.getElementById('shipping-rule-sla');
-  if (slaEl) slaEl.textContent = '⏱ Estimated: ' + sla;
-
-  var tierBadge = document.getElementById('shipping-tier-badge');
-  if (tierBadge) tierBadge.textContent = 'Tier: ' + tierName;
-
-  var badgeEl = document.getElementById('shipping-rate-badge');
-  if (badgeEl) {
-    if (selectedRatePaise === 0) {
-      badgeEl.textContent = 'FREE DELIVERY';
-      badgeEl.style.color = '#2E7D32';
-      badgeEl.style.background = '#EAF5EC';
-    } else {
-      badgeEl.textContent = formatINR(selectedRatePaise);
-      badgeEl.style.color = '#073D26';
-      badgeEl.style.background = '#F4EFE6';
-    }
-  }
-
-  var hintEl = document.getElementById('shipping-free-hint');
-  if (hintEl) {
-    if (freeAbove !== null && baseSubtotalPaise < freeAbove) {
-      var diff = freeAbove - baseSubtotalPaise;
-      hintEl.textContent = '• Add ' + formatINR(diff) + ' more for FREE delivery!';
-      hintEl.style.display = 'inline';
-    } else if (freeAbove !== null && baseSubtotalPaise >= freeAbove) {
-      hintEl.textContent = '• 🎉 You unlocked FREE delivery!';
-      hintEl.style.display = 'inline';
-    } else {
-      hintEl.style.display = 'none';
-    }
-  }
-
   var summaryShipping = document.getElementById('summary-shipping-val');
   if (summaryShipping) {
     summaryShipping.textContent = (selectedRatePaise === 0) ? 'Free' : formatINR(selectedRatePaise);
@@ -597,149 +489,7 @@ function handleStateChange(stateName) {
   }
 }
 
-// =========================================================================
-// BULLETPROOF MULTI-TIER LOCATION AUTO-FETCH ENGINE
-// Tier 1: GPS via navigator.geolocation (5s timeout)
-// Tier 2: BigDataCloud client reverse geocode
-// Tier 3: Internal /api/locate.php + ipapi.co fallback (Works on HTTP & zero permissions)
-// Tier 4: India Post PIN code live resolver
-// =========================================================================
 
-function autoFetchCurrentLocation() {
-  var btn = document.getElementById('btn-use-location');
-  var btnText = document.getElementById('btn-use-location-text');
-
-  if (btn) btn.disabled = true;
-  if (btnText) btnText.textContent = 'Detecting…';
-  showLocationStatus('Detecting your location…', '#EAF5EC', '#073D26');
-
-  // If navigator.geolocation exists and we are in a supported environment, try GPS with strict 5-second timeout
-  var gpsTried = false;
-  if (navigator.geolocation && (window.isSecureContext !== false || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-    gpsTried = true;
-    navigator.geolocation.getCurrentPosition(
-      function(pos) {
-        var lat = pos.coords.latitude;
-        var lon = pos.coords.longitude;
-        if (btnText) btnText.textContent = 'Resolving Address…';
-
-        // Reverse geocode via BigDataCloud (CORS enabled for browsers)
-        fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=en')
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            applyLocationData({
-              road: data.locality || data.city || '',
-              city: data.city || data.locality || '',
-              state: data.principalSubdivision || '',
-              postcode: data.postcode || ''
-            }, 'GPS');
-          })
-          .catch(function() {
-            // Fallback to internal IP locator if reverse geocode fails
-            fallbackToIpLocation('GPS address lookup timed out. Detected via Network IP:');
-          });
-      },
-      function(err) {
-        // Geolocation denied, unavailable, or timed out -> Fall back to IP instantly!
-        fallbackToIpLocation('Detected via Network IP:');
-      },
-      { timeout: 5000, enableHighAccuracy: true, maximumAge: 60000 }
-    );
-  } else {
-    // Non-HTTPS or geolocation not supported -> directly use IP fallback
-    fallbackToIpLocation('Detected via Network IP:');
-  }
-}
-
-function fallbackToIpLocation(successPrefix) {
-  var btn = document.getElementById('btn-use-location');
-  var btnText = document.getElementById('btn-use-location-text');
-
-  // Try internal API first (bypasses any adblockers or browser mixed-content restrictions)
-  var apiUrl = (window.SVG_APP && window.SVG_APP.apiUrl) ? window.SVG_APP.apiUrl : '/api';
-  fetch(apiUrl + '/locate.php')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data && (data.city || data.region)) {
-        applyLocationData({
-          road: '',
-          city: data.city || '',
-          state: data.region || '',
-          postcode: data.postal || ''
-        }, successPrefix || 'Network IP');
-      } else {
-        throw new Error('No region');
-      }
-    })
-    .catch(function() {
-      // Secondary fallback to public ipapi
-      fetch('https://ipapi.co/json/')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          applyLocationData({
-            road: '',
-            city: data.city || '',
-            state: data.region || '',
-            postcode: data.postal || ''
-          }, successPrefix || 'Network IP');
-        })
-        .catch(function() {
-          showLocationStatus('Please enter your city, PIN code and select your state manually.', '#FFF8E6', '#A35A00');
-          if (btn) btn.disabled = false;
-          if (btnText) btnText.textContent = 'Auto-Detect Location';
-        });
-    });
-}
-
-function applyLocationData(addr, source) {
-  var btn = document.getElementById('btn-use-location');
-  var btnText = document.getElementById('btn-use-location-text');
-
-  var city = addr.city || '';
-  var state = addr.state || '';
-  var postcode = (addr.postcode || '').replace(/\D/g, '').slice(0, 6);
-  var road = addr.road || '';
-
-  if (road) {
-    var streetEl = document.getElementById('street');
-    if (streetEl && !streetEl.value.trim()) {
-      streetEl.value = road;
-    }
-  }
-
-  if (city) {
-    var cityEl = document.getElementById('city');
-    if (cityEl) cityEl.value = city;
-  }
-
-  if (postcode && postcode.length === 6) {
-    var pinEl = document.getElementById('pincode');
-    if (pinEl) {
-      pinEl.value = postcode;
-      handlePincodeInput(postcode);
-    }
-  }
-
-  if (state) {
-    matchAndSelectState(state);
-  }
-
-  var displayLabel = (city ? city + ', ' : '') + (state || 'Your Location');
-  showLocationStatus('✓ ' + (source || 'Auto') + ' Location Applied: ' + displayLabel, '#EAF5EC', '#073D26');
-
-  if (btn) btn.disabled = false;
-  if (btnText) btnText.textContent = '✓ Location Applied';
-}
-
-function showLocationStatus(text, bg, color) {
-  var statusEl = document.getElementById('location-fetch-status');
-  if (statusEl) {
-    statusEl.innerHTML = text;
-    statusEl.style.background = bg;
-    statusEl.style.color = color;
-    statusEl.style.display = 'flex';
-  }
-}
 
 function matchAndSelectState(stateStr) {
   var stateSelect = document.getElementById('state');
