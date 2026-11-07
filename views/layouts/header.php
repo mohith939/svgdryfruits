@@ -63,7 +63,7 @@ $siteTitle = (!empty($pageTitle) ? $pageTitle . ' — ' : '') . 'SVG Dry Fruits'
 
         <a class="bag-link" href="<?= Helpers::url('cart') ?>" aria-label="Shopping bag, <?= $cartCount ?> items">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 8.5h13l1 12h-15l1-12Z" /><path d="M9 9V6a3 3 0 0 1 6 0v3" /></svg>
-          <span class="bag-count" id="header-bag-count"><?= $cartCount ?></span>
+          <span class="bag-count" id="header-bag-count"<?= $cartCount === 0 ? ' style="display:none;"' : '' ?>><?= $cartCount ?></span>
         </a>
 
         <button class="icon-button menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="Open navigation menu" id="menu-toggle-btn">

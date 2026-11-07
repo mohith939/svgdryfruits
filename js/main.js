@@ -78,7 +78,10 @@
       .then(function (res) {
         if (res.success) {
           var badge = document.getElementById('header-bag-count');
-          if (badge) badge.textContent = res.count;
+          if (badge) {
+            badge.textContent = res.count;
+            badge.style.display = res.count > 0 ? '' : 'none';
+          }
 
           window.triggerCartToast({
             title: (meta && meta.title) ? meta.title : 'Item',

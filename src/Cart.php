@@ -56,11 +56,23 @@ class Cart {
     public static function count(): int {
         self::init();
         $sum = 0;
-        foreach ($_SESSION['cart'] as $q) {
-            $sum += (int)(is_array($q) ? ($q['quantity'] ?? 1) : $q);
+        foreach ($_SESSION['cart'] as $variantId => $q) {
+            $qty = (int)(is_array($q) ? ($q['quantity'] ?? 1) : $q);
+            if ($qty <= 0) {
+                unset($_SESSION['cart'][$variantId]);
+                continue;
+            }
+            $variant = Models::getVariantById((string)$variantId);
+            if (!$variant || empty($variant['active'])) {
+                unset($_SESSION['cart'][$variantId]);
+                continue;
+            }
+            $sum += $qty;
         }
         return $sum;
     }
+
+
 
     public static function applyCoupon(string $code): array {
         $coupon = Models::getCouponByCode($code);
@@ -128,20 +140,24 @@ class Cart {
         $items = [];
         $subtotalPaise = 0;
         $totalWeightGrams = 0;
+        $itemCount = 0;
 
         foreach ($_SESSION['cart'] as $variantId => $qty) {
             $quantity = (int)(is_array($qty) ? ($qty['quantity'] ?? 1) : $qty);
             if ($quantity <= 0) {
+                unset($_SESSION['cart'][$variantId]);
                 continue;
             }
 
             $variant = Models::getVariantById((string)$variantId);
-            if (!$variant || !$variant['active']) {
+            if (!$variant || empty($variant['active'])) {
+                unset($_SESSION['cart'][$variantId]);
                 continue;
             }
 
             $lineTotalPaise = $variant['price_paise'] * $quantity;
             $subtotalPaise += $lineTotalPaise;
+            $itemCount += $quantity;
 
             $weightGrams = self::parseWeightGrams((string)($variant['label'] ?? ''));
             $lineWeightGrams = $weightGrams * $quantity;
@@ -233,7 +249,7 @@ class Cart {
 
         return [
             'items' => $items,
-            'item_count' => self::count(),
+            'item_count' => $itemCount,
             'subtotal_paise' => $subtotalPaise,
             'total_weight_grams' => $totalWeightGrams,
             'total_weight_kg' => round($totalWeightGrams / 1000, 2),
