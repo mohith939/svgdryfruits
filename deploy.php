@@ -66,15 +66,9 @@ try {
     echo "5. Database note: " . $e->getMessage() . "\n";
 }
 
-echo "\n--- DIRECTORY SCAN ---\n";
-$siteBalaji = '/home/sites/29a/a/a6fe9510b6/balaji';
-echo "Contents of {$siteBalaji}:\n" . shell_exec("ls -la {$siteBalaji} 2>&1") . "\n";
-echo "Contents of {$targetDir}/uploads:\n" . shell_exec("ls -la {$targetDir}/uploads 2>&1") . "\n";
-echo "Contents of {$targetDir}/assets/uploads:\n" . shell_exec("ls -la {$targetDir}/assets/uploads 2>&1") . "\n";
-
-// Copy any images found in /uploads or balaji root into assets/uploads
-shell_exec("cp -n {$targetDir}/uploads/* {$targetDir}/assets/uploads/ 2>/dev/null");
-shell_exec("cp -n {$siteBalaji}/*.png {$siteBalaji}/*.jpg {$targetDir}/assets/uploads/ 2>/dev/null");
+echo "\n--- ACCOUNT ROOT SCAN ---\n";
+echo "Contents of /home/sites/29a/a/a6fe9510b6:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6 2>&1") . "\n";
+echo "Find prod_* in /home/sites/29a/a/a6fe9510b6 (maxdepth 4):\n" . shell_exec("find /home/sites/29a/a/a6fe9510b6 -maxdepth 4 -name 'prod_*' 2>&1") . "\n";
 
 echo "\n=========================================\n";
 echo "DEPLOYMENT COMPLETE & LIVE!\n";
