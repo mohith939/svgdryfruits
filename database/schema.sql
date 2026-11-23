@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS `products` (
   `description` TEXT NULL,
   `image_url` VARCHAR(255) NULL,
   `images` JSON NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `is_featured` TINYINT(1) NOT NULL DEFAULT 0,
   `is_combo` TINYINT(1) NOT NULL DEFAULT 0,
   `active` TINYINT(1) NOT NULL DEFAULT 1,
   `is_demo` TINYINT(1) NOT NULL DEFAULT 0,
@@ -34,6 +36,8 @@ CREATE TABLE IF NOT EXISTS `products` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_products_slug` (`slug`),
   KEY `idx_products_category_id` (`category_id`),
+  KEY `idx_products_sort` (`sort_order`),
+  KEY `idx_products_featured` (`is_featured`),
   CONSTRAINT `fk_products_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

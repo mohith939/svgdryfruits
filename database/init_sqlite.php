@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS products (
   description TEXT,
   image_url TEXT,
   images TEXT,
+  sort_order INTEGER DEFAULT 0,
+  is_featured INTEGER DEFAULT 0,
   is_combo INTEGER DEFAULT 0,
   active INTEGER DEFAULT 1,
   is_demo INTEGER DEFAULT 0,
@@ -116,6 +118,17 @@ CREATE TABLE IF NOT EXISTS shipping_settings (
   whatsapp_number TEXT DEFAULT '919059123456',
   store_address TEXT DEFAULT 'SVG Dry Fruits, Hyderabad, India'
 );
+");
+
+try {
+  $cols = $pdo->query("PRAGMA table_info(shipping_settings)")->fetchAll(PDO::FETCH_COLUMN, 1);
+  if (!in_array('contact_phone', $cols)) $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN contact_phone TEXT");
+  if (!in_array('contact_email', $cols)) $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN contact_email TEXT");
+  if (!in_array('whatsapp_number', $cols)) $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN whatsapp_number TEXT");
+  if (!in_array('store_address', $cols)) $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN store_address TEXT");
+} catch (Throwable $e) {}
+
+$pdo->exec("
 
 CREATE TABLE IF NOT EXISTS shipping_options (
   id TEXT PRIMARY KEY,
@@ -187,9 +200,14 @@ $products = [
     ['b0000001-0000-4000-8000-000000000013', 'a0000001-0000-4000-8000-000000000001', 'organic-walnuts', 'Organic Himalayan Walnuts', 'Certified 100% organic handpicked wild walnuts harvested from pristine Himalayan orchards in Kashmir. Zero additives or preservatives.', '/assets/collection-walnuts.jpg', 0],
 ];
 
-$prodStmt = $pdo->prepare("INSERT OR REPLACE INTO products (id, category_id, slug, name, description, image_url, is_combo, active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
-foreach ($products as $p) {
-    $prodStmt->execute($p);
+$prodStmt = $pdo->prepare("INSERT OR REPLACE INTO products (id, category_id, slug, name, description, image_url, is_combo, sort_order, is_featured, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
+$pSort = 10;
+foreach ($products as $idx => $p) {
+    $isFeat = ($idx < 8) ? 1 : 0;
+    $prodStmt->execute([
+        $p[0], $p[1], $p[2], $p[3], $p[4], $p[5], $p[6], $pSort, $isFeat
+    ]);
+    $pSort += 10;
 }
 
 // 4. Seed Variants

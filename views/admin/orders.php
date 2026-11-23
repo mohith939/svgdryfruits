@@ -396,8 +396,11 @@ require __DIR__ . '/../layouts/admin_layout.php';
               $initials = getInitials($o['customer_name']);
               $dateFormatted = date('d M Y, h:i A', strtotime($o['created_at']));
             ?>
-              <tr>
-                <td>
+              <tr class="order-clickable-row" 
+                  data-order-url="<?= Helpers::url('admin/orders/detail?id=' . $o['id']) ?>" 
+                  style="cursor: pointer; transition: background 0.15s ease;" 
+                  title="Click to view details for order #<?= htmlspecialchars(ltrim($o['order_number'], '#')) ?>">
+                <td onclick="event.stopPropagation();">
                   <input type="checkbox" class="admin-v3-checkbox" aria-label="Select order <?= htmlspecialchars($o['order_number']) ?>">
                 </td>
 
@@ -552,5 +555,29 @@ require __DIR__ . '/../layouts/admin_layout.php';
     </form>
   </div>
 </div>
+
+<style>
+  tr.order-clickable-row:hover td {
+    background-color: #F8F5EE !important;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var rows = document.querySelectorAll('.order-clickable-row');
+    rows.forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        // Prevent row navigation if clicking on checkbox, link, or button
+        if (e.target.closest('input[type="checkbox"], a, button, label')) {
+          return;
+        }
+        var url = this.getAttribute('data-order-url');
+        if (url) {
+          window.location.href = url;
+        }
+      });
+    });
+  });
+</script>
 
 <?php require __DIR__ . '/../layouts/admin_layout_bottom.php'; ?>

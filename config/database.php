@@ -113,6 +113,20 @@ class Database {
 
                     INSERT IGNORE INTO `shadowfax_settings` (`id`, `environment`) VALUES (1, 'staging');
                 ");
+
+                try {
+                    $colCheck = $pdo->query("SHOW COLUMNS FROM `products` LIKE 'sort_order'")->fetch();
+                    if (!$colCheck) {
+                        $pdo->exec("ALTER TABLE `products` ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0 AFTER `image_url`");
+                    }
+                } catch (Throwable $e) {}
+
+                try {
+                    $colCheck = $pdo->query("SHOW COLUMNS FROM `products` LIKE 'is_featured'")->fetch();
+                    if (!$colCheck) {
+                        $pdo->exec("ALTER TABLE `products` ADD COLUMN `is_featured` TINYINT(1) NOT NULL DEFAULT 0 AFTER `sort_order`");
+                    }
+                } catch (Throwable $e) {}
             } else {
                 $pdo->exec("
                     CREATE TABLE IF NOT EXISTS combo_items (
@@ -147,7 +161,65 @@ class Database {
 
                     INSERT OR IGNORE INTO shadowfax_settings (id, environment) VALUES (1, 'staging');
                 ");
+
+                try {
+                    $cols = $pdo->query("PRAGMA table_info(products)")->fetchAll(PDO::FETCH_COLUMN, 1);
+                    if (!in_array('sort_order', $cols)) {
+                        $pdo->exec("ALTER TABLE products ADD COLUMN sort_order INTEGER DEFAULT 0");
+                    }
+                    if (!in_array('is_featured', $cols)) {
+                        $pdo->exec("ALTER TABLE products ADD COLUMN is_featured INTEGER DEFAULT 0");
+                    }
+
+                    $shipCols = $pdo->query("PRAGMA table_info(shipping_settings)")->fetchAll(PDO::FETCH_COLUMN, 1);
+                    if (!in_array('contact_phone', $shipCols)) {
+                        $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN contact_phone TEXT DEFAULT '918340956469'");
+                    }
+                    if (!in_array('contact_email', $shipCols)) {
+                        $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN contact_email TEXT DEFAULT 'svgdryfruits@gmail.com'");
+                    }
+                    if (!in_array('whatsapp_number', $shipCols)) {
+                        $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN whatsapp_number TEXT DEFAULT '918340956469'");
+                    }
+                    if (!in_array('store_address', $shipCols)) {
+                        $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN store_address TEXT DEFAULT 'SVG Dry Fruits, Trunk Road, Kavali, Andhra Pradesh'");
+                    }
+                } catch (Throwable $e) {}
             }
+
+            // Seed initial sort_order and featured status if not yet initialized
+            try {
+                $maxProductSort = (int)$pdo->query("SELECT MAX(sort_order) FROM products")->fetchColumn();
+                if ($maxProductSort === 0) {
+                    $allProds = $pdo->query("SELECT id FROM products ORDER BY created_at ASC")->fetchAll(PDO::FETCH_COLUMN);
+                    $pIdx = 10;
+                    $upStmt = $pdo->prepare("UPDATE products SET sort_order = ? WHERE id = ?");
+                    foreach ($allProds as $pId) {
+                        $upStmt->execute([$pIdx, $pId]);
+                        $pIdx += 10;
+                    }
+                }
+
+                $featCount = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_featured = 1")->fetchColumn();
+                if ($featCount === 0) {
+                    $first8 = $pdo->query("SELECT id FROM products WHERE active = 1 ORDER BY sort_order ASC, created_at ASC LIMIT 8")->fetchAll(PDO::FETCH_COLUMN);
+                    if (!empty($first8)) {
+                        $inClause = implode(',', array_map(fn($id) => $pdo->quote($id), $first8));
+                        $pdo->exec("UPDATE products SET is_featured = 1 WHERE id IN ($inClause)");
+                    }
+                }
+
+                $maxCatSort = (int)$pdo->query("SELECT MAX(sort_order) FROM categories")->fetchColumn();
+                if ($maxCatSort === 0) {
+                    $allCats = $pdo->query("SELECT id FROM categories ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
+                    $cIdx = 10;
+                    $cUpStmt = $pdo->prepare("UPDATE categories SET sort_order = ? WHERE id = ?");
+                    foreach ($allCats as $cId) {
+                        $cUpStmt->execute([$cIdx, $cId]);
+                        $cIdx += 10;
+                    }
+                }
+            } catch (Throwable $e) {}
         } catch (Throwable $e) {
             error_log("Database schema ensure warning: " . $e->getMessage());
         }

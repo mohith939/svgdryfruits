@@ -68,7 +68,7 @@ class Models {
                 ORDER BY price_paise ASC LIMIT 1
             )
             {$whereClause}
-            ORDER BY p.created_at DESC
+            ORDER BY p.sort_order ASC, p.name ASC
         ";
 
         $stmt = $pdo->prepare($sql);
@@ -97,6 +97,100 @@ class Models {
             $p['variants'] = $variantMap[$p['id']] ?? [];
         }
         unset($p);
+        return $products;
+    }
+
+    public static function getHomeFeaturedProducts(int $limit = 8): array {
+        $pdo = Database::getConnection();
+
+        // 1. Fetch featured active products ordered by sort_order
+        $sql = "
+            SELECT 
+                p.*,
+                c.name AS category_name,
+                c.slug AS category_slug,
+                v.id AS default_variant_id,
+                v.sku AS default_sku,
+                v.label AS default_label,
+                v.price_paise,
+                v.compare_price_paise,
+                v.stock
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN variants v ON v.id = (
+                SELECT id FROM variants 
+                WHERE product_id = p.id AND active = 1 
+                ORDER BY price_paise ASC LIMIT 1
+            )
+            WHERE p.active = 1 AND p.is_featured = 1
+            ORDER BY p.sort_order ASC, p.name ASC
+            LIMIT ?
+        ";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$limit]);
+        $products = $stmt->fetchAll();
+
+        // 2. If fewer than limit, fallback to fill with other active products
+        if (count($products) < $limit) {
+            $needed = $limit - count($products);
+            $excludeIds = !empty($products) ? array_column($products, 'id') : [];
+            $excludeClause = "";
+            $params = [];
+            if (!empty($excludeIds)) {
+                $placeholders = implode(',', array_fill(0, count($excludeIds), '?'));
+                $excludeClause = "AND p.id NOT IN ($placeholders)";
+                $params = $excludeIds;
+            }
+            $params[] = $needed;
+            $fillSql = "
+                SELECT 
+                    p.*,
+                    c.name AS category_name,
+                    c.slug AS category_slug,
+                    v.id AS default_variant_id,
+                    v.sku AS default_sku,
+                    v.label AS default_label,
+                    v.price_paise,
+                    v.compare_price_paise,
+                    v.stock
+                FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
+                LEFT JOIN variants v ON v.id = (
+                    SELECT id FROM variants 
+                    WHERE product_id = p.id AND active = 1 
+                    ORDER BY price_paise ASC LIMIT 1
+                )
+                WHERE p.active = 1 {$excludeClause}
+                ORDER BY p.sort_order ASC, p.name ASC
+                LIMIT ?
+            ";
+            $fillStmt = $pdo->prepare($fillSql);
+            $fillStmt->execute($params);
+            $fillProducts = $fillStmt->fetchAll();
+            $products = array_merge($products, $fillProducts);
+        }
+
+        if (empty($products)) {
+            return [];
+        }
+
+        // Attach variants
+        $prodIds = array_column($products, 'id');
+        $placeholders = implode(',', array_fill(0, count($prodIds), '?'));
+        $varStmt = $pdo->prepare("SELECT * FROM variants WHERE product_id IN ($placeholders) AND active = 1 ORDER BY price_paise ASC");
+        $varStmt->execute($prodIds);
+        $allVariants = $varStmt->fetchAll();
+
+        $variantMap = [];
+        foreach ($allVariants as $v) {
+            $variantMap[$v['product_id']][] = $v;
+        }
+
+        foreach ($products as &$p) {
+            $p['variants'] = $variantMap[$p['id']] ?? [];
+        }
+        unset($p);
+
         return $products;
     }
 
@@ -593,6 +687,122 @@ Specialist in Premium Dry Fruits, Almonds, Cashews, Walnuts, Dates & Nutrient Se
             'pending_orders' => $pendingOrders,
             'low_stock_count' => $lowStockCount,
         ];
+    }
+
+    // --- Reordering & Featured Management ---
+    public static function moveCategoryToTop(string $id): void {
+        $pdo = Database::getConnection();
+        $cats = $pdo->query("SELECT id FROM categories ORDER BY sort_order ASC, name ASC")->fetchAll(PDO::FETCH_COLUMN);
+        if (empty($cats) || !in_array($id, $cats)) return;
+
+        $cats = array_values(array_filter($cats, fn($cId) => $cId !== $id));
+        array_unshift($cats, $id);
+
+        $up = $pdo->prepare("UPDATE categories SET sort_order = ? WHERE id = ?");
+        $pos = 10;
+        foreach ($cats as $cId) {
+            $up->execute([$pos, $cId]);
+            $pos += 10;
+        }
+    }
+
+    public static function moveCategoryOrder(string $id, string $direction): void {
+        $pdo = Database::getConnection();
+        $cats = $pdo->query("SELECT id FROM categories ORDER BY sort_order ASC, name ASC")->fetchAll(PDO::FETCH_COLUMN);
+        $idx = array_search($id, $cats);
+        if ($idx === false) return;
+
+        if ($direction === 'up' && $idx > 0) {
+            $temp = $cats[$idx];
+            $cats[$idx] = $cats[$idx - 1];
+            $cats[$idx - 1] = $temp;
+        } elseif ($direction === 'down' && $idx < count($cats) - 1) {
+            $temp = $cats[$idx];
+            $cats[$idx] = $cats[$idx + 1];
+            $cats[$idx + 1] = $temp;
+        }
+
+        $up = $pdo->prepare("UPDATE categories SET sort_order = ? WHERE id = ?");
+        $pos = 10;
+        foreach ($cats as $cId) {
+            $up->execute([$pos, $cId]);
+            $pos += 10;
+        }
+    }
+
+    public static function setCategorySortOrder(string $id, int $sortOrder): void {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE categories SET sort_order = ? WHERE id = ?");
+        $stmt->execute([$sortOrder, $id]);
+    }
+
+    public static function moveProductToTop(string $id): void {
+        $pdo = Database::getConnection();
+        $prods = $pdo->query("SELECT id FROM products ORDER BY sort_order ASC, name ASC")->fetchAll(PDO::FETCH_COLUMN);
+        if (empty($prods) || !in_array($id, $prods)) return;
+
+        $prods = array_values(array_filter($prods, fn($pId) => $pId !== $id));
+        array_unshift($prods, $id);
+
+        $up = $pdo->prepare("UPDATE products SET sort_order = ? WHERE id = ?");
+        $pos = 10;
+        foreach ($prods as $pId) {
+            $up->execute([$pos, $pId]);
+            $pos += 10;
+        }
+    }
+
+    public static function moveProductOrder(string $id, string $direction): void {
+        $pdo = Database::getConnection();
+        $prods = $pdo->query("SELECT id FROM products ORDER BY sort_order ASC, name ASC")->fetchAll(PDO::FETCH_COLUMN);
+        $idx = array_search($id, $prods);
+        if ($idx === false) return;
+
+        if ($direction === 'up' && $idx > 0) {
+            $temp = $prods[$idx];
+            $prods[$idx] = $prods[$idx - 1];
+            $prods[$idx - 1] = $temp;
+        } elseif ($direction === 'down' && $idx < count($prods) - 1) {
+            $temp = $prods[$idx];
+            $prods[$idx] = $prods[$idx + 1];
+            $prods[$idx + 1] = $temp;
+        }
+
+        $up = $pdo->prepare("UPDATE products SET sort_order = ? WHERE id = ?");
+        $pos = 10;
+        foreach ($prods as $pId) {
+            $up->execute([$pos, $pId]);
+            $pos += 10;
+        }
+    }
+
+    public static function setProductSortOrder(string $id, int $sortOrder): void {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE products SET sort_order = ? WHERE id = ?");
+        $stmt->execute([$sortOrder, $id]);
+    }
+
+    public static function toggleProductFeatured(string $id): array {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT is_featured, name FROM products WHERE id = ?");
+        $stmt->execute([$id]);
+        $prod = $stmt->fetch();
+        if (!$prod) {
+            return ['success' => false, 'message' => 'Product not found.'];
+        }
+
+        $current = (int)($prod['is_featured'] ?? 0);
+        if ($current === 1) {
+            $pdo->prepare("UPDATE products SET is_featured = 0 WHERE id = ?")->execute([$id]);
+            return ['success' => true, 'is_featured' => 0, 'message' => "\"{$prod['name']}\" removed from Home Page collection."];
+        } else {
+            $count = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_featured = 1 AND active = 1")->fetchColumn();
+            if ($count >= 8) {
+                return ['success' => false, 'message' => 'Maximum 8 products can be added to the Home Page. Please remove another product before adding this one.'];
+            }
+            $pdo->prepare("UPDATE products SET is_featured = 1 WHERE id = ?")->execute([$id]);
+            return ['success' => true, 'is_featured' => 1, 'message' => "\"{$prod['name']}\" added to Home Page! (Now " . ($count + 1) . "/8)."];
+        }
     }
 }
 

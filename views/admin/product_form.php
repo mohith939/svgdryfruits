@@ -87,6 +87,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $isCombo = isset($_POST['is_combo']) ? 1 : 0;
     $active = isset($_POST['active']) ? 1 : 0;
+    $sortOrder = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
+    $isFeatured = isset($_POST['is_featured']) ? 1 : 0;
+
+    if ($isFeatured === 1) {
+        $exCheck = $pdo->prepare("SELECT COUNT(*) FROM products WHERE is_featured = 1 AND active = 1 AND id != ?");
+        $exCheck->execute([$isEdit ? $id : '']);
+        $currFeat = (int)$exCheck->fetchColumn();
+        if ($currFeat >= 8) {
+            $isFeatured = 0;
+            Helpers::setFlash('warning', 'Maximum 8 products can be featured on the Home Page. The product was saved, but not marked as featured on the Home Page.');
+        }
+    }
 
     if (!$name) {
         Helpers::setFlash('error', 'Product Name is required.');
@@ -112,18 +124,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($isEdit) {
             $stmt = $pdo->prepare("
                 UPDATE products 
-                SET name = ?, slug = ?, category_id = ?, description = ?, image_url = ?, images = ?, is_combo = ?, active = ?
+                SET name = ?, slug = ?, category_id = ?, description = ?, image_url = ?, images = ?, is_combo = ?, active = ?, sort_order = ?, is_featured = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$name, $slug, $categoryId, $description, $imageUrl, $imagesJson, $isCombo, $active, $id]);
+            $stmt->execute([$name, $slug, $categoryId, $description, $imageUrl, $imagesJson, $isCombo, $active, $sortOrder, $isFeatured, $id]);
             $productId = $id;
         } else {
             $productId = 'prod_' . bin2hex(random_bytes(8));
             $stmt = $pdo->prepare("
-                INSERT INTO products (id, name, slug, category_id, description, image_url, images, is_combo, active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO products (id, name, slug, category_id, description, image_url, images, is_combo, active, sort_order, is_featured)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$productId, $name, $slug, $categoryId, $description, $imageUrl, $imagesJson, $isCombo, $active]);
+            $stmt->execute([$productId, $name, $slug, $categoryId, $description, $imageUrl, $imagesJson, $isCombo, $active, $sortOrder, $isFeatured]);
         }
 
         // Process variants preserving existing IDs
@@ -473,11 +485,28 @@ require __DIR__ . '/../layouts/admin_layout.php';
             </label>
           </div>
 
-          <div class="form-checkbox-row" style="margin-bottom: 24px;">
+          <div class="form-checkbox-row" style="margin-bottom: 16px;">
             <label class="checkbox-label" style="display: flex; gap: 10px; align-items: center; cursor: pointer;">
               <input type="checkbox" name="is_combo" value="1" <?= !empty($product['is_combo']) ? 'checked' : '' ?>>
               <span><strong>Is Combo / Gifting Hamper</strong><br><small style="color:#7C7265;">Enables automatic bundle stock calculation</small></span>
             </label>
+          </div>
+
+          <div class="form-checkbox-row" style="margin-bottom: 16px; background: #FDF9F0; border: 1.5px solid #E6D2B5; border-radius: 8px; padding: 12px;">
+            <label class="checkbox-label" style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer;">
+              <input type="checkbox" name="is_featured" value="1" <?= !empty($product['is_featured']) ? 'checked' : '' ?> style="margin-top: 3px;">
+              <span>
+                <strong style="color: #8C5311;">⭐ Feature on Home Page (Max 8)</strong>
+                <br>
+                <small style="color:#7C7265;">Displays this product in the curated 8-product collection on the storefront home page.</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label for="prod_sort" style="font-size: 13px; font-weight: 700; color: #073D26; margin-bottom: 4px; display: block;">Display Sort Order</label>
+            <input type="number" id="prod_sort" name="sort_order" value="<?= (int)($product['sort_order'] ?? 10) ?>" style="width: 100%; border: 1px solid #D5CEBF; border-radius: 6px; padding: 8px 10px; font-size: 13px;">
+            <small style="color: #7C7265; font-size: 11px; display: block; margin-top: 3px;">Lower numbers appear first (e.g. 10, 20, 30). You can also use 1-click 'Move to Top' from the products table.</small>
           </div>
 
           <button type="submit" class="button button-primary" style="width: 100%; justify-content: center; padding: 12px;">

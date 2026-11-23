@@ -12,7 +12,7 @@ $pageTitle = 'SVG Dry Fruits — Naturally Superior Dry Fruits & Nuts';
 $activePage = 'home';
 
 $categories = Models::getCategories();
-$products = Models::getProductsWithVariants(null, true);
+$products = Models::getHomeFeaturedProducts(8);
 
 $marqueeItems = ["Almonds", "Cashews", "Pistachios", "Walnuts", "Dates", "Raisins", "Figs", "Apricots", "Combos"];
 
@@ -156,13 +156,20 @@ require __DIR__ . '/layouts/header.php';
     </div>
 
     <!-- Category Filter Tabs -->
-    <?php if (!empty($categories)): ?>
+    <?php 
+    $featuredCatSlugs = array_unique(array_filter(array_column($products, 'category_slug')));
+    $displayCategories = array_filter($categories, fn($c) => in_array($c['slug'], $featuredCatSlugs));
+    if (empty($displayCategories)) {
+        $displayCategories = $categories;
+    }
+    ?>
+    <?php if (!empty($displayCategories)): ?>
       <div class="coll-tabs" role="tablist" aria-label="Product categories">
         <button type="button" role="tab" aria-selected="true" class="coll-tab-btn is-active" data-category="all">
           <span class="coll-tab-label">All Products</span>
           <div class="coll-tab-indicator"></div>
         </button>
-        <?php foreach ($categories as $cat): ?>
+        <?php foreach ($displayCategories as $cat): ?>
           <button type="button" role="tab" aria-selected="false" class="coll-tab-btn" data-category="<?= htmlspecialchars($cat['slug']) ?>">
             <?php if (!empty($cat['image_url'])): ?>
               <div class="coll-tab-icon-wrap">
