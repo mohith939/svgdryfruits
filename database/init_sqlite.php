@@ -278,10 +278,10 @@ INSERT OR REPLACE INTO coupons (id, code, name, description, type, value, min_su
 // 6. Seed Shipping Settings (100% Free Shipping storewide) & Shadowfax
 $pdo->exec("
 INSERT OR REPLACE INTO shipping_settings (id, flat_charge_paise, free_threshold_paise, active, contact_phone, contact_email, whatsapp_number, store_address) 
-VALUES (1, 0, NULL, 0, '918340956469', 'svgdryfruits@gmail.com', '918340956469', 'SVG Dry Fruits, Trunk Road, Kavali, Andhra Pradesh');
+VALUES (1, 0, NULL, 0, '918340956469', 'svgdryfruits@gmail.com', '918340956469', 'Anjaneya Nagar, APSP Camp, Kakinada, Andhra Pradesh - 533005');
 
 INSERT OR IGNORE INTO shadowfax_settings (id, environment, pickup_name, pickup_phone, pickup_address, pickup_city, pickup_state, pickup_pincode) 
-VALUES (1, 'staging', 'SVG Dry Fruits', '918340956469', 'SVG Dry Fruits, Main Road', 'Kavali', 'Andhra Pradesh', '524201');
+VALUES (1, 'staging', 'SVG Dry Fruits', '918340956469', 'Anjaneya Nagar, APSP Camp', 'Kakinada', 'Andhra Pradesh', '533005');
 ");
 
 // 7. Seed Admin

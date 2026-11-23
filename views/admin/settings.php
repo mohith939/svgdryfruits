@@ -25,10 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'base_url' => trim($_POST['base_url'] ?? ''),
             'pickup_name' => trim($_POST['pickup_name'] ?? 'SVG Dry Fruits'),
             'pickup_phone' => trim($_POST['pickup_phone'] ?? '918340956469'),
-            'pickup_address' => trim($_POST['pickup_address'] ?? 'SVG Dry Fruits, Trunk Road'),
-            'pickup_city' => trim($_POST['pickup_city'] ?? 'Kavali'),
+            'pickup_address' => trim($_POST['pickup_address'] ?? 'Anjaneya Nagar, APSP Camp'),
+            'pickup_city' => trim($_POST['pickup_city'] ?? 'Kakinada'),
             'pickup_state' => trim($_POST['pickup_state'] ?? 'Andhra Pradesh'),
-            'pickup_pincode' => trim($_POST['pickup_pincode'] ?? '524201'),
+            'pickup_pincode' => trim($_POST['pickup_pincode'] ?? '533005'),
         ];
 
         if (Shadowfax::saveConfig($data)) {

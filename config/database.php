@@ -200,7 +200,7 @@ class Database {
                         $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN whatsapp_number TEXT DEFAULT '918340956469'");
                     }
                     if (!in_array('store_address', $shipCols)) {
-                        $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN store_address TEXT DEFAULT 'SVG Dry Fruits, Trunk Road, Kavali, Andhra Pradesh'");
+                        $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN store_address TEXT DEFAULT 'Anjaneya Nagar, APSP Camp, Kakinada, Andhra Pradesh - 533005'");
                     }
                     if (!in_array('home_featured_limit', $shipCols)) {
                         $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN home_featured_limit INTEGER DEFAULT 8");
@@ -215,6 +215,25 @@ class Database {
                     }
                 } catch (Throwable $e) {}
             }
+
+            // Sync warehouse pickup location and store address to Kakinada (533005)
+            try {
+                $pdo->exec("
+                    UPDATE shadowfax_settings 
+                    SET pickup_address = 'Anjaneya Nagar, APSP Camp',
+                        pickup_city = 'Kakinada',
+                        pickup_state = 'Andhra Pradesh',
+                        pickup_pincode = '533005'
+                    WHERE (pickup_pincode = '524201' OR pickup_pincode IS NULL OR pickup_city = 'Kavali')
+                      AND id = 1
+                ");
+                $pdo->exec("
+                    UPDATE shipping_settings 
+                    SET store_address = 'Anjaneya Nagar, APSP Camp, Kakinada, Andhra Pradesh - 533005'
+                    WHERE (store_address LIKE '%Kavali%' OR store_address IS NULL)
+                      AND id = 1
+                ");
+            } catch (Throwable $e) {}
 
             // Seed initial sort_order and featured status if not yet initialized
             try {

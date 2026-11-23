@@ -213,7 +213,7 @@ class Shadowfax {
      */
     public static function calculateShippingRate(string $destPincode, float $weightKg = 0.5, string $paymentMode = 'prepaid', string $direction = 'forward'): array {
         $cfg = self::getConfig();
-        $originPin = preg_replace('/\D/', '', (string)($cfg['pickup_pincode'] ?? '524201'));
+        $originPin = preg_replace('/\D/', '', (string)($cfg['pickup_pincode'] ?? '533005'));
         $destPin = preg_replace('/\D/', '', $destPincode);
         $weightKg = max(0.2, round($weightKg, 2));
 
