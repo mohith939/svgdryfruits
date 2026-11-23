@@ -217,6 +217,8 @@ var currentShippingPaise = 0;
 var cartTotalWeightGrams = <?= (int)($cart['total_weight_grams'] ?? 500) ?>;
 var cartTotalWeightKg = <?= (float)($cart['total_weight_kg'] ?? 0.5) ?>;
 if (cartTotalWeightKg <= 0) cartTotalWeightKg = 0.5;
+var currentShippingRate = null;
+var currentShippingRule = { id: 'shadowfax_express', name: 'Shadowfax Express' };
 
 function formatINR(paise) {
   var rupees = paise / 100;
@@ -509,7 +511,7 @@ function handleCheckoutSubmit(e) {
     shipping_state: stateValue,
     pincode: document.getElementById('pincode').value.trim(),
     shipping_pincode: document.getElementById('pincode').value.trim(),
-    shipping_option_id: currentShippingRule ? currentShippingRule.id : ''
+    shipping_option_id: (currentShippingRule && currentShippingRule.id) ? currentShippingRule.id : 'shadowfax_express'
   };
 
   fetch(window.SVG_APP.apiUrl + '/checkout.php', {
