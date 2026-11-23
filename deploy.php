@@ -66,11 +66,10 @@ try {
     echo "5. Database note: " . $e->getMessage() . "\n";
 }
 
-echo "\n--- FULL BALAJI/SVG DIRECTORY LISTING ---\n";
-echo shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji/SVG/ 2>&1") . "\n";
-echo "Public folder if any:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji/SVG/public/ 2>&1") . "\n";
-echo "Public/assets if any:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji/SVG/public/assets/ 2>&1") . "\n";
-echo "Public/assets/uploads if any:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji/SVG/public/assets/uploads/ 2>&1") . "\n";
+echo "\n--- SEARCHING FOR PROD FILES ON SERVER ---\n";
+echo shell_exec("find /home/sites/29a/a/a6fe9510b6/ -name '*prod_20261107*' 2>&1") . "\n";
+echo "\n--- SEARCHING FOR RECENT UPLOADS / IMAGES ---\n";
+echo shell_exec("find /home/sites/29a/a/a6fe9510b6/ -name '*.png' | grep -v 'svgdryfruits-repo' | head -n 40 2>&1") . "\n";
 
 echo "\n--- PRODUCTS IN LIVE DATABASE ---\n";
 try {
