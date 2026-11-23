@@ -185,7 +185,12 @@ require __DIR__ . '/layouts/header.php';
         <?php endif; ?>
         <div>
           <dt>Shipping</dt>
-          <dd id="summary-shipping-val" style="color: #2E7D32; font-weight: 700;">Free (₹0)</dd>
+          <dd id="summary-shipping-val" style="color: #1B3B2B; font-weight: 700;">
+            <span id="shipping-amount-text" style="color: #666; font-size: 13px; font-weight: 500;">Enter PIN to calculate</span>
+          </dd>
+        </div>
+        <div id="shipping-details-note" style="display: none; font-size: 11.5px; color: #4A5568; margin-top: -6px; margin-bottom: 8px;">
+          🚚 <span id="shipping-zone-text">Shadowfax Express</span> &bull; <span id="shipping-eta-text">1-2 Business Days</span>
         </div>
         <div class="checkout-grand-total">
           <dt>Total payable</dt>
@@ -208,56 +213,88 @@ require __DIR__ . '/layouts/header.php';
 <script>
 var baseSubtotalPaise = <?= (int)$subtotal ?>;
 var discountPaise = <?= (int)$discount ?>;
-var currentShippingPaise = <?= (int)$shipping ?>;
-var shippingRules = <?= json_encode(Models::getShippingOptions(true)) ?>;
+var currentShippingPaise = 0;
 var cartTotalWeightGrams = <?= (int)($cart['total_weight_grams'] ?? 500) ?>;
 var cartTotalWeightKg = <?= (float)($cart['total_weight_kg'] ?? 0.5) ?>;
-var currentShippingRule = null;
+if (cartTotalWeightKg <= 0) cartTotalWeightKg = 0.5;
 
 function formatINR(paise) {
   var rupees = paise / 100;
-  return '₹' + rupees.toLocaleString('en-IN', { maximumFractionDigits: (paise % 100 === 0) ? 0 : 2 });
+  return '₹' + rupees.toLocaleString('en-IN', { minimumFractionDigits: (paise % 100 === 0) ? 0 : 2, maximumFractionDigits: 2 });
 }
 
-function resolveShippingRule(stateName) {
-  var clean = (stateName || '').toLowerCase().trim();
-  var matched = null;
-  var fallbackAll = null;
+// Calculate Shadowfax rate card instantly in JS (matching Shadowfax::calculateShippingRate)
+function calculateShadowfaxRateJS(destPin, weightKg) {
+  destPin = (destPin || '').replace(/\D/g, '');
+  if (destPin.length !== 6) return null;
+  weightKg = Math.max(0.2, weightKg || 0.5);
 
-  for (var i = 0; i < shippingRules.length; i++) {
-    var opt = shippingRules[i];
-    var targets = (opt.target_states || 'ALL').toLowerCase().trim();
-    if (targets === 'all' || targets === '*' || targets === '') {
-      if (!fallbackAll) fallbackAll = opt;
-      continue;
-    }
-    if (clean !== '') {
-      var parts = targets.split(',').map(function(s) { return s.trim(); });
-      for (var j = 0; j < parts.length; j++) {
-        var s = parts[j];
-        if (s === clean || clean.indexOf(s) !== -1 || s.indexOf(clean) !== -1) {
-          matched = opt;
-          break;
-        }
-      }
-      if (matched) break;
-    }
+  var slabs = Math.ceil(weightKg / 0.5);
+  var billedWeightKg = slabs * 0.5;
+  var destPrefix2 = parseInt(destPin.substring(0, 2), 10);
+
+  var zone = 'Rest of India (National)';
+  var baseRate = 80.00;
+  var addlRatePer500g = 55.00;
+  var etaDays = '3 - 5 Business Days';
+
+  if ([51, 52, 53].indexOf(destPrefix2) !== -1) {
+    zone = 'Intra-State (Andhra Pradesh)';
+    baseRate = 45.00;
+    addlRatePer500g = 30.00;
+    etaDays = '1 - 2 Business Days';
+  } else if (destPrefix2 === 50 || (destPrefix2 >= 56 && destPrefix2 <= 69)) {
+    zone = 'Regional South (Telangana, Karnataka, TN, Kerala)';
+    baseRate = 60.00;
+    addlRatePer500g = 40.00;
+    etaDays = '2 - 3 Business Days';
+  } else if ([11, 40, 70].indexOf(destPrefix2) !== -1) {
+    zone = 'Metro Hub (Delhi NCR, Mumbai, Kolkata)';
+    baseRate = 70.00;
+    addlRatePer500g = 45.00;
+    etaDays = '2 - 4 Business Days';
   }
 
-  return matched || fallbackAll || (shippingRules.length > 0 ? shippingRules[0] : null);
+  var baseFreight = baseRate + (Math.max(0, slabs - 1) * addlRatePer500g);
+  var fuelSurcharge = Math.round(baseFreight * 0.10 * 100) / 100;
+  var netFreight = baseFreight + fuelSurcharge;
+  var gst = Math.round(netFreight * 0.18 * 100) / 100;
+  var totalCost = Math.round((netFreight + gst) * 100) / 100;
+  var totalPaise = Math.round(totalCost * 100);
+
+  return {
+    destPin: destPin,
+    zone: zone,
+    totalCost: totalCost,
+    totalPaise: totalPaise,
+    etaDays: etaDays,
+    breakdown: {
+      base: baseFreight,
+      fuel: fuelSurcharge,
+      gst: gst
+    }
+  };
 }
 
-function handleStateChange(stateName) {
-  currentShippingRule = resolveShippingRule(stateName);
-  currentShippingPaise = 0;
+function applyShippingRate(rate) {
+  currentShippingPaise = rate.totalPaise;
 
   var summaryShipping = document.getElementById('summary-shipping-val');
   if (summaryShipping) {
-    summaryShipping.textContent = 'Free (₹0)';
-    summaryShipping.style.color = '#2E7D32';
+    summaryShipping.textContent = '₹' + rate.totalCost.toFixed(2);
+    summaryShipping.style.color = '#1B3B2B';
   }
 
-  var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise);
+  var shippingDetails = document.getElementById('shipping-details-note');
+  var zoneText = document.getElementById('shipping-zone-text');
+  var etaText = document.getElementById('shipping-eta-text');
+  if (shippingDetails && zoneText && etaText) {
+    zoneText.textContent = rate.zone;
+    etaText.textContent = rate.etaDays;
+    shippingDetails.style.display = 'block';
+  }
+
+  var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise + currentShippingPaise);
   var summaryTotal = document.getElementById('summary-total-val');
   if (summaryTotal) {
     summaryTotal.textContent = formatINR(newTotalPaise);
@@ -269,19 +306,70 @@ function handleStateChange(stateName) {
   }
 }
 
-// Live 6-digit PIN code auto-fill via India Post API
+function handleStateChange(stateName) {
+  var pinInput = document.getElementById('pincode');
+  if (pinInput && pinInput.value.replace(/\D/g, '').length === 6) {
+    handlePincodeInput(pinInput.value);
+  }
+}
+
+// Live 6-digit PIN code auto-fill via India Post API + Shadowfax rate calculation
 var pinTimer = null;
 function handlePincodeInput(val) {
   var pin = (val || '').replace(/\D/g, '').slice(0, 6);
   var pinStatus = document.getElementById('pin-status-pill');
+  var summaryShipping = document.getElementById('summary-shipping-val');
+  var shippingDetails = document.getElementById('shipping-details-note');
+  var summaryTotal = document.getElementById('summary-total-val');
+  var submitBtn = document.getElementById('checkout-submit-btn');
 
   if (pin.length !== 6) {
     if (pinStatus) pinStatus.style.display = 'none';
+    if (shippingDetails) shippingDetails.style.display = 'none';
+    currentShippingPaise = 0;
+    if (summaryShipping) {
+      summaryShipping.innerHTML = '<span style="color: #666; font-size: 13px; font-weight: 500;">Enter PIN to calculate</span>';
+    }
+    var baseTotal = Math.max(0, baseSubtotalPaise - discountPaise);
+    if (summaryTotal) summaryTotal.textContent = formatINR(baseTotal);
+    if (submitBtn) submitBtn.textContent = 'Pay ' + formatINR(baseTotal) + ' with Cashfree';
     return;
+  }
+
+  // Instant calculation with client-side Shadowfax rate card
+  var instantRate = calculateShadowfaxRateJS(pin, cartTotalWeightKg);
+  if (instantRate) {
+    applyShippingRate(instantRate);
   }
 
   clearTimeout(pinTimer);
   pinTimer = setTimeout(function() {
+    // 1. Fetch live server calculation & serviceability check from Shadowfax API
+    fetch(window.SVG_APP.apiUrl + '/shipping-calc.php?pincode=' + pin)
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          applyShippingRate({
+            destPin: res.pincode,
+            zone: res.zone,
+            totalCost: res.shipping_cost,
+            totalPaise: res.shipping_paise,
+            etaDays: res.estimated_timeline
+          });
+          if (pinStatus) {
+            pinStatus.innerHTML = res.serviceable 
+              ? '✓ ' + res.service_message 
+              : '⚠️ ' + res.service_message;
+            pinStatus.style.color = res.serviceable ? '#2E7D32' : '#C53030';
+            pinStatus.style.display = 'block';
+          }
+        }
+      })
+      .catch(function(err) {
+        console.warn('Shipping API verification:', err);
+      });
+
+    // 2. Auto-fill City & State via India Post
     fetch('https://api.postalpincode.in/pincode/' + pin)
       .then(function(r) { return r.json(); })
       .then(function(res) {
@@ -299,16 +387,9 @@ function handlePincodeInput(val) {
           if (state) {
             matchAndSelectState(state);
           }
-
-          if (pinStatus) {
-            pinStatus.innerHTML = '✓ ' + (officeName ? officeName + ', ' : '') + district + ' (' + state + ')';
-            pinStatus.style.display = 'block';
-          }
         }
       })
-      .catch(function() {
-        if (pinStatus) pinStatus.style.display = 'none';
-      });
+      .catch(function() {});
   }, 250);
 }
 
@@ -392,7 +473,19 @@ function handleCheckoutSubmit(e) {
   var errBanner = document.getElementById('checkout-err-banner');
   var errMsg = document.getElementById('checkout-err-msg');
 
-  if (errBanner) errBanner.style.display = 'none';
+  var pinValue = document.getElementById('pincode').value.replace(/\D/g, '');
+  if (pinValue.length !== 6) {
+    if (errMsg) errMsg.textContent = 'Please enter a valid 6-digit delivery PIN code to calculate shipping charges.';
+    if (errBanner) errBanner.style.display = 'flex';
+    if (btn) {
+      btn.disabled = false;
+      var baseTotal = Math.max(0, baseSubtotalPaise - discountPaise);
+      btn.textContent = 'Pay ' + formatINR(baseTotal) + ' with Cashfree';
+    }
+    document.getElementById('pincode').focus();
+    return;
+  }
+
   if (btn) {
     btn.disabled = true;
     btn.textContent = 'Redirecting to Cashfree…';
@@ -457,7 +550,7 @@ function handleCheckoutSubmit(e) {
             if (errBanner) errBanner.style.display = 'flex';
             if (btn) {
               btn.disabled = false;
-              handleStateChange(document.getElementById('state').value);
+              handlePincodeInput(document.getElementById('pincode').value);
             }
             return;
           }
@@ -488,7 +581,7 @@ function handleCheckoutSubmit(e) {
       if (errBanner) errBanner.style.display = 'flex';
       if (btn) {
         btn.disabled = false;
-        handleStateChange(document.getElementById('state').value);
+        handlePincodeInput(document.getElementById('pincode').value);
       }
     });
 }

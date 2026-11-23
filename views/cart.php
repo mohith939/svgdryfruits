@@ -139,8 +139,8 @@ require __DIR__ . '/layouts/header.php';
 
             <div class="cart-v3-summary-row">
               <span>Shipping</span>
-              <span class="cart-v3-summary-val" style="color: #2E7D32; font-weight: 600;">
-                Free Delivery (₹0)
+              <span class="cart-v3-summary-val" style="color: #666; font-size: 13px;">
+                Calculated at Checkout
               </span>
             </div>
 

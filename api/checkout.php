@@ -65,10 +65,16 @@ foreach ($cart['items'] as $item) {
     }
 }
 
-// 100% Free Shipping storewide
-$shippingPaise = 0;
+// Dynamic Courier Shipping via Shadowfax Rate Card based on destination PIN
+$cartWeightKg = (float)($cart['total_weight_kg'] ?? 0.5);
+if ($cartWeightKg <= 0) $cartWeightKg = 0.5;
+
+$cleanPin = preg_replace('/\D/', '', $pincode);
+$rate = Shadowfax::calculateShippingRate($cleanPin, $cartWeightKg, $paymentMethod, 'forward');
+$shippingPaise = (int)round(($rate['total_cost'] ?? 0) * 100);
+
 $discountPaise = (int)($cart['discount_paise'] ?? 0);
-$totalPaise = max(0, $cart['subtotal_paise'] - $discountPaise);
+$totalPaise = max(0, $cart['subtotal_paise'] - $discountPaise + $shippingPaise);
 
 // Generate Collision-Free High-Entropy Order ID & Token
 $datePrefix = date('Ymd');
@@ -96,11 +102,11 @@ $orderData = [
     'shipping_address' => $shippingAddress,
     'subtotal_paise' => $cart['subtotal_paise'],
     'discount_paise' => $discountPaise,
-    'shipping_paise' => 0,
+    'shipping_paise' => $shippingPaise,
     'total_paise' => $totalPaise,
     'coupon_code' => $cart['applied_coupon']['code'] ?? null,
-    'shipping_option_id' => 'free_shipping',
-    'shipping_option_name' => 'Free Express Delivery (Shadowfax)',
+    'shipping_option_id' => 'shadowfax_express',
+    'shipping_option_name' => 'Shadowfax Express (' . $rate['zone'] . ')',
     'cashfree_order_id' => null,
     'payment_session_id' => null,
 ];
