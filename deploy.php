@@ -66,10 +66,11 @@ try {
     echo "5. Database note: " . $e->getMessage() . "\n";
 }
 
-echo "\n--- CHECK MATCHING FOLDERS ---\n";
-echo "Matching svg/dry in balaji:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji | grep -iE 'svg|dry|fruit'") . "\n";
-echo "Matching svg/dry in root:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6 | grep -iE 'svg|dry|fruit'") . "\n";
-echo "All files in /home/sites/29a/a/a6fe9510b6/balaji/SVG/assets:\n" . shell_exec("ls /home/sites/29a/a/a6fe9510b6/balaji/SVG/assets 2>&1") . "\n";
+echo "\n--- FULL BALAJI/SVG DIRECTORY LISTING ---\n";
+echo shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji/SVG/ 2>&1") . "\n";
+echo "Public folder if any:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji/SVG/public/ 2>&1") . "\n";
+echo "Public/assets if any:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji/SVG/public/assets/ 2>&1") . "\n";
+echo "Public/assets/uploads if any:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji/SVG/public/assets/uploads/ 2>&1") . "\n";
 
 echo "\n--- PRODUCTS IN LIVE DATABASE ---\n";
 try {
