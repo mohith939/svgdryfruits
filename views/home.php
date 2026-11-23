@@ -12,7 +12,7 @@ $pageTitle = 'SVG Dry Fruits — Naturally Superior Dry Fruits & Nuts';
 $activePage = 'home';
 
 $categories = Models::getCategories();
-$products = Models::getHomeFeaturedProducts(8);
+$products = Models::getHomeFeaturedProducts();
 
 $marqueeItems = ["Almonds", "Cashews", "Pistachios", "Walnuts", "Dates", "Raisins", "Figs", "Apricots", "Combos"];
 

@@ -496,20 +496,14 @@ require __DIR__ . '/../layouts/admin_layout.php';
             <label class="checkbox-label" style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer;">
               <input type="checkbox" name="is_featured" value="1" <?= !empty($product['is_featured']) ? 'checked' : '' ?> style="margin-top: 3px;">
               <span>
-                <strong style="color: #8C5311;">⭐ Feature on Home Page (Max 8)</strong>
+                <strong style="color: #8C5311;">⭐ Feature on Home Page</strong>
                 <br>
-                <small style="color:#7C7265;">Displays this product in the curated 8-product collection on the storefront home page.</small>
+                <small style="color:#7C7265;">Displays this product in the curated collection on the storefront home page.</small>
               </span>
             </label>
           </div>
 
-          <div class="form-group" style="margin-bottom: 24px;">
-            <label for="prod_sort" style="font-size: 13px; font-weight: 700; color: #073D26; margin-bottom: 4px; display: block;">Display Sort Order</label>
-            <input type="number" id="prod_sort" name="sort_order" value="<?= (int)($product['sort_order'] ?? 10) ?>" style="width: 100%; border: 1px solid #D5CEBF; border-radius: 6px; padding: 8px 10px; font-size: 13px;">
-            <small style="color: #7C7265; font-size: 11px; display: block; margin-top: 3px;">Lower numbers appear first (e.g. 10, 20, 30). You can also use 1-click 'Move to Top' from the products table.</small>
-          </div>
-
-          <button type="submit" class="button button-primary" style="width: 100%; justify-content: center; padding: 12px;">
+          <button type="submit" class="button button-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px;">
             <?= $isEdit ? 'Save Changes' : 'Create Product' ?>
           </button>
         </div>

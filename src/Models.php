@@ -100,7 +100,29 @@ class Models {
         return $products;
     }
 
-    public static function getHomeFeaturedProducts(int $limit = 8): array {
+    public static function getHomeFeaturedLimit(): int {
+        try {
+            $pdo = Database::getConnection();
+            $row = $pdo->query("SELECT home_featured_limit FROM shipping_settings WHERE id = 1 LIMIT 1")->fetch();
+            $limit = !empty($row['home_featured_limit']) ? (int)$row['home_featured_limit'] : 8;
+            return max(1, $limit);
+        } catch (Throwable $e) {
+            return 8;
+        }
+    }
+
+    public static function setHomeFeaturedLimit(int $limit): void {
+        try {
+            $pdo = Database::getConnection();
+            $limit = max(1, min(100, $limit));
+            $pdo->prepare("UPDATE shipping_settings SET home_featured_limit = ? WHERE id = 1")->execute([$limit]);
+        } catch (Throwable $e) {}
+    }
+
+    public static function getHomeFeaturedProducts(?int $limit = null): array {
+        if ($limit === null) {
+            $limit = self::getHomeFeaturedLimit();
+        }
         $pdo = Database::getConnection();
 
         // 1. Fetch featured active products ordered by sort_order
@@ -796,12 +818,9 @@ Specialist in Premium Dry Fruits, Almonds, Cashews, Walnuts, Dates & Nutrient Se
             $pdo->prepare("UPDATE products SET is_featured = 0 WHERE id = ?")->execute([$id]);
             return ['success' => true, 'is_featured' => 0, 'message' => "\"{$prod['name']}\" removed from Home Page collection."];
         } else {
-            $count = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_featured = 1 AND active = 1")->fetchColumn();
-            if ($count >= 8) {
-                return ['success' => false, 'message' => 'Maximum 8 products can be added to the Home Page. Please remove another product before adding this one.'];
-            }
             $pdo->prepare("UPDATE products SET is_featured = 1 WHERE id = ?")->execute([$id]);
-            return ['success' => true, 'is_featured' => 1, 'message' => "\"{$prod['name']}\" added to Home Page! (Now " . ($count + 1) . "/8)."];
+            $count = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_featured = 1 AND active = 1")->fetchColumn();
+            return ['success' => true, 'is_featured' => 1, 'message' => "✓ \"{$prod['name']}\" added to Home Page! (Total Home products: {$count})."];
         }
     }
 }

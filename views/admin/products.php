@@ -105,6 +105,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Models::setProductSortOrder($prodId, $sortOrder);
             Helpers::setFlash('success', 'Product sort order updated.');
         }
+    } elseif ($action === 'update_home_limit') {
+        $limit = max(1, min(100, (int)($_POST['home_featured_limit'] ?? 8)));
+        Models::setHomeFeaturedLimit($limit);
+        Helpers::setFlash('success', "Home page display limit updated to {$limit} products!");
     }
     Helpers::redirect(Helpers::url('admin/products' . (!empty($_GET['home']) ? '?home=1' : '')));
 }
@@ -112,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $q = trim($_GET['q'] ?? '');
 $selectedCategory = trim($_GET['category'] ?? '');
 $homeFilter = trim($_GET['home'] ?? '');
+$homeFeaturedLimit = Models::getHomeFeaturedLimit();
 
 $allCategories = $pdo->query("SELECT * FROM categories ORDER BY sort_order ASC, name ASC")->fetchAll();
 
@@ -297,17 +302,38 @@ require __DIR__ . '/../layouts/admin_layout.php';
     </div>
   </div>
 
-  <!-- Quick Collection Filter Tabs -->
-  <div style="display: flex; gap: 8px; margin-bottom: 14px; align-items: center; flex-wrap: wrap;">
-    <a href="<?= Helpers::url('admin/products') ?>" style="padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; <?= empty($homeFilter) ? 'background: #073D26; color: #fff;' : 'background: #FAF7F2; color: #5C5549; border: 1px solid #D6C7B2;' ?>">
-      <span>All Products (<?= count($allItems) ?>)</span>
-    </a>
-    <a href="<?= Helpers::url('admin/products?home=1') ?>" style="padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; <?= $homeFilter === '1' ? 'background: #B4691B; color: #fff;' : 'background: #FDF9F0; color: #8C5311; border: 1.5px solid #E6D2B5;' ?>">
-      <span>⭐ Home Page Products (<?= $homeFeaturedCount ?> / 8)</span>
-    </a>
-    <span style="font-size: 12px; color: #7C7265; margin-left: 6px;">
-      💡 Client can feature at most 8 products on the home page and use <strong>⬆ Top</strong> / <strong>↑ / ↓</strong> to move products from place to place.
-    </span>
+  <!-- Quick Collection Filter & Home Page Display Limit Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; background: #FAF8F5; border: 1.5px solid #E5DFD5; border-radius: 10px; padding: 12px 16px;">
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <a href="<?= Helpers::url('admin/products') ?>" style="padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; <?= empty($homeFilter) ? 'background: #073D26; color: #fff;' : 'background: #fff; color: #5C5549; border: 1px solid #D6C7B2;' ?>">
+        <span>All Products (<?= count($allItems) ?>)</span>
+      </a>
+      <a href="<?= Helpers::url('admin/products?home=1') ?>" style="padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; <?= $homeFilter === '1' ? 'background: #B4691B; color: #fff;' : 'background: #FDF9F0; color: #8C5311; border: 1.5px solid #E6D2B5;' ?>">
+        <span>⭐ Home Page Products (<?= $homeFeaturedCount ?>)</span>
+      </a>
+    </div>
+
+    <!-- Home Page Display Limit Input Field -->
+    <form method="POST" style="display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <?= Helpers::csrfField() ?>
+      <input type="hidden" name="action" value="update_home_limit">
+      <label for="home_featured_limit" style="font-size: 13px; font-weight: 700; color: #073D26; margin: 0;">
+        🏠 Home Page Display Count:
+      </label>
+      <input
+        type="number"
+        id="home_featured_limit"
+        name="home_featured_limit"
+        min="1"
+        max="50"
+        value="<?= $homeFeaturedLimit ?>"
+        style="width: 58px; padding: 5px 8px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #073D26; border-radius: 6px; text-align: center; background: #fff;"
+      >
+      <span style="font-size: 12.5px; color: #5C5549;">products</span>
+      <button type="submit" class="button button-primary" style="padding: 6px 14px; font-size: 12px; font-weight: 700; border-radius: 6px;">
+        Save Count
+      </button>
+    </form>
   </div>
 
   <!-- Search & Filter Toolbar -->
@@ -366,8 +392,8 @@ require __DIR__ . '/../layouts/admin_layout.php';
             </th>
             <th style="min-width: 210px;">PRODUCT</th>
             <th>CATEGORY</th>
-            <th style="min-width: 140px;">ORDER / MOVE</th>
-            <th style="min-width: 120px; text-align: center;">HOME (MAX 8)</th>
+            <th>MOVE TO TOP</th>
+            <th style="text-align: center;">HOME PAGE</th>
             <th>PACK SIZES</th>
             <th>PRICE RANGE</th>
             <th>STOCK UNITS</th>
@@ -456,61 +482,32 @@ require __DIR__ . '/../layouts/admin_layout.php';
                   </span>
                 </td>
 
-                <!-- Order / Move from place to place -->
+                <!-- Move to Top only -->
                 <td style="white-space: nowrap;">
-                  <div style="display: flex; align-items: center; gap: 4px;">
-                    <!-- Move to Top -->
-                    <form method="POST" style="display:inline;" title="Move to Top">
-                      <?= Helpers::csrfField() ?>
-                      <input type="hidden" name="action" value="move_top">
-                      <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
-                      <button type="submit" style="padding: 3px 6px; font-size: 11px; background: #073D26; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 700;">
-                        ⬆ Top
-                      </button>
-                    </form>
-
-                    <!-- Shift Up / Down -->
-                    <form method="POST" style="display:inline;" title="Shift Up">
-                      <?= Helpers::csrfField() ?>
-                      <input type="hidden" name="action" value="move_up">
-                      <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
-                      <button type="submit" style="padding: 3px 6px; font-size: 11px; background: #FAF7F2; border: 1px solid #D6C7B2; border-radius: 4px; cursor: pointer;">
-                        ↑
-                      </button>
-                    </form>
-                    <form method="POST" style="display:inline;" title="Shift Down">
-                      <?= Helpers::csrfField() ?>
-                      <input type="hidden" name="action" value="move_down">
-                      <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
-                      <button type="submit" style="padding: 3px 6px; font-size: 11px; background: #FAF7F2; border: 1px solid #D6C7B2; border-radius: 4px; cursor: pointer;">
-                        ↓
-                      </button>
-                    </form>
-
-                    <!-- Numeric Order Input for Moving to exact place -->
-                    <form method="POST" style="display:inline-flex; align-items:center; gap: 2px;" title="Set Exact Order Position">
-                      <?= Helpers::csrfField() ?>
-                      <input type="hidden" name="action" value="set_order">
-                      <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
-                      <input type="number" name="sort_order" value="<?= (int)($p['sort_order'] ?? 0) ?>" style="width: 44px; padding: 2px 4px; font-size: 11px; border: 1px solid #D6C7B2; border-radius: 4px; text-align: center;">
-                      <button type="submit" style="padding: 2px 5px; font-size: 10px; background: #EAE4D9; border: 1px solid #C8BFB0; border-radius: 4px; cursor: pointer;" title="Save Position">✓</button>
-                    </form>
-                  </div>
+                  <form method="POST" style="display:inline;" title="Move product to top of catalog">
+                    <?= Helpers::csrfField() ?>
+                    <input type="hidden" name="action" value="move_top">
+                    <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
+                    <button type="submit" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 11.5px; background: #073D26; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">
+                      <span>⬆</span>
+                      <span>Top</span>
+                    </button>
+                  </form>
                 </td>
 
-                <!-- Featured on Home Page (Max 8) Toggle -->
+                <!-- Featured on Home Page Toggle -->
                 <td style="text-align: center; white-space: nowrap;">
                   <form method="POST" style="display:inline;">
                     <?= Helpers::csrfField() ?>
                     <input type="hidden" name="action" value="toggle_featured">
                     <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
                     <?php if (!empty($p['is_featured'])): ?>
-                      <button type="submit" style="display: inline-flex; align-items: center; gap: 5px; background: #E8F5E9; border: 1.5px solid #2E7D32; color: #1B5E20; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700; cursor: pointer;" title="Featured on Home Page (Click to remove)">
+                      <button type="submit" style="display: inline-flex; align-items: center; gap: 5px; background: #E8F5E9; border: 1.5px solid #2E7D32; color: #1B5E20; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700; cursor: pointer;" title="Showing on Home Page (Click to remove)">
                         <span>⭐</span>
                         <span>Home</span>
                       </button>
                     <?php else: ?>
-                      <button type="submit" style="display: inline-flex; align-items: center; gap: 4px; background: #FAF8F5; border: 1px solid #D5CEBF; color: #8A7E6F; padding: 4px 8px; border-radius: 20px; font-size: 11.5px; font-weight: 600; cursor: pointer;" title="Feature on Home Page (Max 8)">
+                      <button type="submit" style="display: inline-flex; align-items: center; gap: 4px; background: #FAF8F5; border: 1px solid #D5CEBF; color: #8A7E6F; padding: 4px 8px; border-radius: 20px; font-size: 11.5px; font-weight: 600; cursor: pointer;" title="Show on Home Page">
                         <span>☆</span>
                         <span>Add</span>
                       </button>

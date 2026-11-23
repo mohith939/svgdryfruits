@@ -262,7 +262,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
                 <th>Icon</th>
                 <th>Category</th>
                 <th>Products</th>
-                <th>Order</th>
+                <th>Move to Top</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -289,44 +289,16 @@ require __DIR__ . '/../layouts/admin_layout.php';
                     <span class="badge badge-neutral"><?= (int)$c['product_count'] ?> products</span>
                   </td>
                   <td style="white-space: nowrap;">
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                      <!-- Move to Top -->
-                      <form method="POST" style="display:inline;" title="Move to Top">
-                        <?= Helpers::csrfField() ?>
-                        <input type="hidden" name="action" value="move_top">
-                        <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                        <button type="submit" style="padding: 3px 6px; font-size: 11px; background: #073D26; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 700;">
-                          ⬆ Top
-                        </button>
-                      </form>
-
-                      <!-- Shift Up / Down -->
-                      <form method="POST" style="display:inline;" title="Shift Up">
-                        <?= Helpers::csrfField() ?>
-                        <input type="hidden" name="action" value="move_up">
-                        <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                        <button type="submit" style="padding: 3px 6px; font-size: 11px; background: #FAF7F2; border: 1px solid #D6C7B2; border-radius: 4px; cursor: pointer;">
-                          ↑
-                        </button>
-                      </form>
-                      <form method="POST" style="display:inline;" title="Shift Down">
-                        <?= Helpers::csrfField() ?>
-                        <input type="hidden" name="action" value="move_down">
-                        <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                        <button type="submit" style="padding: 3px 6px; font-size: 11px; background: #FAF7F2; border: 1px solid #D6C7B2; border-radius: 4px; cursor: pointer;">
-                          ↓
-                        </button>
-                      </form>
-
-                      <!-- Numeric Order Input for Moving to exact place -->
-                      <form method="POST" style="display:inline-flex; align-items:center; gap: 2px;" title="Set Custom Order Position">
-                        <?= Helpers::csrfField() ?>
-                        <input type="hidden" name="action" value="set_order">
-                        <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                        <input type="number" name="sort_order" value="<?= (int)$c['sort_order'] ?>" style="width: 44px; padding: 2px 4px; font-size: 11px; border: 1px solid #D6C7B2; border-radius: 4px; text-align: center;">
-                        <button type="submit" style="padding: 2px 5px; font-size: 10px; background: #EAE4D9; border: 1px solid #C8BFB0; border-radius: 4px; cursor: pointer;" title="Save Position">✓</button>
-                      </form>
-                    </div>
+                    <!-- Move to Top -->
+                    <form method="POST" style="display:inline;" title="Move category to top">
+                      <?= Helpers::csrfField() ?>
+                      <input type="hidden" name="action" value="move_top">
+                      <input type="hidden" name="id" value="<?= $c['id'] ?>">
+                      <button type="submit" style="padding: 6px 12px; font-size: 12px; background: #073D26; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <span>⬆</span>
+                        <span>Top</span>
+                      </button>
+                    </form>
                   </td>
                   <td>
                     <form method="POST" style="display:inline;">

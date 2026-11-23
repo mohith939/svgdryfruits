@@ -127,6 +127,12 @@ class Database {
                         $pdo->exec("ALTER TABLE `products` ADD COLUMN `is_featured` TINYINT(1) NOT NULL DEFAULT 0 AFTER `sort_order`");
                     }
                 } catch (Throwable $e) {}
+                try {
+                    $colCheck = $pdo->query("SHOW COLUMNS FROM `shipping_settings` LIKE 'home_featured_limit'")->fetch();
+                    if (!$colCheck) {
+                        $pdo->exec("ALTER TABLE `shipping_settings` ADD COLUMN `home_featured_limit` INT NOT NULL DEFAULT 8");
+                    }
+                } catch (Throwable $e) {}
             } else {
                 $pdo->exec("
                     CREATE TABLE IF NOT EXISTS combo_items (
@@ -183,6 +189,9 @@ class Database {
                     }
                     if (!in_array('store_address', $shipCols)) {
                         $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN store_address TEXT DEFAULT 'SVG Dry Fruits, Trunk Road, Kavali, Andhra Pradesh'");
+                    }
+                    if (!in_array('home_featured_limit', $shipCols)) {
+                        $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN home_featured_limit INTEGER DEFAULT 8");
                     }
                 } catch (Throwable $e) {}
             }
