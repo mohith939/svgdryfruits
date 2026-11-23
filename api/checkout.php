@@ -65,14 +65,10 @@ foreach ($cart['items'] as $item) {
     }
 }
 
-// Resolve state-based shipping pricing dynamically from database rules
-$shippingOpt = Models::getShippingOptionForState($state, $cart['subtotal_paise'], (int)($cart['total_weight_grams'] ?? 0));
-$shippingPaise = (int)$shippingOpt['effective_paise'];
-if (!empty($cart['applied_coupon']) && $cart['applied_coupon']['type'] === 'free_shipping') {
-    $shippingPaise = 0;
-}
-$discountPaise = (int)$cart['discount_paise'];
-$totalPaise = max(0, $cart['subtotal_paise'] - $discountPaise + $shippingPaise);
+// 100% Free Shipping storewide
+$shippingPaise = 0;
+$discountPaise = (int)($cart['discount_paise'] ?? 0);
+$totalPaise = max(0, $cart['subtotal_paise'] - $discountPaise);
 
 // Generate Collision-Free High-Entropy Order ID & Token
 $datePrefix = date('Ymd');
@@ -100,11 +96,11 @@ $orderData = [
     'shipping_address' => $shippingAddress,
     'subtotal_paise' => $cart['subtotal_paise'],
     'discount_paise' => $discountPaise,
-    'shipping_paise' => $shippingPaise,
+    'shipping_paise' => 0,
     'total_paise' => $totalPaise,
     'coupon_code' => $cart['applied_coupon']['code'] ?? null,
-    'shipping_option_id' => $shippingOpt['id'] ?? 'ship_default',
-    'shipping_option_name' => $shippingOpt['name'] ?? 'State Delivery',
+    'shipping_option_id' => 'free_shipping',
+    'shipping_option_name' => 'Free Express Delivery (Shadowfax)',
     'cashfree_order_id' => null,
     'payment_session_id' => null,
 ];

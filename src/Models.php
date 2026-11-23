@@ -164,181 +164,23 @@ class Models {
         $stmt->execute([trim($code)]);
     }
 
-    // --- Schema Self-Healing & Upgrade ---
-    private static bool $schemaChecked = false;
-    public static function ensureSchema(): void {
-        if (self::$schemaChecked) return;
-        self::$schemaChecked = true;
-        $pdo = Database::getConnection();
-        $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-
-        // 1. Ensure shipping_options table exists
-        if ($driver === 'sqlite') {
-            $pdo->exec("
-                CREATE TABLE IF NOT EXISTS shipping_options (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    target_states TEXT DEFAULT 'ALL',
-                    description TEXT,
-                    estimated_days TEXT,
-                    rate_paise INTEGER NOT NULL DEFAULT 9000,
-                    rate_1_2kg_paise INTEGER NOT NULL DEFAULT 13000,
-                    rate_2kg_above_paise INTEGER NOT NULL DEFAULT 15000,
-                    free_above_paise INTEGER,
-                    min_subtotal_paise INTEGER NOT NULL DEFAULT 0,
-                    active INTEGER NOT NULL DEFAULT 1,
-                    sort_order INTEGER NOT NULL DEFAULT 0,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            ");
-            try {
-                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN target_states TEXT DEFAULT 'ALL'");
-            } catch (Throwable $e) {}
-            try {
-                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN rate_1_2kg_paise INTEGER NOT NULL DEFAULT 13000");
-            } catch (Throwable $e) {}
-            try {
-                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN rate_2kg_above_paise INTEGER NOT NULL DEFAULT 15000");
-            } catch (Throwable $e) {}
-        } else {
-            $pdo->exec("
-                CREATE TABLE IF NOT EXISTS `shipping_options` (
-                    `id` VARCHAR(64) NOT NULL,
-                    `name` VARCHAR(128) NOT NULL,
-                    `target_states` TEXT NULL,
-                    `description` TEXT NULL,
-                    `estimated_days` VARCHAR(64) NULL,
-                    `rate_paise` INT NOT NULL DEFAULT 9000,
-                    `rate_1_2kg_paise` INT NOT NULL DEFAULT 13000,
-                    `rate_2kg_above_paise` INT NOT NULL DEFAULT 15000,
-                    `free_above_paise` INT NULL DEFAULT 99900,
-                    `min_subtotal_paise` INT NOT NULL DEFAULT 0,
-                    `active` TINYINT(1) NOT NULL DEFAULT 1,
-                    `sort_order` INT NOT NULL DEFAULT 0,
-                    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (`id`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-            ");
-            try {
-                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN target_states TEXT NULL AFTER name");
-            } catch (Throwable $e) {}
-            try {
-                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN rate_1_2kg_paise INT NOT NULL DEFAULT 13000 AFTER rate_paise");
-            } catch (Throwable $e) {}
-            try {
-                $pdo->exec("ALTER TABLE shipping_options ADD COLUMN rate_2kg_above_paise INT NOT NULL DEFAULT 15000 AFTER rate_1_2kg_paise");
-            } catch (Throwable $e) {}
-        }
-
-        // Seed default options if empty
-        $count = (int)$pdo->query("SELECT COUNT(*) FROM shipping_options")->fetchColumn();
-        if ($count === 0) {
-            $pdo->exec("
-                INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, rate_1_2kg_paise, rate_2kg_above_paise, free_above_paise, min_subtotal_paise, active, sort_order)
-                VALUES 
-                ('ship_ts_ap', 'Telangana & Andhra Pradesh', 'Telangana, Andhra Pradesh', 'Direct surface express dispatch across Telangana & Andhra Pradesh.', '1 – 3 Business Days', 9000, 13000, 15000, 99900, 0, 1, 1),
-                ('ship_south', 'South India (KA, TN, KL)', 'Karnataka, Tamil Nadu, Kerala', 'Regional dispatch across neighboring South Indian states.', '2 – 4 Business Days', 10000, 15000, 21000, 149900, 0, 1, 2),
-                ('ship_roi', 'Rest of India', 'ALL', 'National express courier across all other Indian states & union territories.', '3 – 5 Business Days', 10000, 15000, 21000, 199900, 0, 1, 3)
-            ");
-        }
-
-        // 2. Ensure contact columns in shipping_settings
-        $contactCols = [
-            'contact_phone' => "VARCHAR(32) NOT NULL DEFAULT '919059123456'",
-            'contact_email' => "VARCHAR(128) NOT NULL DEFAULT 'svgdryfruits@gmail.com'",
-            'whatsapp_number' => "VARCHAR(32) NOT NULL DEFAULT '919059123456'",
-            'store_address' => "TEXT NULL",
-        ];
-        foreach ($contactCols as $col => $def) {
-            try {
-                $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN `{$col}` {$def}");
-            } catch (Throwable $e) {
-                // Column already exists or driver syntax difference
-            }
-        }
-
-        // 3. Ensure shipping_option and stock_restored columns in orders
-        $orderCols = [
-            'shipping_option_id' => "VARCHAR(64) NULL",
-            'shipping_option_name' => "VARCHAR(128) NULL",
-            'stock_restored' => ($driver === 'sqlite' ? "INTEGER DEFAULT 0" : "TINYINT(1) NOT NULL DEFAULT 0"),
-        ];
-        foreach ($orderCols as $col => $def) {
-            try {
-                $pdo->exec("ALTER TABLE orders ADD COLUMN {$col} {$def}");
-            } catch (Throwable $e) {
-                // Column already exists
-            }
-        }
-
-        // 4. Ensure stock_restored in order_items
-        try {
-            $colDef = ($driver === 'sqlite') ? "INTEGER DEFAULT 0" : "TINYINT(1) NOT NULL DEFAULT 0";
-            $pdo->exec("ALTER TABLE order_items ADD COLUMN stock_restored {$colDef}");
-        } catch (Throwable $e) {
-            // Column already exists
-        }
-
-        // 5. Ensure refunds table exists
-        try {
-            if ($driver === 'sqlite') {
-                $pdo->exec("
-                    CREATE TABLE IF NOT EXISTS refunds (
-                        id TEXT PRIMARY KEY,
-                        order_id TEXT NOT NULL,
-                        amount_paise INTEGER NOT NULL,
-                        note TEXT,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-                    )
-                ");
-            } else {
-                $pdo->exec("
-                    CREATE TABLE IF NOT EXISTS `refunds` (
-                        `id` VARCHAR(64) NOT NULL,
-                        `order_id` VARCHAR(64) NOT NULL,
-                        `amount_paise` INT NOT NULL,
-                        `note` TEXT NULL,
-                        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY (`id`),
-                        KEY `idx_refunds_order_id` (`order_id`),
-                        CONSTRAINT `fk_refunds_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-                ");
-            }
-        } catch (Throwable $e) {}
-    }
-
-    // --- Store & Contact Settings ---
+    // --- Store Settings & Contact ---
     public static function getStoreSettings(): array {
-        self::ensureSchema();
         $pdo = Database::getConnection();
         $row = $pdo->query("SELECT * FROM shipping_settings WHERE id = 1 LIMIT 1")->fetch();
-        if (!$row) {
-            return [
-                'flat_charge_paise' => 4900,
-                'free_threshold_paise' => 99900,
-                'active' => 1,
-                'contact_phone' => WHATSAPP_NUMBER,
-                'contact_email' => CONTACT_EMAIL,
-                'whatsapp_number' => WHATSAPP_NUMBER,
-                'store_address' => "SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India\nSVG Dry Fruits, Specialist in Premium Dry Fruits, Kakinada, Telangana, India",
-            ];
-        }
-
         return [
-            'flat_charge_paise' => (int)($row['flat_charge_paise'] ?? 4900),
-            'free_threshold_paise' => isset($row['free_threshold_paise']) ? (int)$row['free_threshold_paise'] : 99900,
-            'active' => (int)($row['active'] ?? 1),
+            'flat_charge_paise' => 0,
+            'free_threshold_paise' => null,
+            'active' => 0,
             'contact_phone' => !empty($row['contact_phone']) ? $row['contact_phone'] : WHATSAPP_NUMBER,
             'contact_email' => !empty($row['contact_email']) ? $row['contact_email'] : CONTACT_EMAIL,
             'whatsapp_number' => !empty($row['whatsapp_number']) ? $row['whatsapp_number'] : WHATSAPP_NUMBER,
-            'store_address' => !empty($row['store_address']) ? $row['store_address'] : "SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India\nSVG Dry Fruits, Specialist in Premium Dry Fruits, Kakinada, Telangana, India",
+            'store_address' => !empty($row['store_address']) ? $row['store_address'] : "SVG Dry Fruits
+Specialist in Premium Dry Fruits, Almonds, Cashews, Walnuts, Dates & Nutrient Seeds.",
         ];
     }
 
     public static function saveStoreSettings(array $data): void {
-        self::ensureSchema();
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("
             UPDATE shipping_settings 
@@ -353,169 +195,32 @@ class Models {
         ]);
     }
 
-    // --- Shipping Settings & Options ---
+    // --- Shipping Settings (Always 100% Free Shipping storewide) ---
     public static function getShippingSettings(): array {
-        return self::getStoreSettings();
+        return [
+            'flat_charge_paise' => 0,
+            'free_threshold_paise' => null,
+            'active' => 0,
+        ];
     }
 
     public static function getShippingOptions(bool $activeOnly = false): array {
-        self::ensureSchema();
-        $pdo = Database::getConnection();
-        $sql = "SELECT * FROM shipping_options";
-        if ($activeOnly) {
-            $sql .= " WHERE active = 1";
-        }
-        $sql .= " ORDER BY sort_order ASC, rate_paise ASC";
-        return $pdo->query($sql)->fetchAll();
+        return [];
     }
 
-    public static function getShippingOptionById(string $id): ?array {
-        self::ensureSchema();
-        $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT * FROM shipping_options WHERE id = ? LIMIT 1");
-        $stmt->execute([$id]);
-        return $stmt->fetch() ?: null;
-    }
-
-    public static function saveShippingOption(array $data): void {
-        self::ensureSchema();
-        $pdo = Database::getConnection();
-        $id = $data['id'] ?? ('ship_' . bin2hex(random_bytes(6)));
-        $name = trim($data['name']);
-        $targetStates = trim($data['target_states'] ?? 'ALL');
-        $description = trim($data['description'] ?? '');
-        $estimatedDays = trim($data['estimated_days'] ?? '');
-        $ratePaise = (int)($data['rate_paise'] ?? 9000);
-        $rate12Paise = isset($data['rate_1_2kg_paise']) ? (int)$data['rate_1_2kg_paise'] : (int)round($ratePaise * 1.4);
-        $rate2kgAbovePaise = isset($data['rate_2kg_above_paise']) ? (int)$data['rate_2kg_above_paise'] : (int)round($ratePaise * 1.65);
-        $freeAbovePaise = isset($data['free_above_paise']) && $data['free_above_paise'] !== '' ? (int)$data['free_above_paise'] : null;
-        $minSubtotalPaise = (int)($data['min_subtotal_paise'] ?? 0);
-        $active = !empty($data['active']) ? 1 : 0;
-        $sortOrder = (int)($data['sort_order'] ?? 0);
-
-        $exists = self::getShippingOptionById($id);
-        if ($exists) {
-            $stmt = $pdo->prepare("
-                UPDATE shipping_options 
-                SET name = ?, target_states = ?, description = ?, estimated_days = ?, rate_paise = ?, rate_1_2kg_paise = ?, rate_2kg_above_paise = ?, free_above_paise = ?, min_subtotal_paise = ?, active = ?, sort_order = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([$name, $targetStates, $description, $estimatedDays, $ratePaise, $rate12Paise, $rate2kgAbovePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder, $id]);
-        } else {
-            $stmt = $pdo->prepare("
-                INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, rate_1_2kg_paise, rate_2kg_above_paise, free_above_paise, min_subtotal_paise, active, sort_order)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([$id, $name, $targetStates, $description, $estimatedDays, $ratePaise, $rate12Paise, $rate2kgAbovePaise, $freeAbovePaise, $minSubtotalPaise, $active, $sortOrder]);
-        }
-    }
-
-    /**
-     * Resolves the exact shipping option & tiered rate based on customer's delivery state & cart weight
-     */
     public static function getShippingOptionForState(?string $state, int $subtotalPaise = 0, int $weightGrams = 0): array {
-        self::ensureSchema();
-        $options = self::getShippingOptions(true);
-        if (empty($options)) {
-            $cleanState = strtolower(trim((string)$state));
-            $isHome = ($cleanState === 'telangana' || $cleanState === 'andhra pradesh');
-            $baseRate = $isHome ? 9000 : 10000;
-            $rate12 = $isHome ? 13000 : 15000;
-            $rate2p = $isHome ? 15000 : 21000;
-            $eff = $baseRate;
-            $tier = 'below_1kg';
-            $tierLabel = 'Below 1 kg';
-            if ($weightGrams >= 2000) {
-                $eff = $rate2p;
-                $tier = '2kg_above';
-                $tierLabel = '2 kg & Above';
-            } elseif ($weightGrams >= 1000) {
-                $eff = $rate12;
-                $tier = '1_2kg';
-                $tierLabel = '1 kg – 2 kg';
-            }
-            return [
-                'id' => 'ship_default',
-                'name' => $isHome ? 'Telangana & Andhra Pradesh Direct Delivery' : 'Standard Express Delivery',
-                'target_states' => $isHome ? 'Telangana, Andhra Pradesh' : 'ALL',
-                'rate_paise' => $baseRate,
-                'rate_1_2kg_paise' => $rate12,
-                'rate_2kg_above_paise' => $rate2p,
-                'free_above_paise' => null,
-                'effective_paise' => $eff,
-                'is_free' => false,
-                'weight_grams' => $weightGrams,
-                'active_tier' => $tier,
-                'active_tier_label' => $tierLabel,
-                'estimated_days' => $isHome ? '1 – 3 Days' : '3 – 5 Days'
-            ];
-        }
-
-        $cleanState = strtolower(trim((string)$state));
-        $matched = null;
-        $fallbackAll = null;
-
-        foreach ($options as $opt) {
-            $rawTargets = strtolower(trim((string)($opt['target_states'] ?? 'ALL')));
-            if ($rawTargets === 'all' || $rawTargets === '*' || $rawTargets === '') {
-                if (!$fallbackAll) {
-                    $fallbackAll = $opt;
-                }
-                continue;
-            }
-
-            if ($cleanState !== '') {
-                $statesList = array_map('trim', explode(',', $rawTargets));
-                foreach ($statesList as $s) {
-                    if ($s === $cleanState || strpos($cleanState, $s) !== false || strpos($s, $cleanState) !== false) {
-                        $matched = $opt;
-                        break 2;
-                    }
-                }
-            }
-        }
-
-        $chosen = $matched ?: ($fallbackAll ?: $options[0]);
-
-        // Weight-based rate resolution:
-        // Tier 1: Below 1kg (< 1000g) => rate_paise
-        // Tier 2: 1kg - 2kg (1000g - 1999g) => rate_1_2kg_paise
-        // Tier 3: 2kg & Above (>= 2000g) => rate_2kg_above_paise
-        $tier = 'below_1kg';
-        $tierLabel = 'Below 1 kg';
-        $tierRate = (int)($chosen['rate_paise'] ?? 9000);
-
-        if ($weightGrams >= 2000) {
-            $tier = '2kg_above';
-            $tierLabel = '2 kg & Above';
-            $tierRate = !empty($chosen['rate_2kg_above_paise']) ? (int)$chosen['rate_2kg_above_paise'] : $tierRate;
-        } elseif ($weightGrams >= 1000) {
-            $tier = '1_2kg';
-            $tierLabel = '1 kg – 2 kg';
-            $tierRate = !empty($chosen['rate_1_2kg_paise']) ? (int)$chosen['rate_1_2kg_paise'] : $tierRate;
-        }
-
-        $isFree = ($chosen['free_above_paise'] !== null && $subtotalPaise >= (int)$chosen['free_above_paise']);
-        $chosen['effective_paise'] = $isFree ? 0 : $tierRate;
-        $chosen['is_free'] = $isFree;
-        $chosen['weight_grams'] = $weightGrams;
-        $chosen['active_tier'] = $tier;
-        $chosen['active_tier_label'] = $tierLabel;
-        return $chosen;
+        return [
+            'id' => 'free_shipping',
+            'name' => 'Free Express Shipping (Shadowfax)',
+            'rate_paise' => 0,
+            'effective_paise' => 0,
+            'is_free' => true,
+            'estimated_days' => '2 – 4 Days'
+        ];
     }
 
-    public static function deleteShippingOption(string $id): void {
-        self::ensureSchema();
-        $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("DELETE FROM shipping_options WHERE id = ?");
-        $stmt->execute([$id]);
-    }
-
-    public static function toggleShippingOption(string $id): void {
-        self::ensureSchema();
-        $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("UPDATE shipping_options SET active = 1 - active WHERE id = ?");
-        $stmt->execute([$id]);
+    public static function ensureSchema(): void {
+        Database::getConnection();
     }
 
     // --- Orders ---

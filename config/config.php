@@ -92,7 +92,21 @@ if (!defined('CASHFREE_CLIENT_SECRET')) define('CASHFREE_CLIENT_SECRET', env('CA
 if (!defined('CASHFREE_APP_ID')) define('CASHFREE_APP_ID', CASHFREE_CLIENT_ID);
 if (!defined('CASHFREE_SECRET_KEY')) define('CASHFREE_SECRET_KEY', CASHFREE_CLIENT_SECRET);
 if (!defined('CASHFREE_ENV')) define('CASHFREE_ENV', strtoupper(env('CASHFREE_ENVIRONMENT', env('NEXT_PUBLIC_CASHFREE_ENVIRONMENT', 'PRODUCTION'))));
-if (!defined('CASHFREE_API_VERSION')) define('CASHFREE_API_VERSION', '2026-01-01');
+// Shadowfax Logistics Partner Settings
+if (!defined('SHADOWFAX_API_KEY')) define('SHADOWFAX_API_KEY', env('SHADOWFAX_API_KEY', ''));
+if (!defined('SHADOWFAX_ENV')) define('SHADOWFAX_ENV', strtoupper(env('SHADOWFAX_ENV', 'STAGING')));
+if (!defined('SHADOWFAX_BASE_URL')) {
+    $defaultBase = (strtoupper(SHADOWFAX_ENV) === 'PRODUCTION') 
+        ? 'https://dale.shadowfax.in/api' 
+        : 'https://dale.staging.shadowfax.in/api';
+    define('SHADOWFAX_BASE_URL', env('SHADOWFAX_BASE_URL', $defaultBase));
+}
+if (!defined('SHADOWFAX_PICKUP_NAME')) define('SHADOWFAX_PICKUP_NAME', env('SHADOWFAX_PICKUP_NAME', 'SVG Dry Fruits'));
+if (!defined('SHADOWFAX_PICKUP_PHONE')) define('SHADOWFAX_PICKUP_PHONE', env('SHADOWFAX_PICKUP_PHONE', '918340956469'));
+if (!defined('SHADOWFAX_PICKUP_ADDRESS')) define('SHADOWFAX_PICKUP_ADDRESS', env('SHADOWFAX_PICKUP_ADDRESS', 'SVG Dry Fruits, Main Road'));
+if (!defined('SHADOWFAX_PICKUP_CITY')) define('SHADOWFAX_PICKUP_CITY', env('SHADOWFAX_PICKUP_CITY', 'Kavali'));
+if (!defined('SHADOWFAX_PICKUP_STATE')) define('SHADOWFAX_PICKUP_STATE', env('SHADOWFAX_PICKUP_STATE', 'Andhra Pradesh'));
+if (!defined('SHADOWFAX_PICKUP_PINCODE')) define('SHADOWFAX_PICKUP_PINCODE', env('SHADOWFAX_PICKUP_PINCODE', '524201'));
 
 // Base Paths
 if (!defined('ROOT_PATH')) define('ROOT_PATH', dirname(__DIR__));

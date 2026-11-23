@@ -89,10 +89,15 @@ INSERT INTO `coupons` (`id`, `code`, `name`, `description`, `type`, `value`, `mi
 ('d0000001-0002-4000-8000-000000000002', 'FESTIVE50', 'Festive ₹50 Off', 'Flat ₹50 discount on orders above ₹999', 'flat', 5000, 99900, 5000, 1)
 ON DUPLICATE KEY UPDATE `value`=VALUES(`value`);
 
--- 5. Shipping settings & Store Contact Information
+-- 5. Shipping settings (100% Free Shipping storewide) & Store Contact Information
 INSERT INTO `shipping_settings` (`id`, `flat_charge_paise`, `free_threshold_paise`, `active`, `contact_phone`, `contact_email`, `whatsapp_number`, `store_address`) VALUES
-(1, 4900, 99900, 1, '919059123456', 'svgdryfruits@gmail.com', '919059123456', 'SVG Dry Fruits, Specialist in Premium Dry Fruits, Hyderabad, Telangana, India')
-ON DUPLICATE KEY UPDATE `flat_charge_paise`=VALUES(`flat_charge_paise`), `free_threshold_paise`=VALUES(`free_threshold_paise`), `contact_phone`=VALUES(`contact_phone`), `contact_email`=VALUES(`contact_email`), `whatsapp_number`=VALUES(`whatsapp_number`);
+(1, 0, NULL, 0, '918340956469', 'svgdryfruits@gmail.com', '918340956469', 'SVG Dry Fruits, Trunk Road, Kavali, Andhra Pradesh')
+ON DUPLICATE KEY UPDATE `flat_charge_paise`=0, `free_threshold_paise`=NULL, `active`=0, `contact_phone`=VALUES(`contact_phone`), `contact_email`=VALUES(`contact_email`), `whatsapp_number`=VALUES(`whatsapp_number`);
+
+-- 5b. Shadowfax logistics settings
+INSERT INTO `shadowfax_settings` (`id`, `environment`, `pickup_name`, `pickup_phone`, `pickup_address`, `pickup_city`, `pickup_state`, `pickup_pincode`) VALUES
+(1, 'staging', 'SVG Dry Fruits', '918340956469', 'SVG Dry Fruits, Main Road', 'Kavali', 'Andhra Pradesh', '524201')
+ON DUPLICATE KEY UPDATE `environment`=VALUES(`environment`);
 
 -- 6. Shipping Options (Multi-Condition Delivery Rates)
 INSERT INTO `shipping_options` (`id`, `name`, `target_states`, `description`, `estimated_days`, `rate_paise`, `rate_1_2kg_paise`, `rate_2kg_above_paise`, `free_above_paise`, `min_subtotal_paise`, `active`, `sort_order`) VALUES

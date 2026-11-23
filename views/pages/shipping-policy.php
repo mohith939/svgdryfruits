@@ -11,12 +11,11 @@ require __DIR__ . '/../layouts/header.php';
   <h1 style="font-family:var(--serif, serif); font-size:42px; color:var(--pine); margin:0 0 24px 0;">Shipping &amp; Delivery Policy</h1>
   <div style="background:var(--white); border:1px solid var(--line); border-radius:8px; padding:40px; font-size:15px; line-height:1.8; color:var(--ink);">
     <h3 style="font-family:var(--serif, serif); font-size:22px; color:var(--pine); margin-top:0;">Pan-India Delivery</h3>
-    <p>SVG Dry Fruits ships across all serviceable pin codes throughout India through reputed courier partners (BlueDart, Delhivery, DTDC, Xpressbees).</p>
+    <p>SVG Dry Fruits ships across all serviceable pin codes throughout India in partnership with our logistics partner <strong>Shadowfax Express</strong>.</p>
 
     <h3 style="font-family:var(--serif, serif); font-size:22px; color:var(--pine);">Shipping Charges</h3>
     <p>
-      &bull; <strong>Free Shipping:</strong> On all orders above ₹999.<br>
-      &bull; <strong>Standard Flat Charge:</strong> A nominal ₹49 fee applies for orders below ₹999.
+      &bull; <strong>100% Free Shipping:</strong> We are proud to offer free express shipping on <strong>all orders</strong> with no minimum purchase requirement across India!
     </p>
 
     <h3 style="font-family:var(--serif, serif); font-size:22px; color:var(--pine);">Dispatch Timeline</h3>

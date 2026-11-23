@@ -122,17 +122,7 @@ class Cart {
     }
 
     public static function getEligibleShippingOptions(int $subtotalPaise): array {
-        $all = Models::getShippingOptions(true);
-        $eligible = [];
-        foreach ($all as $opt) {
-            if ($subtotalPaise >= (int)($opt['min_subtotal_paise'] ?? 0)) {
-                $isFree = ($opt['free_above_paise'] !== null && $subtotalPaise >= (int)$opt['free_above_paise']);
-                $opt['effective_paise'] = $isFree ? 0 : (int)$opt['rate_paise'];
-                $opt['is_free'] = $isFree;
-                $eligible[] = $opt;
-            }
-        }
-        return $eligible;
+        return [];
     }
 
     public static function getDetails(?string $shippingOptionId = null, ?string $state = null): array {
@@ -208,44 +198,9 @@ class Cart {
             }
         }
 
-        // State-based & multi-condition shipping resolution
-        $eligibleShipping = self::getEligibleShippingOptions($subtotalPaise);
-        $targetState = $state ?? ($_SESSION['customer_state'] ?? null);
-
-        $selectedOption = null;
-        if ($targetState) {
-            $selectedOption = Models::getShippingOptionForState($targetState, $subtotalPaise, $totalWeightGrams);
-        } elseif ($shippingOptionId) {
-            foreach ($eligibleShipping as $opt) {
-                if ($opt['id'] === $shippingOptionId) {
-                    $selectedOption = $opt;
-                    break;
-                }
-            }
-        }
-
-        if (!$selectedOption && !empty($eligibleShipping)) {
-            $selectedOption = Models::getShippingOptionForState('Telangana', $subtotalPaise, $totalWeightGrams);
-        }
-
+        // All orders enjoy 100% Free Shipping storewide
         $shippingPaise = 0;
-        if ($appliedCoupon && $appliedCoupon['type'] === 'free_shipping') {
-            $shippingPaise = 0;
-        } elseif ($selectedOption) {
-            $shippingPaise = (int)$selectedOption['effective_paise'];
-        } else {
-            // Fallback to legacy shipping_settings if no shipping_options exist
-            $shipping = Models::getShippingSettings();
-            if (!empty($shipping['active'])) {
-                if ($shipping['free_threshold_paise'] !== null && $subtotalPaise >= $shipping['free_threshold_paise']) {
-                    $shippingPaise = 0;
-                } else {
-                    $shippingPaise = (int)$shipping['flat_charge_paise'];
-                }
-            }
-        }
-
-        $totalPaise = max(0, $subtotalPaise - $discountPaise + $shippingPaise);
+        $totalPaise = max(0, $subtotalPaise - $discountPaise);
 
         return [
             'items' => $items,
@@ -254,11 +209,11 @@ class Cart {
             'total_weight_grams' => $totalWeightGrams,
             'total_weight_kg' => round($totalWeightGrams / 1000, 2),
             'discount_paise' => $discountPaise,
-            'shipping_paise' => $shippingPaise,
+            'shipping_paise' => 0,
             'total_paise' => $totalPaise,
             'applied_coupon' => $appliedCoupon,
-            'eligible_shipping' => $eligibleShipping,
-            'selected_shipping' => $selectedOption,
+            'eligible_shipping' => [],
+            'selected_shipping' => null,
         ];
     }
 }

@@ -257,14 +257,13 @@ INSERT OR REPLACE INTO coupons (id, code, name, description, type, value, min_su
 ('d0000001-0002-4000-8000-000000000002', 'FESTIVE50', 'Festive ₹50 Off', 'Flat ₹50 discount', 'flat', 5000, 99900, 5000, 1);
 ");
 
-// 6. Seed Shipping Settings & Options
+// 6. Seed Shipping Settings (100% Free Shipping storewide) & Shadowfax
 $pdo->exec("
 INSERT OR REPLACE INTO shipping_settings (id, flat_charge_paise, free_threshold_paise, active, contact_phone, contact_email, whatsapp_number, store_address) 
-VALUES (1, 4900, 99900, 1, '919059123456', 'svgdryfruits@gmail.com', '919059123456', 'SVG Dry Fruits, Hyderabad, India');
+VALUES (1, 0, NULL, 0, '918340956469', 'svgdryfruits@gmail.com', '918340956469', 'SVG Dry Fruits, Trunk Road, Kavali, Andhra Pradesh');
 
-INSERT OR REPLACE INTO shipping_options (id, name, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order) VALUES
-('ship_standard', 'Standard Delivery', 'Carefully packed & shipped via surface express.', '3 – 5 Business Days', 4900, 99900, 0, 1, 1),
-('ship_express', 'Priority Air Express', 'Faster delivery via dedicated air cargo.', '1 – 2 Business Days', 12900, 199900, 0, 1, 2);
+INSERT OR IGNORE INTO shadowfax_settings (id, environment, pickup_name, pickup_phone, pickup_address, pickup_city, pickup_state, pickup_pincode) 
+VALUES (1, 'staging', 'SVG Dry Fruits', '918340956469', 'SVG Dry Fruits, Main Road', 'Kavali', 'Andhra Pradesh', '524201');
 ");
 
 // 7. Seed Admin

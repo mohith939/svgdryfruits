@@ -185,9 +185,7 @@ require __DIR__ . '/layouts/header.php';
         <?php endif; ?>
         <div>
           <dt>Shipping</dt>
-          <dd id="summary-shipping-val" style="color: <?= $shipping === 0 ? '#2E7D32' : 'inherit' ?>; font-weight: 700;">
-            <?= $shipping === 0 ? 'Free' : Helpers::formatPaise($shipping) ?>
-          </dd>
+          <dd id="summary-shipping-val" style="color: #2E7D32; font-weight: 700;">Free (₹0)</dd>
         </div>
         <div class="checkout-grand-total">
           <dt>Total payable</dt>

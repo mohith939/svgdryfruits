@@ -197,22 +197,21 @@ require __DIR__ . '/layouts/header.php';
         </div>
       </div>
 
-      <!-- Courier / AWB Banner -->
-      <?php if (!empty($order['courier']) || !empty($order['tracking_number'])): ?>
-        <div style="background:#eaf4ee; border:1px solid #c7e5cf; border-radius:8px; padding:14px 18px; margin-bottom:24px; font-size:13.5px; color:var(--pine); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <!-- Courier / Shadowfax AWB Banner -->
+      <?php if (!empty($order['courier']) && !empty($order['tracking_number'])): ?>
+        <div style="background:#FAF7F2; border:1px solid #D6C7B2; border-radius:8px; padding:16px 20px; margin-bottom:24px; font-size:14px; color:#073D26; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <div>
-            <?php if (!empty($order['courier'])): ?>
-              <span>Courier: <strong><?= htmlspecialchars($order['courier']) ?></strong></span>
-            <?php endif; ?>
-            <?php if (!empty($order['tracking_number'])): ?>
-              <span style="margin-left:8px;">AWB: <code style="background:#fff; padding:2px 6px; border-radius:4px; border:1px solid #c7e5cf; font-weight:700;"><?= htmlspecialchars($order['tracking_number']) ?></code></span>
-            <?php endif; ?>
+            <strong>Delivery Partner:</strong> <?= htmlspecialchars($order['courier']) ?><br>
+            <strong>Tracking AWB:</strong> <code><?= htmlspecialchars($order['tracking_number']) ?></code>
           </div>
-          <?php if (!empty($order['courier']) && stripos($order['courier'], 'shadowfax') !== false && !empty($order['tracking_number'])): ?>
-            <a href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['tracking_number']) ?>" target="_blank" rel="noopener noreferrer" style="background:#073D26; color:#fff; padding:6px 14px; border-radius:4px; font-size:12px; font-weight:700; text-decoration:none;">
-              Track on Shadowfax ↗
-            </a>
-          <?php endif; ?>
+          <a
+            href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['tracking_number']) ?>"
+            target="_blank"
+            rel="noreferrer"
+            style="background:#073D26; color:#E2C376; padding:10px 18px; border-radius:6px; font-size:13px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px;"
+          >
+            🚚 Track Live on Shadowfax &rarr;
+          </a>
         </div>
       <?php endif; ?>
 

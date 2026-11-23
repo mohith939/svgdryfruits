@@ -122,6 +122,13 @@ require __DIR__ . '/layouts/header.php';
               <span style="color:var(--muted); display:block; margin-bottom:4px;">Tracking Reference:</span>
               <code><?= htmlspecialchars($order['tracking_token']) ?></code>
             </div>
+            <?php if (!empty($order['tracking_number'])): ?>
+              <div style="margin-top:10px;">
+                <a href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['tracking_number']) ?>" target="_blank" style="color:var(--pine); font-weight:700; font-size:12px; text-decoration:underline;">
+                  🚚 Track on Shadowfax (AWB: <?= htmlspecialchars($order['tracking_number']) ?>) ↗
+                </a>
+              </div>
+            <?php endif; ?>
           <?php endif; ?>
         </div>
       </div>

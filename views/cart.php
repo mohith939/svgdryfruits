@@ -139,8 +139,8 @@ require __DIR__ . '/layouts/header.php';
 
             <div class="cart-v3-summary-row">
               <span>Shipping</span>
-              <span class="cart-v3-summary-val" style="color: <?= $shipping === 0 ? '#2E7D32' : 'inherit' ?>; font-weight: 600;">
-                <?= $shipping === 0 ? 'Free' : Helpers::formatPaise($shipping) ?>
+              <span class="cart-v3-summary-val" style="color: #2E7D32; font-weight: 600;">
+                Free Delivery (₹0)
               </span>
             </div>
 

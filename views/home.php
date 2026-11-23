@@ -27,7 +27,7 @@ $faqs = [
     ],
     [
         'q' => 'How are shipping charges decided?',
-        'a' => 'Shipping is set by SVG Dry Fruits and shown clearly in your bag and at checkout before you pay.'
+        'a' => 'SVG Dry Fruits provides 100% Free Express Shipping on all orders across India, fulfilled by our logistics partner Shadowfax Express.'
     ],
     [
         'q' => 'How can I pay?',

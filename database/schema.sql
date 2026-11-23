@@ -118,16 +118,32 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   CONSTRAINT `fk_order_items_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. Shipping Settings & Store Contact
+-- 7. Shipping Settings (Free Shipping Storewide) & Store Contact
 CREATE TABLE IF NOT EXISTS `shipping_settings` (
   `id` INT NOT NULL DEFAULT 1,
-  `flat_charge_paise` INT NOT NULL DEFAULT 4900,
-  `free_threshold_paise` INT NULL DEFAULT 99900,
-  `active` TINYINT(1) NOT NULL DEFAULT 1,
-  `contact_phone` VARCHAR(32) NOT NULL DEFAULT '919059123456',
+  `flat_charge_paise` INT NOT NULL DEFAULT 0,
+  `free_threshold_paise` INT NULL DEFAULT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 0,
+  `contact_phone` VARCHAR(32) NOT NULL DEFAULT '918340956469',
   `contact_email` VARCHAR(128) NOT NULL DEFAULT 'svgdryfruits@gmail.com',
-  `whatsapp_number` VARCHAR(32) NOT NULL DEFAULT '919059123456',
+  `whatsapp_number` VARCHAR(32) NOT NULL DEFAULT '918340956469',
   `store_address` TEXT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 8. Shadowfax Logistics Settings
+CREATE TABLE IF NOT EXISTS `shadowfax_settings` (
+  `id` INT NOT NULL DEFAULT 1,
+  `api_key` VARCHAR(255) NULL,
+  `environment` VARCHAR(32) NOT NULL DEFAULT 'staging',
+  `base_url` VARCHAR(255) NULL,
+  `pickup_name` VARCHAR(128) NULL,
+  `pickup_phone` VARCHAR(32) NULL,
+  `pickup_address` TEXT NULL,
+  `pickup_city` VARCHAR(64) NULL,
+  `pickup_state` VARCHAR(64) NULL,
+  `pickup_pincode` VARCHAR(16) NULL,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

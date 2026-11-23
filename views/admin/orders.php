@@ -449,6 +449,16 @@ require __DIR__ . '/../layouts/admin_layout.php';
                     <span class="order-v3-pill-dot"></span>
                     <?= ucfirst($norm) ?>
                   </span>
+                  <?php if (!empty($o['tracking_number'])): ?>
+                    <div style="margin-top: 4px;">
+                      <a href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($o['tracking_number']) ?>" 
+                         target="_blank" 
+                         title="Track on Shadowfax"
+                         style="font-size: 11px; color: #073D26; background: #FAF7F2; border: 1px solid #D6C7B2; padding: 2px 6px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; gap: 3px;">
+                        🚚 <?= htmlspecialchars(substr($o['tracking_number'], 0, 14)) ?> ↗
+                      </a>
+                    </div>
+                  <?php endif; ?>
                 </td>
 
                 <!-- Actions Dropdown -->

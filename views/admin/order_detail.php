@@ -46,14 +46,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         Helpers::setFlash('success', 'Order fulfillment status & tracking updated successfully.');
     } elseif ($action === 'dispatch_shadowfax') {
-        $awb = 'SFX' . date('ymd') . rand(1000, 9999);
-        $stmt = $pdo->prepare("
-            UPDATE orders 
-            SET fulfillment_status = 'shipped', courier = 'Shadowfax Express', tracking_number = ? 
-            WHERE id = ?
-        ");
-        $stmt->execute([$awb, $id]);
-        Helpers::setFlash('success', "✓ Dispatched via Shadowfax! AWB: {$awb}");
+        require_once ROOT_PATH . '/src/Shadowfax.php';
+        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        $itemStmt->execute([$id]);
+        $orderItems = $itemStmt->fetchAll() ?: [];
+
+        $dispatch = Shadowfax::createOrder($order, $orderItems);
+        if (!empty($dispatch['awb_number'])) {
+            $awb = $dispatch['awb_number'];
+            $stmt = $pdo->prepare("
+                UPDATE orders 
+                SET fulfillment_status = 'shipped', courier = 'Shadowfax Express', tracking_number = ? 
+                WHERE id = ?
+            ");
+            $stmt->execute([$awb, $id]);
+            Helpers::setFlash('success', $dispatch['message']);
+        } else {
+            Helpers::setFlash('error', 'Shadowfax Dispatch Error: ' . ($dispatch['message'] ?? 'Unable to generate AWB'));
+        }
+    } elseif ($action === 'track_shadowfax') {
+        require_once ROOT_PATH . '/src/Shadowfax.php';
+        $trackRes = Shadowfax::trackOrder($order['tracking_number'] ?? '');
+        if ($trackRes['success']) {
+            $statusStr = $trackRes['status'] ?? ($trackRes['data']['status'] ?? 'Active');
+            Helpers::setFlash('success', "✓ Shadowfax Live Tracking: {$statusStr}");
+        } else {
+            Helpers::setFlash('warning', $trackRes['message'] ?? 'Could not fetch live tracking events');
+        }
     } elseif ($action === 'record_refund') {
         $refundRupees = (float)($_POST['refund_amount'] ?? 0);
         $note = trim($_POST['refund_note'] ?? '');
@@ -295,7 +314,7 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
     <!-- Right Column: Fulfillment, Shadowfax Dispatch, and Manual Refund -->
     <div class="admin-col">
-      <!-- Quick Shadowfax Dispatch Box matching Node.js -->
+      <!-- Shadowfax Logistics Box -->
       <div class="admin-card" style="background: #FAF7F2; border: 1px solid #D6C7B2;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
           <div>
@@ -303,34 +322,51 @@ require __DIR__ . '/../layouts/admin_layout.php';
               🚚 Shadowfax Logistics Partner
             </h2>
             <p style="margin: 0; font-size: 12.5px; color: #555;">
-              Generate express waybill and arrange door-step delivery pickup.
+              Forward delivery manifest, automated AWB &amp; door-step pickup.
             </p>
           </div>
-          <form method="POST">
+          <form method="POST" style="margin:0;">
             <?= Helpers::csrfField() ?>
             <input type="hidden" name="action" value="dispatch_shadowfax">
             <button
               type="submit"
-              <?= in_array($order['fulfillment_status'], ['shipped', 'delivered']) ? 'disabled' : '' ?>
               class="button button-primary"
               style="font-size: 12.5px; padding: 8px 14px; white-space: nowrap; background: #073D26; color: #E2C376;"
             >
-              <?= in_array($order['fulfillment_status'], ['shipped', 'delivered']) ? '✓ Dispatched' : '⚡ 1-Click Shadowfax Dispatch' ?>
+              <?= in_array($order['fulfillment_status'], ['shipped', 'delivered']) ? '⚡ Re-Dispatch via Shadowfax' : '⚡ 1-Click Shadowfax Dispatch' ?>
             </button>
           </form>
         </div>
 
         <?php if (!empty($order['tracking_number']) && $isShadowfax): ?>
-          <div style="margin-top: 12px; padding: 8px 12px; background: #fff; border-radius: 6px; border: 1px solid #E0D6C5; font-size: 12.5px; display: flex; justify-content: space-between; align-items: center;">
-            <span>Shadowfax AWB: <strong><?= htmlspecialchars($order['tracking_number']) ?></strong></span>
-            <a
-              href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['tracking_number']) ?>"
-              target="_blank"
-              rel="noreferrer"
-              style="color: #073D26; font-weight: 600; text-decoration: underline;"
-            >
-              Track on Shadowfax ↗
-            </a>
+          <div style="margin-top: 14px; padding: 12px; background: #fff; border-radius: 6px; border: 1px solid #E0D6C5; font-size: 12.5px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span>Shadowfax AWB: <strong><?= htmlspecialchars($order['tracking_number']) ?></strong></span>
+              <a
+                href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['tracking_number']) ?>"
+                target="_blank"
+                rel="noreferrer"
+                style="color: #073D26; font-weight: 600; text-decoration: underline;"
+              >
+                Track on Shadowfax ↗
+              </a>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <form method="POST" style="margin:0;">
+                <input type="hidden" name="action" value="track_shadowfax">
+                <button type="submit" class="button button-outline" style="font-size:11px; padding:4px 10px; background:#faf7f2;">
+                  🔄 Check Live Status
+                </button>
+              </form>
+              <a 
+                href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['tracking_number']) ?>" 
+                target="_blank"
+                class="button button-outline" 
+                style="font-size:11px; padding:4px 10px; background:#fff; text-decoration:none; color:#073D26;"
+              >
+                📋 Customer Tracking Page ↗
+              </a>
+            </div>
           </div>
         <?php endif; ?>
       </div>

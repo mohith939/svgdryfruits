@@ -95,6 +95,23 @@ class Database {
                       PRIMARY KEY (`id`),
                       KEY `idx_refunds_order_id` (`order_id`)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                    CREATE TABLE IF NOT EXISTS `shadowfax_settings` (
+                      `id` INT NOT NULL DEFAULT 1,
+                      `api_key` VARCHAR(255) NULL,
+                      `environment` VARCHAR(32) NOT NULL DEFAULT 'staging',
+                      `base_url` VARCHAR(255) NULL,
+                      `pickup_name` VARCHAR(128) NULL,
+                      `pickup_phone` VARCHAR(32) NULL,
+                      `pickup_address` TEXT NULL,
+                      `pickup_city` VARCHAR(64) NULL,
+                      `pickup_state` VARCHAR(64) NULL,
+                      `pickup_pincode` VARCHAR(16) NULL,
+                      `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                      PRIMARY KEY (`id`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                    INSERT IGNORE INTO `shadowfax_settings` (`id`, `environment`) VALUES (1, 'staging');
                 ");
             } else {
                 $pdo->exec("
@@ -113,6 +130,22 @@ class Database {
                       note TEXT,
                       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
+
+                    CREATE TABLE IF NOT EXISTS shadowfax_settings (
+                      id INTEGER PRIMARY KEY DEFAULT 1,
+                      api_key TEXT,
+                      environment TEXT DEFAULT 'staging',
+                      base_url TEXT,
+                      pickup_name TEXT,
+                      pickup_phone TEXT,
+                      pickup_address TEXT,
+                      pickup_city TEXT,
+                      pickup_state TEXT,
+                      pickup_pincode TEXT,
+                      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    INSERT OR IGNORE INTO shadowfax_settings (id, environment) VALUES (1, 'staging');
                 ");
             }
         } catch (Throwable $e) {
