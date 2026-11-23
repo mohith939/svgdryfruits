@@ -9,6 +9,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../src/Helpers.php';
 require_once __DIR__ . '/../src/Cart.php';
 require_once __DIR__ . '/../src/Models.php';
+require_once __DIR__ . '/../src/Shadowfax.php';
 require_once __DIR__ . '/../config/cashfree.php';
 
 header('Content-Type: application/json');
