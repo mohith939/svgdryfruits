@@ -66,9 +66,21 @@ try {
     echo "5. Database note: " . $e->getMessage() . "\n";
 }
 
-echo "\n--- ACCOUNT ROOT SCAN ---\n";
-echo "Contents of /home/sites/29a/a/a6fe9510b6:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6 2>&1") . "\n";
-echo "Find prod_* in /home/sites/29a/a/a6fe9510b6 (maxdepth 4):\n" . shell_exec("find /home/sites/29a/a/a6fe9510b6 -maxdepth 4 -name 'prod_*' 2>&1") . "\n";
+echo "\n--- TARGETED BACKUP & TRASH SCAN ---\n";
+$dirsToSearch = [
+    '/home/sites/29a/a/a6fe9510b6/.trash',
+    '/home/sites/29a/a/a6fe9510b6/balaji/SVG',
+    '/home/sites/29a/a/a6fe9510b6/public_html',
+    '/home/sites/29a/a/a6fe9510b6/public',
+    '/tmp'
+];
+foreach ($dirsToSearch as $d) {
+    if (is_dir($d)) {
+        echo "Searching {$d}...\n";
+        $out = shell_exec("find {$d} -name '*prod_20261107*' 2>/dev/null | head -n 30");
+        if ($out) echo "FOUND in {$d}:\n{$out}\n";
+    }
+}
 
 echo "\n--- PRODUCTS IN LIVE DATABASE ---\n";
 try {
