@@ -17,7 +17,7 @@ class CashfreePG {
     public function __construct() {
         $this->clientId = CASHFREE_CLIENT_ID;
         $this->clientSecret = CASHFREE_CLIENT_SECRET;
-        $this->apiVersion = CASHFREE_API_VERSION;
+        $this->apiVersion = defined('CASHFREE_API_VERSION') ? CASHFREE_API_VERSION : '2023-08-01';
 
         if (CASHFREE_ENV === 'PRODUCTION') {
             $this->baseUrl = 'https://api.cashfree.com/pg';

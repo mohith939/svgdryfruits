@@ -216,7 +216,7 @@ require __DIR__ . '/layouts/header.php';
                 <circle cx="18.5" cy="18.5" r="2.5"></circle>
               </svg>
             </div>
-            <span class="pdp-v2-trust-label">Fast Delivery</span>
+            <span class="pdp-v2-trust-label">Free Delivery</span>
           </div>
 
           <div class="pdp-v2-trust-item">
@@ -235,6 +235,10 @@ require __DIR__ . '/layouts/header.php';
   <!-- SECTION 2: GOODNESS IN EVERY BITE (BANNER) -->
   <section class="pdp-v2-banner-sec">
     <div class="pdp-v2-container pdp-v2-banner-grid">
+      <div class="pdp-v2-banner-media">
+        <img src="<?= Helpers::asset('dpack.png') ?>" alt="Pure wholesome dry fruits pack" class="pdp-v2-banner-img" loading="lazy" />
+      </div>
+
       <div class="pdp-v2-banner-content">
         <span class="pdp-v2-banner-kicker">GOODNESS IN EVERY BITE</span>
         <h2 class="pdp-v2-banner-title">Pure. Wholesome. Naturally Better.</h2>
@@ -270,10 +274,6 @@ require __DIR__ . '/layouts/header.php';
           </div>
         </div>
       </div>
-
-      <div class="pdp-v2-banner-media">
-        <img src="<?= Helpers::asset('pdp-banner-hd.jpg') ?>" alt="Scattered nuts close-up" class="pdp-v2-banner-img" loading="lazy" />
-      </div>
     </div>
   </section>
 
@@ -281,7 +281,7 @@ require __DIR__ . '/layouts/header.php';
   <section class="pdp-v2-orchard-sec">
     <div class="pdp-v2-container pdp-v2-orchard-grid">
       <div class="pdp-v2-orchard-media">
-        <img src="<?= Helpers::asset('pdp-orchard-hd.jpg') ?>" alt="Orchard trees with fresh harvest" class="pdp-v2-orchard-img" loading="lazy" />
+        <img src="<?= Helpers::asset('orchards.png') ?>" alt="From nature's finest orchards" class="pdp-v2-orchard-img" loading="lazy" />
       </div>
 
       <div class="pdp-v2-orchard-content">
@@ -308,19 +308,19 @@ require __DIR__ . '/layouts/header.php';
       <div class="pdp-v2-ways-cards">
         <div class="pdp-v2-way-card">
           <div class="pdp-v2-way-img-wrap">
-            <img src="<?= Helpers::asset('pdp-way-snack-hd.jpg') ?>" alt="Snack on the go" class="pdp-v2-way-img" loading="lazy" />
+            <img src="<?= Helpers::asset('Snack on the go.png') ?>" alt="Snack on the go" class="pdp-v2-way-img" loading="lazy" />
           </div>
           <span class="pdp-v2-way-caption">Snack on the go</span>
         </div>
         <div class="pdp-v2-way-card">
           <div class="pdp-v2-way-img-wrap">
-            <img src="<?= Helpers::asset('pdp-way-smoothie-hd.jpg') ?>" alt="Add to your smoothies" class="pdp-v2-way-img" loading="lazy" />
+            <img src="<?= Helpers::asset('Add to your smoothies.png') ?>" alt="Add to your smoothies" class="pdp-v2-way-img" loading="lazy" />
           </div>
           <span class="pdp-v2-way-caption">Add to your smoothies</span>
         </div>
         <div class="pdp-v2-way-card">
           <div class="pdp-v2-way-img-wrap">
-            <img src="<?= Helpers::asset('pdp-way-cookies-hd.jpg') ?>" alt="Use in your favourite recipes" class="pdp-v2-way-img" loading="lazy" />
+            <img src="<?= Helpers::asset('favourite.png') ?>" alt="Use in your favourite recipes" class="pdp-v2-way-img" loading="lazy" />
           </div>
           <span class="pdp-v2-way-caption">Use in your favourite recipes</span>
         </div>

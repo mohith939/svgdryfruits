@@ -66,26 +66,6 @@ try {
     echo "5. Database note: " . $e->getMessage() . "\n";
 }
 
-echo "\n--- SEARCHING FOR PROD FILES ON SERVER ---\n";
-echo shell_exec("find /home/sites/29a/a/a6fe9510b6/ -name '*prod_20261107*' 2>&1") . "\n";
-echo "\n--- SEARCHING FOR RECENT UPLOADS / IMAGES ---\n";
-echo shell_exec("find /home/sites/29a/a/a6fe9510b6/ -name '*.png' | grep -v 'svgdryfruits-repo' | head -n 40 2>&1") . "\n";
-
-echo "\n--- PRODUCTS IN LIVE DATABASE ---\n";
-try {
-    $pdo = Database::getConnection();
-    $prods = $pdo->query("SELECT id, name, slug, image_url FROM products ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
-    echo "Total Products: " . count($prods) . "\n";
-    foreach ($prods as $pr) {
-        $img = $pr['image_url'] ?? '';
-        $localPath = $targetDir . $img;
-        $status = file_exists($localPath) ? 'EXISTS' : 'MISSING';
-        echo "- {$pr['name']}: {$img} [{$status}]\n";
-    }
-} catch (Throwable $e) {
-    echo "DB Error: " . $e->getMessage() . "\n";
-}
-
 echo "\n=========================================\n";
 echo "DEPLOYMENT COMPLETE & LIVE!\n";
 echo "Storefront: https://www.svgdryfruits.com/\n";

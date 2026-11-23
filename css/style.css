@@ -5636,7 +5636,7 @@ body { font-size: 17px; line-height: 1.6; }
 
 .pdp-v2-banner-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   gap: 48px;
   align-items: center;
 }

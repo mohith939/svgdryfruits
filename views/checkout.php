@@ -248,45 +248,16 @@ function resolveShippingRule(stateName) {
 }
 
 function handleStateChange(stateName) {
-  var rule = resolveShippingRule(stateName);
-  currentShippingRule = rule;
-
-  var clean = (stateName || '').toLowerCase().trim();
-  var isHome = (clean === 'telangana' || clean === 'andhra pradesh');
-
-  var baseRatePaise = isHome ? 9000 : 10000;
-  var rate12Paise = isHome ? 13000 : 15000;
-  var rate2kgAbovePaise = isHome ? 15000 : 21000;
-  var freeAbove = null;
-
-  if (rule) {
-    freeAbove = rule.free_above_paise ? parseInt(rule.free_above_paise, 10) : null;
-    baseRatePaise = parseInt(rule.rate_paise, 10) || baseRatePaise;
-    rate12Paise = rule.rate_1_2kg_paise ? parseInt(rule.rate_1_2kg_paise, 10) : (isHome ? 13000 : 15000);
-    rate2kgAbovePaise = rule.rate_2kg_above_paise ? parseInt(rule.rate_2kg_above_paise, 10) : (isHome ? 15000 : 21000);
-  }
-
-  // Weight-based Tier Calculation
-  var selectedRatePaise = baseRatePaise;
-  if (cartTotalWeightGrams >= 2000) {
-    selectedRatePaise = rate2kgAbovePaise;
-  } else if (cartTotalWeightGrams >= 1000) {
-    selectedRatePaise = rate12Paise;
-  }
-
-  if (freeAbove !== null && baseSubtotalPaise >= freeAbove) {
-    selectedRatePaise = 0;
-  }
-
-  currentShippingPaise = selectedRatePaise;
+  currentShippingRule = resolveShippingRule(stateName);
+  currentShippingPaise = 0;
 
   var summaryShipping = document.getElementById('summary-shipping-val');
   if (summaryShipping) {
-    summaryShipping.textContent = (selectedRatePaise === 0) ? 'Free' : formatINR(selectedRatePaise);
-    summaryShipping.style.color = (selectedRatePaise === 0) ? '#2E7D32' : 'inherit';
+    summaryShipping.textContent = 'Free (₹0)';
+    summaryShipping.style.color = '#2E7D32';
   }
 
-  var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise + selectedRatePaise);
+  var newTotalPaise = Math.max(0, baseSubtotalPaise - discountPaise);
   var summaryTotal = document.getElementById('summary-total-val');
   if (summaryTotal) {
     summaryTotal.textContent = formatINR(newTotalPaise);

@@ -92,6 +92,7 @@ if (!defined('CASHFREE_CLIENT_SECRET')) define('CASHFREE_CLIENT_SECRET', env('CA
 if (!defined('CASHFREE_APP_ID')) define('CASHFREE_APP_ID', CASHFREE_CLIENT_ID);
 if (!defined('CASHFREE_SECRET_KEY')) define('CASHFREE_SECRET_KEY', CASHFREE_CLIENT_SECRET);
 if (!defined('CASHFREE_ENV')) define('CASHFREE_ENV', strtoupper(env('CASHFREE_ENVIRONMENT', env('NEXT_PUBLIC_CASHFREE_ENVIRONMENT', 'PRODUCTION'))));
+if (!defined('CASHFREE_API_VERSION')) define('CASHFREE_API_VERSION', env('CASHFREE_API_VERSION', '2023-08-01'));
 // Shadowfax Logistics Partner Settings
 if (!defined('SHADOWFAX_API_KEY')) define('SHADOWFAX_API_KEY', env('SHADOWFAX_API_KEY', ''));
 if (!defined('SHADOWFAX_ENV')) define('SHADOWFAX_ENV', strtoupper(env('SHADOWFAX_ENV', 'STAGING')));

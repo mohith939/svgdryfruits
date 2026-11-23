@@ -19,11 +19,13 @@ $pdo->prepare("
     VALUES (?, ?, 'Test Cart Product', 'Desc', NULL, 0)
 ")->execute([$cartProdId, $cartProdSlug]);
 
+$cartSku1 = 'SKU-CART-1-' . bin2hex(random_bytes(3));
+$cartSku2 = 'SKU-CART-2-' . bin2hex(random_bytes(3));
 $pdo->prepare("
     INSERT INTO variants (id, product_id, sku, label, price_paise, compare_price_paise, stock, low_stock_threshold, active)
-    VALUES (?, ?, 'SKU-CART-1', '500g', 45000, 50000, 50, 5, 1),
-           (?, ?, 'SKU-CART-2', '250g', 30000, 35000, 50, 5, 1)
-")->execute([$cartVarId1, $cartProdId, $cartVarId2, $cartProdId]);
+    VALUES (?, ?, ?, '500g', 45000, 50000, 50, 5, 1),
+           (?, ?, ?, '250g', 30000, 35000, 50, 5, 1)
+")->execute([$cartVarId1, $cartProdId, $cartSku1, $cartVarId2, $cartProdId, $cartSku2]);
 
 Cart::clear();
 TestSuite::assert(Cart::count() === 0, 'Cart starts empty after clear()');
@@ -107,10 +109,11 @@ TestSuite::assert(
 Cart::clear();
 // Create small item
 $cheapVarId = 'var_cheap_' . bin2hex(random_bytes(4));
+$cheapSku = 'SKU-CHEAP-' . bin2hex(random_bytes(4));
 $pdo->prepare("
     INSERT INTO variants (id, product_id, sku, label, price_paise, compare_price_paise, stock, low_stock_threshold, active)
-    VALUES (?, ?, 'SKU-CHEAP', '50g', 10000, 15000, 50, 5, 1)
-")->execute([$cheapVarId, $cartProdId]);
+    VALUES (?, ?, ?, '50g', 10000, 15000, 50, 5, 1)
+")->execute([$cheapVarId, $cartProdId, $cheapSku]);
 
 Cart::add($cheapVarId, 1); // 10000 paise (₹100), less than ₹500
 $resMin = Cart::applyCoupon('TEST10');
@@ -119,41 +122,22 @@ TestSuite::assert(
     'Coupon is rejected when cart subtotal is below minimum order value'
 );
 
-// Section 7B: State-Based Shipping Rate Auto-Resolution
-TestSuite::section('7B. State-Based Shipping Rate Auto-Resolution');
+// Section 7B: Storewide Free Shipping (Shadowfax) Verification
+TestSuite::section('7B. Storewide Free Shipping (Shadowfax) Verification');
 
-// Temporarily deactivate non-test shipping options to test exact rule resolution
-$pdo->exec("UPDATE shipping_options SET active = 0");
-$pdo->exec("DELETE FROM shipping_options WHERE id LIKE 'test_ship_%'");
-$pdo->prepare("
-    INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, free_above_paise, min_subtotal_paise, active, sort_order)
-    VALUES 
-    ('test_ship_ts_ap', 'Telangana & AP Delivery', 'Telangana, Andhra Pradesh', 'Fast regional', '1-2 Days', 4900, 99900, 0, 1, 1),
-    ('test_ship_south', 'South India', 'Karnataka, Tamil Nadu, Kerala', 'South zonal', '2-3 Days', 6900, 149900, 0, 1, 2),
-    ('test_ship_roi', 'Rest of India', 'ALL', 'National delivery', '3-5 Days', 8900, 199900, 0, 1, 3)
-")->execute();
-
-// Test 1: Match Telangana below free threshold (₹450 order)
 $optTs = Models::getShippingOptionForState('Telangana', 45000);
-TestSuite::assert($optTs['id'] === 'test_ship_ts_ap', 'Correctly matches Telangana state rule (test_ship_ts_ap)');
-TestSuite::assert($optTs['effective_paise'] === 4900, 'Applies exact ₹49 (4900 paise) rate for Telangana when below ₹999');
+TestSuite::assert($optTs['id'] === 'free_shipping', 'Correctly resolves to free_shipping ID');
+TestSuite::assert($optTs['effective_paise'] === 0, 'Applies 0 paise (Free Delivery) for Telangana');
+TestSuite::assert($optTs['is_free'] === true, 'Flags is_free as true for Telangana');
 
-// Test 2: Match Telangana above free threshold (₹1200 order)
-$optTsFree = Models::getShippingOptionForState('Telangana', 120000);
-TestSuite::assert($optTsFree['effective_paise'] === 0, 'Automatically unlocks FREE delivery (0 paise) when cart >= ₹999 threshold');
-
-// Test 3: Match Karnataka (South India)
 $optKa = Models::getShippingOptionForState('Karnataka', 50000);
-TestSuite::assert($optKa['id'] === 'test_ship_south', 'Correctly matches Karnataka to South India shipping rule');
-TestSuite::assert($optKa['effective_paise'] === 6900, 'Applies ₹69 (6900 paise) rate for Karnataka');
+TestSuite::assert($optKa['effective_paise'] === 0, 'Applies 0 paise (Free Delivery) for Karnataka');
 
-// Test 4: Match Delhi (Falls back to Rest of India 'ALL')
 $optDel = Models::getShippingOptionForState('Delhi', 50000);
-TestSuite::assert($optDel['id'] === 'test_ship_roi', 'Correctly falls back to ALL (Rest of India) for unlisted states like Delhi');
-TestSuite::assert($optDel['effective_paise'] === 8900, 'Applies ₹89 (8900 paise) rate for Rest of India');
+TestSuite::assert($optDel['effective_paise'] === 0, 'Applies 0 paise (Free Delivery) for Delhi (National)');
 
-// Section 7C: Weight Calculation & Tiered State Shipping Verification
-TestSuite::section('7C. Weight-Based Tiered Shipping & Coupon Updates');
+// Section 7C: Weight Calculation & Free Shipping Verification
+TestSuite::section('7C. Weight-Based Extraction & Coupon Updates');
 
 // 1. Weight extraction from variant label strings
 TestSuite::assert(Cart::parseWeightGrams('250 g') === 250, 'parseWeightGrams extracts 250g from "250 g"');
@@ -163,41 +147,19 @@ TestSuite::assert(Cart::parseWeightGrams('1.5 kg') === 1500, 'parseWeightGrams e
 TestSuite::assert(Cart::parseWeightGrams('2 kg') === 2000, 'parseWeightGrams extracts 2000g from "2 kg"');
 TestSuite::assert(Cart::parseWeightGrams('1 kg Deluxe Hamper') === 1000, 'parseWeightGrams extracts 1000g from "1 kg Deluxe Hamper"');
 
-// 2. Setup user's requested rates for Telangana & Rest of India
-$pdo->exec("DELETE FROM shipping_options WHERE id LIKE 'test_%'");
-$pdo->prepare("
-    INSERT INTO shipping_options (id, name, target_states, description, estimated_days, rate_paise, rate_1_2kg_paise, rate_2kg_above_paise, free_above_paise, min_subtotal_paise, active, sort_order)
-    VALUES 
-    ('test_tiered_ts', 'Telangana & AP Tiered', 'Telangana, Andhra Pradesh', 'Express TS/AP', '1-2 Days', 9000, 13000, 15000, NULL, 0, 1, 1),
-    ('test_tiered_roi', 'Rest of India Tiered', 'ALL', 'National Express', '3-5 Days', 10000, 15000, 21000, NULL, 0, 1, 2)
-")->execute();
-
-// Telangana Tier 1: Below 1kg (< 1000g) => ₹90 (9000 paise)
-$tsTier1 = Models::getShippingOptionForState('Telangana', 40000, 500);
-TestSuite::assert($tsTier1['effective_paise'] === 9000, 'Telangana < 1kg resolves to ₹90 (9000 paise)');
-TestSuite::assert($tsTier1['active_tier'] === 'below_1kg', 'Telangana < 1kg sets active_tier to below_1kg');
-
-// Telangana Tier 2: 1kg - 2kg (1500g) => ₹130 (13000 paise)
-$tsTier2 = Models::getShippingOptionForState('Telangana', 40000, 1500);
-TestSuite::assert($tsTier2['effective_paise'] === 13000, 'Telangana 1-2kg resolves to ₹130 (13000 paise)');
-TestSuite::assert($tsTier2['active_tier'] === '1_2kg', 'Telangana 1-2kg sets active_tier to 1_2kg');
-
-// Telangana Tier 3: 2kg & Above (2500g) => ₹150 (15000 paise)
-$tsTier3 = Models::getShippingOptionForState('Telangana', 40000, 2500);
-TestSuite::assert($tsTier3['effective_paise'] === 15000, 'Telangana >= 2kg resolves to ₹150 (15000 paise)');
-TestSuite::assert($tsTier3['active_tier'] === '2kg_above', 'Telangana >= 2kg sets active_tier to 2kg_above');
-
-// Rest of India Tier 1: Below 1kg (< 1000g) => ₹100 (10000 paise)
-$roiTier1 = Models::getShippingOptionForState('Delhi', 40000, 750);
-TestSuite::assert($roiTier1['effective_paise'] === 10000, 'Rest of India < 1kg resolves to ₹100 (10000 paise)');
-
-// Rest of India Tier 2: 1kg - 2kg (1800g) => ₹150 (15000 paise)
-$roiTier2 = Models::getShippingOptionForState('Maharashtra', 40000, 1800);
-TestSuite::assert($roiTier2['effective_paise'] === 15000, 'Rest of India 1-2kg resolves to ₹150 (15000 paise)');
-
-// Rest of India Tier 3: 2kg & Above (3000g) => ₹210 (21000 paise)
-$roiTier3 = Models::getShippingOptionForState('Punjab', 40000, 3000);
-TestSuite::assert($roiTier3['effective_paise'] === 21000, 'Rest of India >= 2kg resolves to ₹210 (21000 paise)');
+// 2. Free shipping across all weights
+$tsWeight1 = Models::getShippingOptionForState('Telangana', 40000, 500);
+TestSuite::assert($tsWeight1['effective_paise'] === 0, 'Telangana < 1kg remains ₹0 Free Delivery');
+$tsWeight2 = Models::getShippingOptionForState('Telangana', 40000, 1500);
+TestSuite::assert($tsWeight2['effective_paise'] === 0, 'Telangana 1-2kg remains ₹0 Free Delivery');
+$tsWeight3 = Models::getShippingOptionForState('Telangana', 40000, 2500);
+TestSuite::assert($tsWeight3['effective_paise'] === 0, 'Telangana >= 2kg remains ₹0 Free Delivery');
+$roiWeight1 = Models::getShippingOptionForState('Delhi', 40000, 750);
+TestSuite::assert($roiWeight1['effective_paise'] === 0, 'Rest of India < 1kg remains ₹0 Free Delivery');
+$roiWeight2 = Models::getShippingOptionForState('Maharashtra', 40000, 1800);
+TestSuite::assert($roiWeight2['effective_paise'] === 0, 'Rest of India 1-2kg remains ₹0 Free Delivery');
+$roiWeight3 = Models::getShippingOptionForState('Punjab', 40000, 3000);
+TestSuite::assert($roiWeight3['effective_paise'] === 0, 'Rest of India >= 2kg remains ₹0 Free Delivery');
 
 // 3. Test Coupon Update and Type Mutation
 $testCpnId = 'cpn_test_edit_' . bin2hex(random_bytes(4));
