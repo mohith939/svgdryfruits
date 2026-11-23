@@ -66,6 +66,31 @@ try {
     echo "5. Database note: " . $e->getMessage() . "\n";
 }
 
+echo "\n--- UPLOADED IMAGES SCAN & RESTORE ---\n";
+$siteRoot = dirname($targetDir); // /home/sites/29a/a/a6fe9510b6/balaji
+$homeRoot = dirname($siteRoot); // /home/sites/29a/a/a6fe9510b6
+$foundImages = shell_exec("find {$homeRoot} -type f \( -name 'prod_*' -o -name 'img_*' -o -name '*.png' -o -name '*.jpg' \) 2>/dev/null");
+echo "Found Images:\n" . ($foundImages ?: "None found in scan.\n");
+
+// Ensure both /assets/uploads and /uploads exist in target
+@mkdir($targetDir . '/assets/uploads', 0755, true);
+@mkdir($targetDir . '/uploads', 0755, true);
+
+// If any prod_* images exist elsewhere on the account, copy them into targetDir/assets/uploads!
+$prodImages = shell_exec("find {$homeRoot} -type f -name 'prod_*' 2>/dev/null");
+if ($prodImages) {
+    $lines = explode("\n", trim($prodImages));
+    foreach ($lines as $srcFile) {
+        $srcFile = trim($srcFile);
+        if ($srcFile && file_exists($srcFile)) {
+            $baseName = basename($srcFile);
+            @copy($srcFile, $targetDir . '/assets/uploads/' . $baseName);
+            @copy($srcFile, $targetDir . '/uploads/' . $baseName);
+            echo "Restored: {$baseName} -> {$targetDir}/assets/uploads/\n";
+        }
+    }
+}
+
 echo "\n=========================================\n";
 echo "DEPLOYMENT COMPLETE & LIVE!\n";
 echo "Storefront: https://www.svgdryfruits.com/\n";
