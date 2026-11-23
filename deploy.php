@@ -66,21 +66,10 @@ try {
     echo "5. Database note: " . $e->getMessage() . "\n";
 }
 
-echo "\n--- TARGETED BACKUP & TRASH SCAN ---\n";
-$dirsToSearch = [
-    '/home/sites/29a/a/a6fe9510b6/.trash',
-    '/home/sites/29a/a/a6fe9510b6/balaji/SVG',
-    '/home/sites/29a/a/a6fe9510b6/public_html',
-    '/home/sites/29a/a/a6fe9510b6/public',
-    '/tmp'
-];
-foreach ($dirsToSearch as $d) {
-    if (is_dir($d)) {
-        echo "Searching {$d}...\n";
-        $out = shell_exec("find {$d} -name '*prod_20261107*' 2>/dev/null | head -n 30");
-        if ($out) echo "FOUND in {$d}:\n{$out}\n";
-    }
-}
+echo "\n--- CHECK MATCHING FOLDERS ---\n";
+echo "Matching svg/dry in balaji:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6/balaji | grep -iE 'svg|dry|fruit'") . "\n";
+echo "Matching svg/dry in root:\n" . shell_exec("ls -la /home/sites/29a/a/a6fe9510b6 | grep -iE 'svg|dry|fruit'") . "\n";
+echo "All files in /home/sites/29a/a/a6fe9510b6/balaji/SVG/assets:\n" . shell_exec("ls /home/sites/29a/a/a6fe9510b6/balaji/SVG/assets 2>&1") . "\n";
 
 echo "\n--- PRODUCTS IN LIVE DATABASE ---\n";
 try {
