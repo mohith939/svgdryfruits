@@ -328,72 +328,7 @@ require __DIR__ . '/layouts/header.php';
     </div>
   </section>
 
-  <!-- SECTION 5: NUTRITION INFORMATION -->
-  <section class="pdp-v2-nutrition-sec">
-    <div class="pdp-v2-container pdp-v2-nutrition-grid">
-      <div class="pdp-v2-nutrition-media">
-        <img src="<?= Helpers::asset('pdp-nutrition-hd.jpg') ?>" alt="Nutrient-dense natural dry fruits" class="pdp-v2-nutrition-img" loading="lazy" />
-      </div>
 
-      <div class="pdp-v2-nutrition-content">
-        <span class="pdp-v2-nutrition-kicker">NUTRITION INFORMATION</span>
-        <h2 class="pdp-v2-nutrition-title">A Natural Source of<br />Good Nutrition</h2>
-        <p class="pdp-v2-nutrition-desc"><?= htmlspecialchars($product['name']) ?> are packed with essential vitamins and clean nutrients that support overall vitality.</p>
-        <div class="pdp-v2-nutrition-line"></div>
-
-        <div class="pdp-v2-nutrients-grid">
-          <div class="pdp-v2-nutrient-item">
-            <div class="pdp-v2-nutrient-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E3622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
-                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>
-              </svg>
-            </div>
-            <div class="pdp-v2-nutrient-text">
-              <span class="pdp-v2-nutrient-name">Essential Nutrients</span>
-              <span class="pdp-v2-nutrient-sub">Clean cellular energy</span>
-            </div>
-          </div>
-
-          <div class="pdp-v2-nutrient-item">
-            <div class="pdp-v2-nutrient-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E3622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-              </svg>
-            </div>
-            <div class="pdp-v2-nutrient-text">
-              <span class="pdp-v2-nutrient-name">Healthy Natural Fats</span>
-              <span class="pdp-v2-nutrient-sub">Promotes heart health</span>
-            </div>
-          </div>
-
-          <div class="pdp-v2-nutrient-item">
-            <div class="pdp-v2-nutrient-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E3622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12"></path>
-              </svg>
-            </div>
-            <div class="pdp-v2-nutrient-text">
-              <span class="pdp-v2-nutrient-name">Natural Plant Protein</span>
-              <span class="pdp-v2-nutrient-sub">Supports muscle recovery</span>
-            </div>
-          </div>
-
-          <div class="pdp-v2-nutrient-item">
-            <div class="pdp-v2-nutrient-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E3622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 22 12 12M12 2v20M8 6l4 4M16 6l-4 4M8 12l4 4M16 12l-4 4"></path>
-              </svg>
-            </div>
-            <div class="pdp-v2-nutrient-text">
-              <span class="pdp-v2-nutrient-name">Dietary Fibre</span>
-              <span class="pdp-v2-nutrient-sub">Supports healthy digestion</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- SECTION 6: FAQS ACCORDION -->
   <section class="pdp-v2-faq-sec">

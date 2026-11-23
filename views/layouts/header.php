@@ -28,7 +28,7 @@ $siteTitle = (!empty($pageTitle) ? $pageTitle . ' — ' : '') . 'SVG Dry Fruits'
     window.SVG_APP = {
       baseUrl: '<?= Helpers::url('/') ?>',
       apiUrl: '<?= Helpers::url('api') ?>',
-      cashfreeMode: '<?= strtolower(CASHFREE_ENV) ?>'
+      cashfreeMode: '<?= strtolower(defined('CASHFREE_ENV') ? CASHFREE_ENV : 'production') ?>'
     };
   </script>
 </head>

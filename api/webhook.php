@@ -16,8 +16,8 @@ $timestamp = $_SERVER['HTTP_X_WEBHOOK_TIMESTAMP'] ?? '';
 
 $cashfree = new CashfreePG();
 
-// Mandatory signature verification in production
-if (CASHFREE_ENV === 'PRODUCTION') {
+$isProd = (defined('CASHFREE_ENV') ? strtoupper(CASHFREE_ENV) : 'PRODUCTION') === 'PRODUCTION';
+if ($isProd) {
     if (empty($signature) || empty($timestamp) || !$cashfree->isConfigured()) {
         http_response_code(401);
         echo json_encode(['error' => 'Missing webhook signature or credentials in production']);

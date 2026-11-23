@@ -15,11 +15,12 @@ class CashfreePG {
     private string $apiVersion;
 
     public function __construct() {
-        $this->clientId = CASHFREE_CLIENT_ID;
-        $this->clientSecret = CASHFREE_CLIENT_SECRET;
+        $this->clientId = defined('CASHFREE_CLIENT_ID') ? CASHFREE_CLIENT_ID : (defined('CASHFREE_APP_ID') ? CASHFREE_APP_ID : '');
+        $this->clientSecret = defined('CASHFREE_CLIENT_SECRET') ? CASHFREE_CLIENT_SECRET : (defined('CASHFREE_SECRET_KEY') ? CASHFREE_SECRET_KEY : '');
         $this->apiVersion = defined('CASHFREE_API_VERSION') ? CASHFREE_API_VERSION : '2023-08-01';
 
-        if (CASHFREE_ENV === 'PRODUCTION') {
+        $env = defined('CASHFREE_ENV') ? strtoupper(CASHFREE_ENV) : 'PRODUCTION';
+        if ($env === 'PRODUCTION') {
             $this->baseUrl = 'https://api.cashfree.com/pg';
         } else {
             $this->baseUrl = 'https://sandbox.cashfree.com/pg';

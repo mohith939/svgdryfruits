@@ -144,7 +144,7 @@ try {
         'tracking_token' => $trackingToken,
         'payment_method' => $paymentMethod,
         'payment_session_id' => $orderData['payment_session_id'],
-        'environment' => CASHFREE_ENV,
+        'environment' => defined('CASHFREE_ENV') ? CASHFREE_ENV : 'PRODUCTION',
         'redirect_url' => Helpers::url("order-success?order_id={$orderNumber}&token={$trackingToken}")
     ]);
 } catch (Throwable $e) {
