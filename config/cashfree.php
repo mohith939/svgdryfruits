@@ -61,9 +61,14 @@ class CashfreePG {
             $notifyUrl = $siteUrl . '/api/webhook.php';
         }
 
+        $orderAmount = round((float)($params['order_amount'] ?? 0), 2);
+        if ($orderAmount < 1.00) {
+            throw new Exception("Order amount must be at least ₹1.00 (Current: ₹" . number_format($orderAmount, 2, '.', '') . ")");
+        }
+
         $payload = [
             'order_id' => (string)$params['order_id'],
-            'order_amount' => (float)$params['order_amount'], // In Rupees (e.g. 799.00)
+            'order_amount' => '__CF_ORDER_AMOUNT_NUMERIC__',
             'order_currency' => 'INR',
             'customer_details' => [
                 'customer_id' => $customerId,
@@ -78,7 +83,12 @@ class CashfreePG {
             'order_note' => $params['order_note'] ?? 'Order ' . $params['order_id'],
         ];
 
-        $response = $this->request('POST', '/orders', $payload);
+        // Format to exact 2-decimal numeric literal without floating-point serialization artifacts
+        $formattedAmount = number_format($orderAmount, 2, '.', '');
+        $postJson = json_encode($payload, JSON_UNESCAPED_SLASHES);
+        $postJson = str_replace('"__CF_ORDER_AMOUNT_NUMERIC__"', $formattedAmount, $postJson);
+
+        $response = $this->request('POST', '/orders', $payload, $postJson);
         return $response;
     }
 
@@ -124,7 +134,7 @@ class CashfreePG {
             || php_sapi_name() === 'cli-server';
     }
 
-    private function request(string $method, string $endpoint, ?array $body = null): array {
+    private function request(string $method, string $endpoint, ?array $body = null, ?string $rawJsonBody = null): array {
         $url = $this->baseUrl . $endpoint;
         $headers = [
             'x-api-version: ' . $this->apiVersion,
@@ -165,7 +175,8 @@ class CashfreePG {
 
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+            $postData = ($rawJsonBody !== null) ? $rawJsonBody : json_encode($body);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
         }
 
         $rawResponse = curl_exec($ch);

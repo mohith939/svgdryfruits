@@ -114,6 +114,11 @@ $orderData = [
 
 // If Online payment via Cashfree
 if ($paymentMethod === 'online') {
+    if ($totalPaise < 100) {
+        unset($_SESSION[$checkoutLockKey]);
+        Helpers::json(['success' => false, 'error' => 'Order amount must be at least ₹1.00 for online payment.'], 400);
+    }
+
     try {
         $cashfree = new CashfreePG();
         $orderAmountRupees = Helpers::paiseToRupees($totalPaise);
@@ -132,7 +137,8 @@ if ($paymentMethod === 'online') {
         $orderData['cashfree_order_id'] = $cfResponse['cf_order_id'] ?? $orderNumber;
         $orderData['payment_session_id'] = $cfResponse['payment_session_id'] ?? null;
     } catch (Throwable $e) {
-        error_log("Cashfree Order Create Error: " . $e->getMessage());
+        unset($_SESSION[$checkoutLockKey]);
+        error_log("Cashfree Order Create Error for {$orderNumber} (amount: ₹{$orderAmountRupees}): " . $e->getMessage());
         Helpers::json(['success' => false, 'error' => 'Payment gateway error: ' . $e->getMessage()], 500);
     }
 }

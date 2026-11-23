@@ -517,6 +517,7 @@ function handleCheckoutSubmit(e) {
   fetch(window.SVG_APP.apiUrl + '/checkout.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
     body: JSON.stringify(payload)
   })
     .then(async function(r) {

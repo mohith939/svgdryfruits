@@ -6,6 +6,8 @@
 
 // Error handling & Output buffering
 ini_set('display_errors', '0');
+ini_set('serialize_precision', '-1');
+ini_set('precision', '14');
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 if (!ob_get_level()) {
     ob_start();

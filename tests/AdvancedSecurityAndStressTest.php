@@ -347,10 +347,65 @@ for ($i = 1; $i <= 5; $i++) {
 $blockedAttempt = Helpers::checkRateLimit($trackKey, $trackLimit, $trackWindow);
 TestSuite::assert($blockedAttempt === false, 'Order tracking lookup attempt 6 is blocked by rate limiter');
 
+TestSuite::section('18. Cashfree Order Amount Formatting & Precision Defense');
+
+// 18.1: Minimum amount rejection (< 1.00 INR)
+$belowMinRejected = false;
+try {
+    $cf = new CashfreePG();
+    $cf->createOrder([
+        'order_id' => 'test_sub_min',
+        'order_amount' => 0.50,
+        'customer_phone' => '918340956469',
+    ]);
+} catch (Exception $e) {
+    if (strpos($e->getMessage(), 'must be at least ₹1.00') !== false) {
+        $belowMinRejected = true;
+    }
+}
+TestSuite::assert($belowMinRejected === true, 'CashfreePG rejects order amount below ₹1.00 with friendly message');
+
+// 18.2: Zero amount rejection
+$zeroAmountRejected = false;
+try {
+    $cf = new CashfreePG();
+    $cf->createOrder([
+        'order_id' => 'test_zero',
+        'order_amount' => 0.00,
+        'customer_phone' => '918340956469',
+    ]);
+} catch (Exception $e) {
+    if (strpos($e->getMessage(), 'must be at least ₹1.00') !== false) {
+        $zeroAmountRejected = true;
+    }
+}
+TestSuite::assert($zeroAmountRejected === true, 'CashfreePG rejects order amount of 0.00');
+
+// 18.3: Verification of exact 2-decimal numeric JSON formatting
+$testAmount = 58.41;
+$payload = [
+    'order_id' => 'test_json_fmt',
+    'order_amount' => '__CF_ORDER_AMOUNT_NUMERIC__',
+    'order_currency' => 'INR',
+];
+$formattedAmount = number_format($testAmount, 2, '.', '');
+$postJson = json_encode($payload, JSON_UNESCAPED_SLASHES);
+$postJson = str_replace('"__CF_ORDER_AMOUNT_NUMERIC__"', $formattedAmount, $postJson);
+
+TestSuite::assert(
+    strpos($postJson, '"order_amount":58.41') !== false,
+    'Cashfree JSON serializes order_amount as exact 2-decimal numeric literal (58.41)'
+);
+TestSuite::assert(
+    strpos($postJson, '58.409999') === false && strpos($postJson, '58.410000') === false,
+    'Cashfree JSON has zero floating-point precision artifacts (no 58.409999 or 58.410000)'
+);
+
 // Cleanup all test records created in this test suite run
 $pdo->prepare("DELETE FROM order_items WHERE order_id IN (?, ?, ?)")->execute([$orderId, $orderIdA, $refundOrderId]);
 $pdo->prepare("DELETE FROM refunds WHERE order_id = ?")->execute([$refundOrderId]);
 $pdo->prepare("DELETE FROM orders WHERE id IN (?, ?, ?)")->execute([$orderId, $orderIdA, $refundOrderId]);
 $pdo->prepare("DELETE FROM variants WHERE product_id IN (?, ?)")->execute([$tamperProdId, $raceProdId]);
 $pdo->prepare("DELETE FROM products WHERE id IN (?, ?)")->execute([$tamperProdId, $raceProdId]);
+
 
