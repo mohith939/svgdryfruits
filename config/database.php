@@ -133,6 +133,18 @@ class Database {
                         $pdo->exec("ALTER TABLE `shipping_settings` ADD COLUMN `home_featured_limit` INT NOT NULL DEFAULT 8");
                     }
                 } catch (Throwable $e) {}
+                try {
+                    $colCheck = $pdo->query("SHOW COLUMNS FROM `orders` LIKE 'reverse_tracking_number'")->fetch();
+                    if (!$colCheck) {
+                        $pdo->exec("ALTER TABLE `orders` ADD COLUMN `reverse_tracking_number` VARCHAR(128) NULL");
+                    }
+                } catch (Throwable $e) {}
+                try {
+                    $colCheck = $pdo->query("SHOW COLUMNS FROM `orders` LIKE 'reverse_status'")->fetch();
+                    if (!$colCheck) {
+                        $pdo->exec("ALTER TABLE `orders` ADD COLUMN `reverse_status` VARCHAR(64) NULL");
+                    }
+                } catch (Throwable $e) {}
             } else {
                 $pdo->exec("
                     CREATE TABLE IF NOT EXISTS combo_items (
@@ -192,6 +204,14 @@ class Database {
                     }
                     if (!in_array('home_featured_limit', $shipCols)) {
                         $pdo->exec("ALTER TABLE shipping_settings ADD COLUMN home_featured_limit INTEGER DEFAULT 8");
+                    }
+
+                    $orderCols = $pdo->query("PRAGMA table_info(orders)")->fetchAll(PDO::FETCH_COLUMN, 1);
+                    if (!in_array('reverse_tracking_number', $orderCols)) {
+                        $pdo->exec("ALTER TABLE orders ADD COLUMN reverse_tracking_number TEXT");
+                    }
+                    if (!in_array('reverse_status', $orderCols)) {
+                        $pdo->exec("ALTER TABLE orders ADD COLUMN reverse_status TEXT");
                     }
                 } catch (Throwable $e) {}
             }

@@ -456,9 +456,21 @@ require __DIR__ . '/../layouts/admin_layout.php';
                     <div style="margin-top: 4px;">
                       <a href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($o['tracking_number']) ?>" 
                          target="_blank" 
-                         title="Track on Shadowfax"
+                         title="Track Forward Delivery on Shadowfax"
+                         onclick="event.stopPropagation();"
                          style="font-size: 11px; color: #073D26; background: #FAF7F2; border: 1px solid #D6C7B2; padding: 2px 6px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; gap: 3px;">
                         🚚 <?= htmlspecialchars(substr($o['tracking_number'], 0, 14)) ?> ↗
+                      </a>
+                    </div>
+                  <?php endif; ?>
+                  <?php if (!empty($o['reverse_tracking_number'])): ?>
+                    <div style="margin-top: 3px;">
+                      <a href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($o['reverse_tracking_number']) ?>" 
+                         target="_blank" 
+                         title="Track Return / Reverse Pickup on Shadowfax"
+                         onclick="event.stopPropagation();"
+                         style="font-size: 11px; color: #7A3E00; background: #FFF8E7; border: 1px solid #E6D0A6; padding: 2px 6px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; gap: 3px;">
+                        ↩ Ret: <?= htmlspecialchars(substr($o['reverse_tracking_number'], 0, 14)) ?> ↗
                       </a>
                     </div>
                   <?php endif; ?>

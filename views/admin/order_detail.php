@@ -64,6 +64,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             Helpers::setFlash('error', 'Shadowfax Dispatch Error: ' . ($dispatch['message'] ?? 'Unable to generate AWB'));
         }
+    } elseif ($action === 'reverse_shadowfax') {
+        require_once ROOT_PATH . '/src/Shadowfax.php';
+        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        $itemStmt->execute([$id]);
+        $orderItems = $itemStmt->fetchAll() ?: [];
+        $returnReason = trim($_POST['return_reason'] ?? 'Customer Return / Quality Exchange');
+
+        $reverseDispatch = Shadowfax::createReverseOrder($order, $orderItems, $returnReason);
+        if (!empty($reverseDispatch['awb_number'])) {
+            $revAwb = $reverseDispatch['awb_number'];
+            $stmt = $pdo->prepare("
+                UPDATE orders 
+                SET reverse_tracking_number = ?, reverse_status = 'pickup_scheduled'
+                WHERE id = ?
+            ");
+            $stmt->execute([$revAwb, $id]);
+            Helpers::setFlash('success', $reverseDispatch['message']);
+        } else {
+            Helpers::setFlash('error', 'Shadowfax Reverse Pickup Error: ' . ($reverseDispatch['message'] ?? 'Unable to generate Return AWB'));
+        }
     } elseif ($action === 'track_shadowfax') {
         require_once ROOT_PATH . '/src/Shadowfax.php';
         $trackRes = Shadowfax::trackOrder($order['tracking_number'] ?? '');
@@ -72,6 +92,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Helpers::setFlash('success', "✓ Shadowfax Live Tracking: {$statusStr}");
         } else {
             Helpers::setFlash('warning', $trackRes['message'] ?? 'Could not fetch live tracking events');
+        }
+    } elseif ($action === 'track_reverse_shadowfax') {
+        require_once ROOT_PATH . '/src/Shadowfax.php';
+        $trackRes = Shadowfax::trackOrder($order['reverse_tracking_number'] ?? '');
+        if ($trackRes['success']) {
+            $statusStr = $trackRes['status'] ?? ($trackRes['data']['status'] ?? 'Active');
+            Helpers::setFlash('success', "✓ Shadowfax Reverse Tracking: {$statusStr}");
+        } else {
+            Helpers::setFlash('warning', $trackRes['message'] ?? 'Could not fetch live reverse tracking');
         }
     } elseif ($action === 'record_refund') {
         $refundRupees = (float)($_POST['refund_amount'] ?? 0);
@@ -314,61 +343,118 @@ require __DIR__ . '/../layouts/admin_layout.php';
 
     <!-- Right Column: Fulfillment, Shadowfax Dispatch, and Manual Refund -->
     <div class="admin-col">
-      <!-- Shadowfax Logistics Box -->
-      <div class="admin-card" style="background: #FAF7F2; border: 1px solid #D6C7B2;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-          <div>
-            <h2 style="margin: 0 0 4px; font-size: 16px; color: #073D26;">
-              🚚 Shadowfax Logistics Partner
-            </h2>
-            <p style="margin: 0; font-size: 12.5px; color: #555;">
-              Forward delivery manifest, automated AWB &amp; door-step pickup.
-            </p>
-          </div>
-          <form method="POST" style="margin:0;">
-            <?= Helpers::csrfField() ?>
-            <input type="hidden" name="action" value="dispatch_shadowfax">
-            <button
-              type="submit"
-              class="button button-primary"
-              style="font-size: 12.5px; padding: 8px 14px; white-space: nowrap; background: #073D26; color: #E2C376;"
-            >
-              <?= in_array($order['fulfillment_status'], ['shipped', 'delivered']) ? '⚡ Re-Dispatch via Shadowfax' : '⚡ 1-Click Shadowfax Dispatch' ?>
-            </button>
-          </form>
+      <!-- Shadowfax Logistics Box: Forward & Backward Operations -->
+      <div class="admin-card" style="background: #FAF7F2; border: 1.5px solid #D6C7B2;">
+        <div style="margin-bottom: 12px; border-bottom: 1px solid #E4DACB; padding-bottom: 10px;">
+          <h2 style="margin: 0 0 4px; font-size: 16px; color: #073D26;">
+            🚚 Shadowfax Logistics Partner
+          </h2>
+          <p style="margin: 0; font-size: 12px; color: #555;">
+            Manage automated Forward Delivery Dispatch and Backward Reverse Pickup / Returns.
+          </p>
         </div>
 
-        <?php if (!empty($order['tracking_number']) && $isShadowfax): ?>
-          <div style="margin-top: 14px; padding: 12px; background: #fff; border-radius: 6px; border: 1px solid #E0D6C5; font-size: 12.5px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span>Shadowfax AWB: <strong><?= htmlspecialchars($order['tracking_number']) ?></strong></span>
-              <a
-                href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['tracking_number']) ?>"
-                target="_blank"
-                rel="noreferrer"
-                style="color: #073D26; font-weight: 600; text-decoration: underline;"
-              >
-                Track on Shadowfax ↗
-              </a>
+        <!-- 1. Forward Operations (Customer Delivery) -->
+        <div style="background: #fff; border: 1px solid #E0D6C5; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 13px; font-weight: 700; color: #073D26;">Forward Logistics (Delivery)</span>
+              <?php if (!empty($order['tracking_number'])): ?>
+                <span class="badge badge-success" style="font-size: 10.5px; padding: 2px 7px;">DISPATCHED</span>
+              <?php else: ?>
+                <span class="badge badge-warning" style="font-size: 10.5px; padding: 2px 7px;">NOT DISPATCHED</span>
+              <?php endif; ?>
             </div>
-            <div style="display:flex; gap:8px;">
-              <form method="POST" style="margin:0;">
+            <form method="POST" style="margin:0;">
+              <?= Helpers::csrfField() ?>
+              <input type="hidden" name="action" value="dispatch_shadowfax">
+              <button
+                type="submit"
+                style="font-size: 12px; font-weight: 700; padding: 6px 12px; white-space: nowrap; background: #073D26; color: #E2C376; border: none; border-radius: 4px; cursor: pointer;"
+              >
+                <?= !empty($order['tracking_number']) ? '⚡ Re-Dispatch Forward' : '⚡ 1-Click Forward Dispatch' ?>
+              </button>
+            </form>
+          </div>
+
+          <?php if (!empty($order['tracking_number'])): ?>
+            <div style="padding-top: 8px; border-top: 1px dashed #E0D6C5; font-size: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span>Forward AWB: <strong style="color: #073D26;"><?= htmlspecialchars($order['tracking_number']) ?></strong></span>
+                <a
+                  href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['tracking_number']) ?>"
+                  target="_blank"
+                  rel="noreferrer"
+                  style="color: #073D26; font-weight: 600; text-decoration: underline;"
+                >
+                  Track on Shadowfax ↗
+                </a>
+              </div>
+              <form method="POST" style="margin:0; display: inline-block;">
+                <?= Helpers::csrfField() ?>
                 <input type="hidden" name="action" value="track_shadowfax">
-                <button type="submit" class="button button-outline" style="font-size:11px; padding:4px 10px; background:#faf7f2;">
+                <button type="submit" style="font-size: 11px; font-weight: 600; padding: 3px 8px; background: #FAF7F2; border: 1px solid #D6C7B2; border-radius: 4px; cursor: pointer; color: #073D26;">
                   🔄 Check Live Status
                 </button>
               </form>
-              <a 
-                href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['tracking_number']) ?>" 
-                target="_blank"
-                class="button button-outline" 
-                style="font-size:11px; padding:4px 10px; background:#fff; text-decoration:none; color:#073D26;"
-              >
-                📋 Customer Tracking Page ↗
-              </a>
+            </div>
+          <?php endif; ?>
+        </div>
+
+        <!-- 2. Backward Operations (Customer Return / Pickup) -->
+        <div style="background: #fff; border: 1px solid #E0D6C5; border-radius: 6px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 13px; font-weight: 700; color: #7A3E00;">Backward Logistics (Returns)</span>
+              <?php if (!empty($order['reverse_tracking_number'])): ?>
+                <span class="badge badge-success" style="font-size: 10.5px; padding: 2px 7px;">PICKUP SCHEDULED</span>
+              <?php else: ?>
+                <span class="badge badge-neutral" style="font-size: 10.5px; padding: 2px 7px;">NO RETURN</span>
+              <?php endif; ?>
             </div>
           </div>
-        <?php endif; ?>
+
+          <?php if (!empty($order['reverse_tracking_number'])): ?>
+            <div style="padding-top: 6px; font-size: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span>Return AWB: <strong style="color: #7A3E00;"><?= htmlspecialchars($order['reverse_tracking_number']) ?></strong></span>
+                <a
+                  href="https://tracker.shadowfax.in/#/track?awb=<?= urlencode($order['reverse_tracking_number']) ?>"
+                  target="_blank"
+                  rel="noreferrer"
+                  style="color: #7A3E00; font-weight: 600; text-decoration: underline;"
+                >
+                  Track Return ↗
+                </a>
+              </div>
+              <form method="POST" style="margin:0; display: inline-block;">
+                <?= Helpers::csrfField() ?>
+                <input type="hidden" name="action" value="track_reverse_shadowfax">
+                <button type="submit" style="font-size: 11px; font-weight: 600; padding: 3px 8px; background: #FAF7F2; border: 1px solid #D6C7B2; border-radius: 4px; cursor: pointer; color: #7A3E00;">
+                  🔄 Check Return Status
+                </button>
+              </form>
+            </div>
+          <?php else: ?>
+            <form method="POST" style="margin:0; display: flex; gap: 6px; flex-wrap: wrap;">
+              <?= Helpers::csrfField() ?>
+              <input type="hidden" name="action" value="reverse_shadowfax">
+              <input
+                type="text"
+                name="return_reason"
+                placeholder="Reason (e.g. Quality return / exchange)"
+                style="flex: 1; min-width: 160px; padding: 5px 8px; font-size: 11.5px; border: 1px solid #ccc; border-radius: 4px;"
+                required
+              >
+              <button
+                type="submit"
+                style="font-size: 11.5px; font-weight: 700; padding: 6px 10px; background: #8B4513; color: #fff; border: none; border-radius: 4px; cursor: pointer;"
+              >
+                ↩ 1-Click Reverse Pickup
+              </button>
+            </form>
+          <?php endif; ?>
+        </div>
       </div>
 
       <!-- Fulfillment Update Form -->
